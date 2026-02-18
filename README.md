@@ -9,6 +9,7 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 
 - **Non-blocking Python logging**: `log_metrics()` is a ~100ns channel send — never blocks your training loop
 - **Live dashboard**: SSE-powered real-time metric streaming, run comparison charts, artifact browser
+- **Scalar metric filtering**: Toggle which metric columns appear in the runs table with one click
 - **Single binary**: CLI + web server in one `expman` binary — no Python runtime needed for the server
 - **Efficient storage**: Batched Arrow/Parquet writes, not per-step read-concat-write
 - **Nix dev environment**: Reproducible with `nix develop`
@@ -65,9 +66,11 @@ just build-docs                # build and open documentation
 
 ### Dashboard Features
 - **Live Metrics**: Real-time SSE streaming of experiment metrics and logs.
+- **Scalar Filter**: Toggle individual metric columns in the Runs table via chip buttons — no page reload.
 - **Deep Inspection**: View detailed run configurations, metadata, and artifacts.
 - **Artifact Browser**: Preview `parquet`, `csv`, and other files directly in the browser.
 - **Comparison View**: Overlay multiple runs on a shared timeline for analysis.
+- **Server-side filtering**: Pass `?metrics=loss,acc` to `/api/experiments/:exp/runs` to limit which scalars are returned.
 
 ## Examples
 

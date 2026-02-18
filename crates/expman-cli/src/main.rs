@@ -158,9 +158,7 @@ fn cmd_list(dir: PathBuf, experiment: Option<String>) -> Result<()> {
                     experiment: exp_name.clone(),
                     status: expman_core::models::RunStatus::Crashed,
                     started_at: chrono::Utc::now(),
-                    finished_at: None,
-                    duration_secs: None,
-                    description: None,
+                    ..Default::default()
                 });
 
             let duration = meta

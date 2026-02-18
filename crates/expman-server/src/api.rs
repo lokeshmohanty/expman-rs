@@ -73,27 +73,51 @@ async fn list_experiments(State(state): State<AppState>) -> impl IntoResponse {
     }
 }
 
+/// Query params for `list_runs`.
+#[derive(Deserialize, Default)]
+struct ListRunsQuery {
+    /// Comma-separated list of metric keys to include. If omitted, all scalars are returned.
+    metrics: Option<String>,
+}
+
 async fn list_runs(
     State(state): State<AppState>,
     Path(exp): Path<String>,
+    Query(q): Query<ListRunsQuery>,
 ) -> impl IntoResponse {
+    // Parse optional metric filter
+    let metric_filter: Option<std::collections::HashSet<String>> = q.metrics.map(|s| {
+        s.split(',').map(|k| k.trim().to_string()).filter(|k| !k.is_empty()).collect()
+    });
+
     let exp_dir = exp_dir(&state.base_dir, &exp);
     match storage::list_runs(&exp_dir) {
         Ok(run_names) => {
             let mut result = vec![];
             for name in run_names {
                 let dir = run_dir(&state.base_dir, &exp, &name);
-                let meta = storage::load_run_metadata(&dir).unwrap_or_else(|_| {
+                let mut meta = storage::load_run_metadata(&dir).unwrap_or_else(|_| {
                     expman_core::models::RunMetadata {
                         name: name.clone(),
                         experiment: exp.clone(),
                         status: expman_core::models::RunStatus::Crashed,
                         started_at: chrono::Utc::now(),
-                        finished_at: None,
-                        duration_secs: None,
-                        description: None,
+                        ..Default::default()
                     }
                 });
+
+                // Attach latest scalar metrics, filtered if requested
+                let metrics_path = dir.join("metrics.parquet");
+                if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
+                    if !scalars.is_empty() {
+                        let filtered = match &metric_filter {
+                            Some(keys) => scalars.into_iter().filter(|(k, _)| keys.contains(k)).collect(),
+                            None => scalars,
+                        };
+                        meta.metrics = Some(filtered);
+                    }
+                }
+
                 result.push(meta);
             }
             Json(result).into_response()
@@ -200,7 +224,6 @@ async fn stream_metrics(
     let interval = tokio::time::interval(Duration::from_millis(500));
     let stream = IntervalStream::new(interval).map(move |_| {
         let rows = storage::read_metrics_since(&path, last_step).unwrap_or_default();
-        // Update last_step to the max step seen
         for row in &rows {
             if let Some(step) = row.get("step").and_then(|v| v.as_u64()) {
                 last_step = Some(last_step.map_or(step, |ls| ls.max(step)));
@@ -233,12 +256,10 @@ async fn stream_log(
             let mut reader = std::io::BufReader::new(file);
             let metadata = std::fs::metadata(&path).unwrap();
             let len = metadata.len();
-            
+
             if len < last_pos {
-                // File was likely truncated/restarted
                 last_pos = 0;
             }
-
             if len > last_pos {
                 let _ = reader.seek(SeekFrom::Start(last_pos));
                 let _ = reader.read_to_string(&mut data);
@@ -262,13 +283,10 @@ async fn get_config(
     let dir = run_dir(&state.base_dir, &exp, &run);
     let path = dir.join("config.yaml");
     match storage::load_yaml_value(&path) {
-        Ok(val) => {
-            // Convert serde_yaml::Value to serde_json::Value for JSON response
-            match serde_json::to_value(&val) {
-                Ok(json_val) => Json(json_val).into_response(),
-                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
-            }
-        }
+        Ok(val) => match serde_json::to_value(&val) {
+            Ok(json_val) => Json(json_val).into_response(),
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        },
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
@@ -279,7 +297,15 @@ async fn get_run_metadata(
 ) -> impl IntoResponse {
     let dir = run_dir(&state.base_dir, &exp, &run);
     match storage::load_run_metadata(&dir) {
-        Ok(meta) => Json(meta).into_response(),
+        Ok(mut meta) => {
+            let metrics_path = dir.join("metrics.parquet");
+            if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
+                if !scalars.is_empty() {
+                    meta.metrics = Some(scalars);
+                }
+            }
+            Json(meta).into_response()
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
@@ -306,8 +332,7 @@ async fn get_artifact_content(
     Query(q): Query<ArtifactQuery>,
 ) -> impl IntoResponse {
     let dir = run_dir(&state.base_dir, &exp, &run);
-    
-    // Determine if the path is in the artifacts subdirectory or a root file
+
     let file_path = if dir.join("artifacts").join(&q.path).exists() {
         dir.join("artifacts").join(&q.path)
     } else {
@@ -326,12 +351,10 @@ async fn get_artifact_content(
     if !canonical_file.starts_with(&canonical_run_dir) {
         return (StatusCode::FORBIDDEN, "Access denied").into_response();
     }
-
     if !canonical_file.exists() {
         return (StatusCode::NOT_FOUND, "File not found").into_response();
     }
 
-    // Parquet: return JSON preview
     let ext = canonical_file
         .extension()
         .and_then(|e| e.to_str())
@@ -344,7 +367,6 @@ async fn get_artifact_content(
         return Json(serde_json::json!({"type": "parquet", "data": preview})).into_response();
     }
 
-    // Serve raw file with appropriate content type
     let content_type = match ext.as_str() {
         "png" | "jpg" | "jpeg" => "image/jpeg",
         "svg" => "image/svg+xml",
@@ -384,16 +406,11 @@ async fn get_experiment_stats(
                 experiment: exp.clone(),
                 status: expman_core::models::RunStatus::Crashed,
                 started_at: chrono::Utc::now(),
-                finished_at: None,
-                duration_secs: None,
-                description: None,
+                ..Default::default()
             }
         });
 
-        let metrics_path = dir.join("metrics.parquet");
-        let last_metrics = storage::read_metrics(&metrics_path)
-            .ok()
-            .and_then(|rows| rows.into_iter().last())
+        let last_metrics = storage::read_latest_scalar_metrics(&dir.join("metrics.parquet"))
             .unwrap_or_default();
 
         stats.push(serde_json::json!({
@@ -413,12 +430,12 @@ async fn get_global_stats(State(state): State<AppState>) -> impl IntoResponse {
     let experiments = storage::list_experiments(&state.base_dir).unwrap_or_default();
     let mut total_runs = 0;
     let mut active_runs = 0;
-    
+
     for exp in &experiments {
         let exp_dir = exp_dir(&state.base_dir, exp);
         let runs = storage::list_runs(&exp_dir).unwrap_or_default();
         total_runs += runs.len();
-        
+
         for run in runs {
             let dir = run_dir(&state.base_dir, exp, &run);
             if let Ok(meta) = storage::load_run_metadata(&dir) {
@@ -433,7 +450,7 @@ async fn get_global_stats(State(state): State<AppState>) -> impl IntoResponse {
         "total_experiments": experiments.len(),
         "total_runs": total_runs,
         "active_runs": active_runs,
-        "total_storage_bytes": 0, // Placeholder for now
+        "total_storage_bytes": 0,
     }))
 }
 
@@ -446,9 +463,7 @@ async fn get_server_config() -> impl IntoResponse {
 /// Serve the embedded frontend HTML/JS/CSS.
 pub async fn serve_frontend(uri: axum::http::Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
-    
-    // 1. Try exact match
-    // 2. Fallback to index.html (for SPA-like behavior)
+
     let (actual_path, content) = match Assets::get(path) {
         Some(content) => (path, content),
         None => match Assets::get("index.html") {
@@ -458,7 +473,7 @@ pub async fn serve_frontend(uri: axum::http::Uri) -> impl IntoResponse {
     };
 
     let mime = mime_guess::from_path(actual_path).first_or_octet_stream();
-    
+
     Response::builder()
         .header(header::CONTENT_TYPE, mime.as_ref())
         .body(Body::from(content.data.into_owned()))

@@ -132,6 +132,24 @@ pub struct RunMetadata {
     pub finished_at: Option<DateTime<Utc>>,
     pub duration_secs: Option<f64>,
     pub description: Option<String>,
+    /// Latest scalar metrics (numeric only) from the last logged row.
+    #[serde(default)]
+    pub metrics: Option<HashMap<String, f64>>,
+}
+
+impl Default for RunMetadata {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            experiment: String::new(),
+            status: RunStatus::Crashed,
+            started_at: Utc::now(),
+            finished_at: None,
+            duration_secs: None,
+            description: None,
+            metrics: None,
+        }
+    }
 }
 
 /// Metadata stored for an experiment.

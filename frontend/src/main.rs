@@ -8,6 +8,8 @@ use lucide_leptos::{
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsValue;
 use chrono::{DateTime, Local};
 
 use std::rc::Rc;
@@ -39,6 +41,7 @@ pub struct Run {
     pub finished_at: Option<String>,
     pub duration_secs: Option<f64>,
     pub description: Option<String>,
+    pub metrics: Option<std::collections::HashMap<String, f64>>,
 }
 
 async fn fetch_experiments() -> Result<Vec<Experiment>, String> {
@@ -55,20 +58,8 @@ async fn fetch_experiments() -> Result<Vec<Experiment>, String> {
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
-#[allow(dead_code)]
-async fn fetch_run_metadata(exp_id: String, run_id: String) -> Result<Run, String> {
-    let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/runs/{}/metadata", exp_id, run_id))
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    
-    if !resp.ok() {
-        return Err(format!("Error fetching run metadata: {}", resp.status()));
-    }
-    
-    let text = resp.text().await.map_err(|e| e.to_string())?;
-    serde_json::from_str(&text).map_err(|e| e.to_string())
-}
+
+
 
 async fn fetch_runs(exp_id: String) -> Result<Vec<Run>, String> {
     let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/runs", exp_id))
@@ -279,30 +270,6 @@ fn StatCard(label: &'static str, value: String, children: Children) -> impl Into
     }
 }
 
-#[component]
-#[allow(dead_code)]
-fn RunSummary(run: Run) -> impl IntoView {
-    view! {
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                <p class="text-[10px] text-slate-500 uppercase tracking-wider">"Started At"</p>
-                <p class="text-sm font-mono text-slate-200">{run.started_at}</p>
-            </div>
-            {run.finished_at.map(|end| view! {
-                <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                    <p class="text-[10px] text-slate-500 uppercase tracking-wider">"Finished At"</p>
-                    <p class="text-sm font-mono text-slate-200">{end}</p>
-                </div>
-            })}
-            {run.duration_secs.map(|dur| view! {
-                <div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                    <p class="text-[10px] text-slate-500 uppercase tracking-wider">"Duration"</p>
-                    <p class="text-sm font-mono text-slate-200">{format!("{:.2}s", dur)}</p>
-                </div>
-            })}
-        </div>
-    }
-}
 
 #[component]
 fn Experiments() -> impl IntoView {
@@ -637,7 +604,7 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
             <div class="flex-grow flex flex-col space-y-4 min-h-0">
                 // Tabs
                 <div class="flex space-x-1 bg-slate-900 border border-slate-800 p-1 rounded-xl w-fit flex-shrink-0">
-                    {["metrics", "artifacts", "console"].into_iter().map(|t| {
+                    {["runs", "metrics", "artifacts", "console"].into_iter().map(|t| {
                         let tab = t.to_string();
                         let tab_click = tab.clone();
                         let is_active = move || active_tab.get() == tab;
@@ -658,6 +625,7 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                 // Content Area (Full Width)
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl flex-grow flex flex-col overflow-hidden min-h-0">
                     {move || match active_tab.get().as_str() {
+                        "runs" => view! { <RunsTableView exp_id=id() /> }.into_any(),
                         "metrics" => view! { <MetricsView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "artifacts" => view! { <ArtifactView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "console" => view! { <ConsoleView exp_id=id() selected=selected_runs.get() /> }.into_any(),
@@ -735,56 +703,67 @@ fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> i
     }.into_any()
 }
 
+use plotly::{Plot, Scatter, Layout, layout::{Axis, Margin}, common::Title};
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = Plotly, js_name = newPlot)]
+    fn new_plot(root: &JsValue, data: &JsValue, layout: &JsValue, config: &JsValue);
+}
+
 #[component]
 fn LineChart(#[allow(unused_variables)] exp_id: String, selected_runs: std::collections::HashSet<String>) -> impl IntoView {
-    // This component will eventually use SSE to stream metrics for all selected runs
-    // and render them in a single SVG.
+    let div_ref = NodeRef::<leptos::html::Div>::new();
+    
+    Effect::new(move |_| {
+        if let Some(div) = div_ref.get() {
+            let mut p = Plot::new();
+            let layout = Layout::new()
+                .margin(Margin::new().left(50).right(50).top(30).bottom(50))
+                .show_legend(true)
+                .paper_background_color("rgba(0,0,0,0)")
+                .plot_background_color("rgba(0,0,0,0)")
+                .font(plotly::common::Font::new().color("#94a3b8"))
+                .x_axis(Axis::new().title(Title::from("Step")).show_grid(true).grid_color("#1e293b"))
+                .y_axis(Axis::new().title(Title::from("Value")).show_grid(true).grid_color("#1e293b"));
+                
+            p.set_layout(layout);
+    
+            // Mock data for now - in real app this would fetch from backend/SSE
+            for (_i, run_id) in selected_runs.iter().enumerate() {
+                let x: Vec<f64> = (0..20).map(|i| i as f64).collect();
+                let y: Vec<f64> = (0..20).map(|i| {
+                    let base = (i as f64).sin();
+                    base + (run_id.len() as f64 % 10.0) / 10.0
+                }).collect();
+                
+                let trace = Scatter::new(x, y)
+                    .name(run_id.as_str())
+                    .mode(plotly::common::Mode::LinesMarkers);
+                p.add_trace(trace);
+            }
+            
+            // Serialize to JSON string using plotly's to_json
+            let json_str = p.to_json();
+            
+            // Parse JSON string to JS object
+            if let Ok(js_value) = js_sys::JSON::parse(&json_str) {
+                let data = js_sys::Reflect::get(&js_value, &"data".into()).unwrap_or(JsValue::UNDEFINED);
+                let layout = js_sys::Reflect::get(&js_value, &"layout".into()).unwrap_or(JsValue::UNDEFINED);
+                let config = js_sys::Reflect::get(&js_value, &"config".into()).unwrap_or(JsValue::UNDEFINED);
+                
+                let div_element: &web_sys::HtmlElement = &div;
+                new_plot(&div_element.into(), &data, &layout, &config);
+            } else {
+                leptos::logging::error!("Failed to parse Plotly JSON");
+            }
+        }
+    });
+
     view! {
-        <svg class="w-full h-full p-4" viewBox="0 0 1000 400" preserveAspectRatio="none">
-            <defs>
-                <linearGradient id="chart-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:rgb(59,130,246);stop-opacity:0.1" />
-                    <stop offset="100%" style="stop-color:rgb(59,130,246);stop-opacity:0" />
-                </linearGradient>
-            </defs>
-            
-            // Grid lines
-            <g stroke="#1e293b" stroke-width="1" stroke-dasharray="4">
-                <line x1="40" y1="100" x2="980" y2="100" />
-                <line x1="40" y1="200" x2="980" y2="200" />
-                <line x1="40" y1="300" x2="980" y2="300" />
-            </g>
-            
-            // Axis Labels
-            <text x="500" y="390" font-size="20" fill="#64748b" text-anchor="middle" font-weight="600">"Step"</text>
-            <text x="15" y="200" font-size="20" fill="#64748b" text-anchor="middle" font-weight="600" transform="rotate(-90, 15, 200)">"Value"</text>
-
-            // Y-axis ticks
-            <text x="35" y="105" font-size="16" fill="#475569" text-anchor="end">"0.75"</text>
-            <text x="35" y="205" font-size="16" fill="#475569" text-anchor="end">"0.50"</text>
-            <text x="35" y="305" font-size="16" fill="#475569" text-anchor="end">"0.25"</text>
-
-            // Multi-line paths (mock data for now, will connect to SSE)
-            {selected_runs.iter().enumerate().map(|(i, _)| {
-                let colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
-                let color = colors[i % colors.len()];
-                let path = match i % 3 {
-                    0 => "M 40 350 Q 250 100 500 200 T 980 150",
-                    1 => "M 40 380 Q 300 300 600 320 T 980 280",
-                    _ => "M 40 300 L 200 250 L 400 280 L 600 150 L 800 180 L 980 50",
-                };
-                view! {
-                    <path 
-                        d=path 
-                        fill="none" 
-                        stroke=color 
-                        stroke_width="3" 
-                        stroke_linecap="round" 
-                        class="drop-shadow-[0_0_8px_rgba(0,0,0,0.5)]"
-                    />
-                }
-            }).collect_view()}
-        </svg>
+        <div class="w-full h-full p-2">
+            <div node_ref=div_ref class="w-full h-full"></div>
+        </div>
     }
 }
 
@@ -1100,4 +1079,146 @@ fn main() {
     _ = console_log::init_with_level(level);
     console_error_panic_hook::set_once();
     mount_to_body(App);
+}
+#[component]
+fn RunsTableView(exp_id: String) -> impl IntoView {
+    let runs = LocalResource::new(move || {
+        let id = exp_id.clone();
+        async move { fetch_runs(id).await }
+    });
+
+    // Which metric columns are currently visible (None = all visible)
+    let (selected_metrics, set_selected_metrics) = signal(std::collections::HashSet::<String>::new());
+    let (metrics_initialized, set_metrics_initialized) = signal(false);
+
+    view! {
+        <div class="flex-grow p-6 overflow-auto space-y-4">
+             <Suspense fallback=|| view! { <div class="p-4 text-center text-slate-500">"Loading runs..."</div> }>
+                {move || Suspend::new(async move {
+                    let run_list = runs.await.unwrap_or_default();
+                    if run_list.is_empty() {
+                        return view! { <div class="p-12 text-center text-slate-500">"No runs found for this experiment."</div> }.into_any();
+                    }
+
+                    // Collect all unique metric keys (sorted)
+                    let all_metric_keys: Vec<String> = {
+                        let mut keys = std::collections::BTreeSet::new();
+                        for run in &run_list {
+                            if let Some(metrics) = &run.metrics {
+                                for key in metrics.keys() {
+                                    keys.insert(key.clone());
+                                }
+                            }
+                        }
+                        keys.into_iter().collect()
+                    };
+
+                    // Initialize selected_metrics to all keys on first load
+                    if !metrics_initialized.get() && !all_metric_keys.is_empty() {
+                        set_selected_metrics.set(all_metric_keys.iter().cloned().collect());
+                        set_metrics_initialized.set(true);
+                    }
+
+                    let keys_for_filter = all_metric_keys.clone();
+                    let keys_for_table = all_metric_keys.clone();
+
+                    view! {
+                        // ── Metric filter chips ──────────────────────────────────
+                        {if !keys_for_filter.is_empty() {
+                            view! {
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Metrics:"</span>
+                                    {keys_for_filter.into_iter().map(|key| {
+                                        let k1 = key.clone();
+                                        let k2 = key.clone();
+                                        let is_on = Signal::derive(move || selected_metrics.with(|s| s.contains(&k1)));
+                                        view! {
+                                            <button
+                                                on:click=move |_| {
+                                                    let k = k2.clone();
+                                                    set_selected_metrics.update(|s| {
+                                                        if s.contains(&k) { s.remove(&k); } else { s.insert(k); }
+                                                    });
+                                                }
+                                                class=move || format!(
+                                                    "px-3 py-1 rounded-full text-xs font-medium border transition-all duration-150 {}",
+                                                    if is_on.get() {
+                                                        "bg-blue-600/20 border-blue-500/50 text-blue-300 hover:bg-blue-600/30"
+                                                    } else {
+                                                        "bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-400"
+                                                    }
+                                                )
+                                            >
+                                                {key}
+                                            </button>
+                                        }
+                                    }).collect_view()}
+                                </div>
+                            }.into_any()
+                        } else {
+                            view! { <div></div> }.into_any()
+                        }}
+
+                        // ── Runs table ───────────────────────────────────────────
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-950 text-xs uppercase text-slate-500 font-semibold sticky top-0">
+                                    <tr>
+                                        <th class="p-4 border-b border-slate-800">"Run ID"</th>
+                                        <th class="p-4 border-b border-slate-800">"Status"</th>
+                                        {keys_for_table.iter().filter(|k| selected_metrics.with(|s| s.contains(*k))).map(|k| view! {
+                                            <th class="p-4 border-b border-slate-800 text-blue-400">{k.clone()}</th>
+                                        }).collect_view()}
+                                        <th class="p-4 border-b border-slate-800">"Duration"</th>
+                                        <th class="p-4 border-b border-slate-800">"Started"</th>
+                                        <th class="p-4 border-b border-slate-800">"Description"</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800/50 text-sm text-slate-300">
+                                    {run_list.into_iter().map(|run| {
+                                        let duration = run.duration_secs.map(|d| format!("{:.1}s", d)).unwrap_or("-".to_string());
+                                        let (status_color, status_bg, status_border) = match run.status.as_str() {
+                                            "RUNNING"   => ("text-blue-400",   "bg-blue-500",   "border-blue-500"),
+                                            "COMPLETED" => ("text-emerald-400", "bg-emerald-500", "border-emerald-500"),
+                                            "FAILED"    => ("text-red-400",     "bg-red-500",     "border-red-500"),
+                                            _           => ("text-slate-400",   "bg-slate-600",   "border-slate-500"),
+                                        };
+                                        let dot_class = if run.status == "RUNNING" { "animate-pulse" } else { "" };
+                                        let run_metrics = run.metrics.clone().unwrap_or_default();
+                                        let metric_cols: Vec<String> = keys_for_table.iter()
+                                            .filter(|k| selected_metrics.with(|s| s.contains(*k)))
+                                            .cloned()
+                                            .collect();
+
+                                        view! {
+                                            <tr class="hover:bg-slate-800/30 transition-colors group">
+                                                <td class="p-4 font-mono text-white flex items-center space-x-2">
+                                                    <div class=format!("w-2 h-2 rounded-full {} {}", status_bg, dot_class)></div>
+                                                    <span>{run.name}</span>
+                                                </td>
+                                                <td class="p-4">
+                                                    <span class=format!("px-2 py-1 rounded text-xs font-medium bg-opacity-10 border border-opacity-20 {} {} {}", status_bg, status_color, status_border)>
+                                                        {run.status}
+                                                    </span>
+                                                </td>
+                                                {metric_cols.into_iter().map(|k| {
+                                                    let val = run_metrics.get(&k)
+                                                        .map(|f| format!("{:.4}", f))
+                                                        .unwrap_or_else(|| "-".to_string());
+                                                    view! { <td class="p-4 font-mono text-slate-400">{val}</td> }
+                                                }).collect_view()}
+                                                <td class="p-4 font-mono text-slate-400">{duration}</td>
+                                                <td class="p-4 text-slate-400 whitespace-nowrap">{format_date(&run.started_at)}</td>
+                                                <td class="p-4 text-slate-500 truncate max-w-xs group-hover:text-slate-300 transition-colors">{run.description.unwrap_or_default()}</td>
+                                            </tr>
+                                        }
+                                    }).collect_view()}
+                                </tbody>
+                            </table>
+                        </div>
+                    }.into_any()
+                })}
+             </Suspense>
+        </div>
+    }
 }

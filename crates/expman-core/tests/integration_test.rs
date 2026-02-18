@@ -147,3 +147,29 @@ fn test_parquet_schema_merge() {
     // Row 1 should have acc = 0.8
     assert_eq!(rows[1].get("acc").and_then(|v| v.as_f64()), Some(0.8));
 }
+
+#[test]
+fn test_read_latest_scalar_metrics() {
+    let tmp = TempDir::new().unwrap();
+    let engine = make_engine(&tmp, "scalar_test");
+
+    for i in 0..5u64 {
+        let mut m = HashMap::new();
+        m.insert("loss".to_string(), MetricValue::Float(1.0 - i as f64 * 0.1));
+        m.insert("acc".to_string(), MetricValue::Float(i as f64 * 0.1));
+        engine.log_metrics(m, Some(i));
+    }
+    engine.close(RunStatus::Finished);
+
+    let metrics_path = engine.config().run_dir().join("metrics.parquet");
+    let scalars = expman_core::storage::read_latest_scalar_metrics(&metrics_path).unwrap();
+
+    // Last row (step=4): loss = 0.6, acc = 0.4
+    let loss = scalars.get("loss").copied().unwrap();
+    let acc = scalars.get("acc").copied().unwrap();
+    assert!((loss - 0.6).abs() < 1e-9, "expected loss≈0.6, got {}", loss);
+    assert!((acc - 0.4).abs() < 1e-9, "expected acc≈0.4, got {}", acc);
+    // "step" and "timestamp" should not appear
+    assert!(!scalars.contains_key("step"));
+    assert!(!scalars.contains_key("timestamp"));
+}

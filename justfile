@@ -30,8 +30,7 @@ watch:
 # Build the frontend dashboard
 build-frontend:
     @echo "Building frontend with trunk..."
-    @# Use nix develop to ensure trunk and wasm target are available
-    cd frontend && nix develop ..#default --command trunk build --release
+    cd frontend && trunk build --release
 
 # Build documentation
 build-docs:

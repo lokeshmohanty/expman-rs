@@ -190,9 +190,7 @@ pub fn load_run_metadata(run_dir: &Path) -> Result<RunMetadata> {
             experiment: exp,
             status: RunStatus::Crashed,
             started_at: Utc::now(),
-            finished_at: None,
-            duration_secs: None,
-            description: None,
+            ..Default::default()
         });
     }
     let content = std::fs::read_to_string(&path)?;
@@ -261,6 +259,24 @@ pub fn read_metrics_since(
     } else {
         Ok(all)
     }
+}
+
+/// Read the latest row of a parquet file and return only numeric (scalar) columns as f64.
+/// Non-numeric columns (step, timestamp, strings) are silently skipped.
+pub fn read_latest_scalar_metrics(path: &Path) -> Result<HashMap<String, f64>> {
+    if !path.exists() {
+        return Ok(HashMap::new());
+    }
+    let rows = read_metrics(path)?;
+    let Some(last) = rows.into_iter().last() else {
+        return Ok(HashMap::new());
+    };
+    let scalars = last
+        .into_iter()
+        .filter(|(k, _)| k != "step" && k != "timestamp")
+        .filter_map(|(k, v)| v.as_f64().map(|f| (k, f)))
+        .collect();
+    Ok(scalars)
 }
 
 fn read_parquet(path: &Path) -> Result<RecordBatch> {

@@ -74,9 +74,7 @@ impl LoggingEngine {
             experiment: config.name.clone(),
             status: RunStatus::Running,
             started_at: Utc::now(),
-            finished_at: None,
-            duration_secs: None,
-            description: None,
+            ..Default::default()
         };
         storage::save_run_metadata(&run_dir, &meta)?;
 
