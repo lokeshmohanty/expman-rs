@@ -1,0 +1,51 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/expman-core",
+    "crates/expman-server",
+    "crates/expman-cli",
+    "crates/expman-py",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Lokesh Mohanty <lokesh1197@gmail.com>"]
+license = "MIT"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+
+# Web
+axum = { version = "0.7", features = ["ws"] }
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+rust-embed = { version = "8", features = ["include-exclude"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# Arrow / Parquet
+arrow = { version = "53", features = ["ipc"] }
+parquet = { version = "53", features = ["arrow"] }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+thiserror = "1"
+anyhow = "1"
+
+# CLI
+clap = { version = "4", features = ["derive", "color"] }
+mime_guess = "2"
+comfy-table = "7"
+indicatif = "0.17"
+
+# Python bindings
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }

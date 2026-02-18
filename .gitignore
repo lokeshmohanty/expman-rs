@@ -1,0 +1,30 @@
+# Rust
+/target/
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+dist/
+*.egg-info/
+.venv/
+
+# Nix
+.direnv/
+result
+
+# Experiments & Data
+/experiments/
+*.parquet
+*.pt
+model.pt
+notes.txt
+
+# Editor
+.idea/
+.vscode/
+*.swp
+.next/
+.env

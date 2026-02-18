@@ -1,0 +1,31 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "expman"
+version = "0.1.0"
+description = "High-performance experiment manager with Rust backend"
+authors = [{ name = "Lokesh Mohanty", email = "lokesh1197@gmail.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "numpy"]
+
+[tool.maturin]
+# The Rust crate that contains the PyO3 extension
+manifest-path = "crates/expman-py/Cargo.toml"
+# Python package source
+python-source = "python"
+# Module name (must match #[pymodule] fn name in Rust)
+module-name = "expman.expman"
+features = ["pyo3/extension-module"]

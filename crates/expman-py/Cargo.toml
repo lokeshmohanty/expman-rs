@@ -1,0 +1,21 @@
+[package]
+name = "expman-py"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "expman"
+crate-type = ["cdylib"]
+
+[dependencies]
+expman-core = { path = "../expman-core" }
+pyo3 = { workspace = true, features = ["extension-module"] }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+serde_yaml = { workspace = true }
+
+[features]
+default = ["pyo3/extension-module"]
