@@ -1,20 +1,20 @@
+use chrono::{DateTime, Local};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use leptos_router::components::{Router, Routes, Route, A};
+use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    LayoutDashboard, FlaskConical, Settings as SettingsIcon, Package, ChevronRight, 
+    ChevronRight, FlaskConical, LayoutDashboard, Package, Settings as SettingsIcon,
 };
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
-use chrono::{DateTime, Local};
 
 use std::rc::Rc;
 #[derive(Clone, Copy)]
-struct SidebarContext(RwSignal<Option<Rc<dyn Fn() -> AnyView>>, LocalStorage>); 
+struct SidebarContext(RwSignal<Option<Rc<dyn Fn() -> AnyView>>, LocalStorage>);
 
 fn format_date(iso: &str) -> String {
     if let Ok(dt) = DateTime::parse_from_rfc3339(iso) {
@@ -49,33 +49,35 @@ async fn fetch_experiments() -> Result<Vec<Experiment>, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     if !resp.ok() {
         return Err(format!("Error fetching experiments: {}", resp.status()));
     }
-    
+
     let text = resp.text().await.map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
-
-
-
 
 async fn fetch_runs(exp_id: String) -> Result<Vec<Run>, String> {
     let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/runs", exp_id))
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     if !resp.ok() {
         return Err(format!("Error fetching runs: {}", resp.status()));
     }
-    
+
     let text = resp.text().await.map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
-async fn update_experiment_metadata(exp_id: String, display_name: Option<String>, description: Option<String>, tags: Option<Vec<String>>) -> Result<(), String> {
+async fn update_experiment_metadata(
+    exp_id: String,
+    display_name: Option<String>,
+    description: Option<String>,
+    tags: Option<Vec<String>>,
+) -> Result<(), String> {
     let payload = serde_json::json!({
         "display_name": display_name,
         "description": description,
@@ -87,7 +89,7 @@ async fn update_experiment_metadata(exp_id: String, display_name: Option<String>
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     if !resp.ok() {
         return Err(format!("Error updating metadata: {}", resp.status()));
     }
@@ -95,18 +97,26 @@ async fn update_experiment_metadata(exp_id: String, display_name: Option<String>
 }
 
 #[allow(dead_code)]
-async fn update_run_metadata(exp_id: String, run_id: String, name: Option<String>, description: Option<String>) -> Result<(), String> {
+async fn update_run_metadata(
+    exp_id: String,
+    run_id: String,
+    name: Option<String>,
+    description: Option<String>,
+) -> Result<(), String> {
     let payload = serde_json::json!({
         "name": name,
         "description": description,
     });
-    let resp = gloo_net::http::Request::patch(&format!("/api/experiments/{}/runs/{}/metadata", exp_id, run_id))
-        .json(&payload)
-        .map_err(|e| e.to_string())?
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    
+    let resp = gloo_net::http::Request::patch(&format!(
+        "/api/experiments/{}/runs/{}/metadata",
+        exp_id, run_id
+    ))
+    .json(&payload)
+    .map_err(|e| e.to_string())?
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
     if !resp.ok() {
         return Err(format!("Error updating run metadata: {}", resp.status()));
     }
@@ -129,7 +139,7 @@ fn App() -> impl IntoView {
                         </div>
                         <span class="text-2xl font-bold tracking-tight text-white">"ExpMan"</span>
                     </div>
-                    
+
                     <div class="space-y-1">
                         <A href="/" attr:class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all duration-200 text-slate-400 hover:text-white group">
                             <div class="group-hover:text-blue-400 transition-colors">
@@ -137,7 +147,7 @@ fn App() -> impl IntoView {
                             </div>
                             <span class="font-medium">"Dashboard"</span>
                         </A>
-                        
+
                         <A href="/experiments" attr:class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all duration-200 text-slate-400 hover:text-white group">
                             <div class="group-hover:text-blue-400 transition-colors">
                                 <FlaskConical size=20 />
@@ -149,7 +159,7 @@ fn App() -> impl IntoView {
                              {move || sidebar_content.get().map(|f| f())}
                         </div>
                     </div>
-                    
+
                     <div class="mt-auto">
                         <A href="/settings" attr:class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all duration-200 text-slate-400 hover:text-white group">
                             <div class="group-hover:text-blue-400 transition-colors">
@@ -187,11 +197,11 @@ async fn fetch_global_stats() -> Result<GlobalStats, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     if !resp.ok() {
         return Err(format!("Error fetching stats: {}", resp.status()));
     }
-    
+
     let text = resp.text().await.map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
@@ -204,12 +214,12 @@ fn Dashboard() -> impl IntoView {
     view! {
         <div class="space-y-6">
             <h1 class="text-3xl font-bold text-white">"Dashboard Overview"</h1>
-            
+
             <Suspense fallback=|| view! { <div class="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-6"><div class="bg-slate-900 h-32 rounded-xl"></div><div class="bg-slate-900 h-32 rounded-xl"></div><div class="bg-slate-900 h-32 rounded-xl"></div></div> }>
                 {move || Suspend::new(async move {
                     let s = stats.get().as_deref().cloned().unwrap_or(Ok(GlobalStats::default())).unwrap_or_default();
                     let exps = experiments.get().as_deref().cloned().unwrap_or(Ok(vec![])).unwrap_or_default();
-                    
+
                     view! {
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <StatCard label="Total Experiments" value=s.total_experiments.to_string()>
@@ -225,7 +235,7 @@ fn Dashboard() -> impl IntoView {
                                 <Package size=24 />
                             </StatCard>
                         </div>
-                        
+
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
                             <h2 class="text-xl font-semibold mb-4 text-white">"Recent Experiments"</h2>
                             <div class="divide-y divide-slate-800">
@@ -269,7 +279,6 @@ fn StatCard(label: &'static str, value: String, children: Children) -> impl Into
         </div>
     }
 }
-
 
 #[component]
 fn Experiments() -> impl IntoView {
@@ -329,7 +338,7 @@ fn ExperimentDetail() -> impl IntoView {
     let params = use_params_map();
     let id = move || params.read().get("id").unwrap_or_default();
     let sidebar_ctx = use_context::<SidebarContext>().expect("SidebarContext not found");
-    
+
     let runs = LocalResource::new(move || {
         let exp_id = id();
         async move { fetch_runs(exp_id).await }
@@ -337,7 +346,7 @@ fn ExperimentDetail() -> impl IntoView {
 
     let (selected_runs, set_selected_runs) = signal(std::collections::HashSet::<String>::new());
     let (active_tab, set_active_tab) = signal("metrics".to_string());
-    
+
     // Experiment Edit
     let (show_edit, set_show_edit) = signal(false);
     let (edit_name, set_edit_name) = signal("".to_string());
@@ -364,8 +373,13 @@ fn ExperimentDetail() -> impl IntoView {
         let eid = id();
         let name = edit_name.get();
         let desc = edit_desc.get();
-        let tags: Vec<String> = edit_tags.get().split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-        
+        let tags: Vec<String> = edit_tags
+            .get()
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
         spawn_local(async move {
             let _ = update_experiment_metadata(eid, Some(name), Some(desc), Some(tags)).await;
             set_show_edit.set(false);
@@ -377,11 +391,11 @@ fn ExperimentDetail() -> impl IntoView {
         let rid = edit_run_id.get();
         let name = edit_run_name.get();
         let desc = edit_run_desc.get();
-        
+
         spawn_local(async move {
             let _ = update_run_metadata(eid, rid, Some(name), Some(desc)).await;
             set_show_run_edit.set(false);
-            runs.refetch(); 
+            runs.refetch();
         });
     };
 
@@ -392,18 +406,20 @@ fn ExperimentDetail() -> impl IntoView {
         set_show_run_edit.set(true);
     };
 
-async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
-    let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/metadata", eid)).send().await;
-    if let Ok(r) = resp {
-        if let Ok(text) = r.text().await {
-             serde_json::from_str(&text).ok()
+    async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
+        let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/metadata", eid))
+            .send()
+            .await;
+        if let Ok(r) = resp {
+            if let Ok(text) = r.text().await {
+                serde_json::from_str(&text).ok()
+            } else {
+                None
+            }
         } else {
-             None
+            Option::<Experiment>::None
         }
-    } else {
-        Option::<Experiment>::None
     }
-}
 
     let exp_metadata = LocalResource::new(move || {
         let eid = id();
@@ -432,9 +448,9 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                                     let rid_click = run.name.clone();
 
                                     let duration = run.duration_secs.map(|d| format!("{:.0}s", d));
-                                    
+
                                     view! {
-                                        <div 
+                                        <div
                                             class=move || format!(
                                                 "p-2 rounded-lg transition-all duration-200 border group/item relative pr-8 {} {}",
                                                 if is_selected.get() { "bg-blue-600/10 border-blue-500/50" } else { "hover:bg-slate-800/50 border-transparent text-slate-400" },
@@ -453,9 +469,9 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                                                     {duration.map(|d| view! { <p class="text-[9px] text-slate-600 font-mono">"Dur: " {d}</p> })}
                                                 </div>
                                             </div>
-                                            
+
                                             // Edit Button (visible on hover)
-                                            <button 
+                                            <button
                                                 on:click=move |e| {
                                                     e.stop_propagation();
                                                     open_run_edit(run_clone.clone());
@@ -491,19 +507,19 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">"Run Name"</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         on:input=move |ev| set_edit_run_name.set(event_target_value(&ev))
                                         prop:value=edit_run_name
-                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none" 
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none"
                                     />
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">"Description"</label>
-                                    <textarea 
+                                    <textarea
                                         on:input=move |ev| set_edit_run_desc.set(event_target_value(&ev))
                                         prop:value=edit_run_desc
-                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white h-32 focus:border-blue-500 outline-none" 
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white h-32 focus:border-blue-500 outline-none"
                                         placeholder="Run description..."
                                     ></textarea>
                                 </div>
@@ -526,31 +542,31 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                             <div class="space-y-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">"Display Name"</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         on:input=move |ev| set_edit_name.set(event_target_value(&ev))
                                         prop:value=edit_name
-                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none" 
-                                        placeholder="Experiment Name" 
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none"
+                                        placeholder="Experiment Name"
                                     />
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">"Description"</label>
-                                    <textarea 
+                                    <textarea
                                         on:input=move |ev| set_edit_desc.set(event_target_value(&ev))
                                         prop:value=edit_desc
-                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white h-32 focus:border-blue-500 outline-none" 
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white h-32 focus:border-blue-500 outline-none"
                                         placeholder="Provide a detailed description..."
                                     ></textarea>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">"Tags (comma separated)"</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         on:input=move |ev| set_edit_tags.set(event_target_value(&ev))
                                         prop:value=edit_tags
-                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none" 
-                                        placeholder="research, mnist, baseline" 
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none"
+                                        placeholder="research, mnist, baseline"
                                     />
                                 </div>
                             </div>
@@ -573,7 +589,7 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                         {move || Suspend::new(async move {
                             let meta: Experiment = exp_metadata.get().as_deref().cloned().flatten().unwrap_or_default();
                             let count = runs.get().as_deref().cloned().unwrap_or(Ok(vec![])).map(|r| r.len()).unwrap_or(0);
-                            
+
                             view! {
                                 <div class="space-y-2">
                                     <p class="text-slate-400 text-sm leading-relaxed">{meta.description.unwrap_or_else(|| "No description provided.".to_string())}</p>
@@ -600,7 +616,7 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                     // New Run button removed
                 </div>
             </div>
-            
+
             <div class="flex-grow flex flex-col space-y-4 min-h-0">
                 // Tabs
                 <div class="flex space-x-1 bg-slate-900 border border-slate-800 p-1 rounded-xl w-fit flex-shrink-0">
@@ -609,7 +625,7 @@ async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
                         let tab_click = tab.clone();
                         let is_active = move || active_tab.get() == tab;
                         view! {
-                            <button 
+                            <button
                                 on:click=move |_| set_active_tab.set(tab_click.clone())
                                 class=move || format!(
                                     "px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 {}",
@@ -675,7 +691,7 @@ fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> i
                     </div>
                 </div>
             </div>
-            
+
             <div class="bg-slate-950 border border-slate-800 rounded-xl p-6">
                  <h4 class="text-sm font-semibold text-slate-300 mb-4">"Selected Runs Summary"</h4>
                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -703,7 +719,11 @@ fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> i
     }.into_any()
 }
 
-use plotly::{Plot, Scatter, Layout, layout::{Axis, Margin}, common::Title};
+use plotly::{
+    common::Title,
+    layout::{Axis, Margin},
+    Layout, Plot, Scatter,
+};
 
 #[wasm_bindgen]
 extern "C" {
@@ -712,9 +732,12 @@ extern "C" {
 }
 
 #[component]
-fn LineChart(#[allow(unused_variables)] exp_id: String, selected_runs: std::collections::HashSet<String>) -> impl IntoView {
+fn LineChart(
+    #[allow(unused_variables)] exp_id: String,
+    selected_runs: std::collections::HashSet<String>,
+) -> impl IntoView {
     let div_ref = NodeRef::<leptos::html::Div>::new();
-    
+
     Effect::new(move |_| {
         if let Some(div) = div_ref.get() {
             let mut p = Plot::new();
@@ -724,34 +747,49 @@ fn LineChart(#[allow(unused_variables)] exp_id: String, selected_runs: std::coll
                 .paper_background_color("rgba(0,0,0,0)")
                 .plot_background_color("rgba(0,0,0,0)")
                 .font(plotly::common::Font::new().color("#94a3b8"))
-                .x_axis(Axis::new().title(Title::from("Step")).show_grid(true).grid_color("#1e293b"))
-                .y_axis(Axis::new().title(Title::from("Value")).show_grid(true).grid_color("#1e293b"));
-                
+                .x_axis(
+                    Axis::new()
+                        .title(Title::from("Step"))
+                        .show_grid(true)
+                        .grid_color("#1e293b"),
+                )
+                .y_axis(
+                    Axis::new()
+                        .title(Title::from("Value"))
+                        .show_grid(true)
+                        .grid_color("#1e293b"),
+                );
+
             p.set_layout(layout);
-    
+
             // Mock data for now - in real app this would fetch from backend/SSE
-            for (_i, run_id) in selected_runs.iter().enumerate() {
+            for run_id in selected_runs.iter() {
                 let x: Vec<f64> = (0..20).map(|i| i as f64).collect();
-                let y: Vec<f64> = (0..20).map(|i| {
-                    let base = (i as f64).sin();
-                    base + (run_id.len() as f64 % 10.0) / 10.0
-                }).collect();
-                
+                let y: Vec<f64> = (0..20)
+                    .map(|i| {
+                        let base = (i as f64).sin();
+                        base + (run_id.len() as f64 % 10.0) / 10.0
+                    })
+                    .collect();
+
                 let trace = Scatter::new(x, y)
                     .name(run_id.as_str())
                     .mode(plotly::common::Mode::LinesMarkers);
                 p.add_trace(trace);
             }
-            
+
             // Serialize to JSON string using plotly's to_json
             let json_str = p.to_json();
-            
+
             // Parse JSON string to JS object
             if let Ok(js_value) = js_sys::JSON::parse(&json_str) {
-                let data = js_sys::Reflect::get(&js_value, &"data".into()).unwrap_or(JsValue::UNDEFINED);
-                let layout = js_sys::Reflect::get(&js_value, &"layout".into()).unwrap_or(JsValue::UNDEFINED);
-                let config = js_sys::Reflect::get(&js_value, &"config".into()).unwrap_or(JsValue::UNDEFINED);
-                
+                let data =
+                    js_sys::Reflect::get(&js_value, &"data".into()).unwrap_or(JsValue::UNDEFINED);
+                let layout =
+                    js_sys::Reflect::get(&js_value, &"layout".into()).unwrap_or(JsValue::UNDEFINED);
+                let config =
+                    js_sys::Reflect::get(&js_value, &"config".into()).unwrap_or(JsValue::UNDEFINED);
+
                 let div_element: &web_sys::HtmlElement = &div;
                 new_plot(&div_element.into(), &data, &layout, &config);
             } else {
@@ -776,9 +814,12 @@ fn TabularPreview(content: String) -> impl IntoView {
                 if data.is_empty() {
                     return view! { <div class="p-8 text-slate-500 italic">"No data available in this parquet file."</div> }.into_any();
                 }
-                
-                let headers: Vec<_> = data[0].as_object().map(|obj| obj.keys().cloned().collect()).unwrap_or_default();
-                
+
+                let headers: Vec<_> = data[0]
+                    .as_object()
+                    .map(|obj| obj.keys().cloned().collect())
+                    .unwrap_or_default();
+
                 return view! {
                     <div class="overflow-auto max-h-full">
                         <table class="w-full text-left border-collapse min-w-max">
@@ -812,10 +853,11 @@ fn TabularPreview(content: String) -> impl IntoView {
     if content.contains(',') && content.lines().count() > 1 {
         let lines: Vec<&str> = content.lines().collect();
         let headers: Vec<String> = lines[0].split(',').map(|s| s.trim().to_string()).collect();
-        let rows: Vec<Vec<String>> = lines[1..].iter()
+        let rows: Vec<Vec<String>> = lines[1..]
+            .iter()
             .map(|line| line.split(',').map(|s| s.trim().to_string()).collect())
             .collect();
-        
+
         return view! {
             <div class="overflow-auto max-h-full">
                 <table class="w-full text-left border-collapse min-w-max">
@@ -855,47 +897,60 @@ pub struct Artifact {
 }
 
 async fn fetch_artifacts(exp_id: String, run_id: String) -> Result<Vec<Artifact>, String> {
-    let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/runs/{}/artifacts", exp_id, run_id))
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/artifacts",
+        exp_id, run_id
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
     if !resp.ok() {
         return Err(format!("Error fetching artifacts: {}", resp.status()));
     }
-    
+
     let text = resp.text().await.map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
-async fn fetch_artifact_content(exp_id: String, run_id: String, path: String) -> Result<String, String> {
-    let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", exp_id, run_id, path))
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    
+async fn fetch_artifact_content(
+    exp_id: String,
+    run_id: String,
+    path: String,
+) -> Result<String, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/artifacts/content?path={}",
+        exp_id, run_id, path
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
     if !resp.ok() {
-        return Err(format!("Error fetching artifact content: {}", resp.status()));
+        return Err(format!(
+            "Error fetching artifact content: {}",
+            resp.status()
+        ));
     }
-    
-    resp.text()
-        .await
-        .map_err(|e| e.to_string())
+
+    resp.text().await.map_err(|e| e.to_string())
 }
 
 #[component]
 fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
     let run_id = selected.iter().next().cloned().unwrap_or_default();
     let (selected_path, set_selected_path) = signal("run.log".to_string());
-    
+
     let exp_id_val = StoredValue::new(exp_id);
     let run_id_val = StoredValue::new(run_id);
-    
+
     let artifact_resource = LocalResource::new(move || {
         let eid = exp_id_val.with_value(|v| v.clone());
         let rid = run_id_val.with_value(|v| v.clone());
         async move {
-            if rid.is_empty() { return Ok(vec![]); }
+            if rid.is_empty() {
+                return Ok(vec![]);
+            }
             fetch_artifacts(eid, rid).await
         }
     });
@@ -905,13 +960,15 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
         let rid = run_id_val.with_value(|v| v.clone());
         let path = selected_path.get();
         async move {
-            if rid.is_empty() { return Ok("Select a run".to_string()); }
+            if rid.is_empty() {
+                return Ok("Select a run".to_string());
+            }
             fetch_artifact_content(eid, rid, path).await
         }
     });
 
     if run_id_val.with_value(|v| v.is_empty()) {
-         return view! { <div class="p-12 text-center text-slate-500">"Select a single run to browse artifacts."</div> }.into_any();
+        return view! { <div class="p-12 text-center text-slate-500">"Select a single run to browse artifacts."</div> }.into_any();
     }
 
     view! {
@@ -928,7 +985,7 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
                                     let path = a.path.clone();
                                     let is_active = move || selected_path.get() == a.path;
                                     view! {
-                                        <div 
+                                        <div
                                             on:click=move |_| set_selected_path.set(path.clone())
                                             class=move || format!(
                                                 "p-3 rounded-lg text-sm transition-colors cursor-pointer {}",
@@ -978,19 +1035,27 @@ fn ConsoleView(exp_id: String, selected: std::collections::HashSet<String>) -> i
     // Effect to handle SSE streaming
     Effect::new(move |_| {
         let rid = run_id_val.with_value(|v| v.clone());
-        if rid.is_empty() { return; }
-        
-        let url = format!("/api/experiments/{}/runs/{}/log/stream", exp_id_val.with_value(|v| v.clone()), rid);
+        if rid.is_empty() {
+            return;
+        }
+
+        let url = format!(
+            "/api/experiments/{}/runs/{}/log/stream",
+            exp_id_val.with_value(|v| v.clone()),
+            rid
+        );
         let event_source = web_sys::EventSource::new(&url).unwrap();
-        
-        let on_message = wasm_bindgen::prelude::Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |e: web_sys::MessageEvent| {
-            if let Some(data) = e.data().as_string() {
-                if !data.is_empty() {
-                    set_logs.update(|l| l.push(data));
+
+        let on_message = wasm_bindgen::prelude::Closure::<dyn FnMut(web_sys::MessageEvent)>::new(
+            move |e: web_sys::MessageEvent| {
+                if let Some(data) = e.data().as_string() {
+                    if !data.is_empty() {
+                        set_logs.update(|l| l.push(data));
+                    }
                 }
-            }
-        });
-        
+            },
+        );
+
         event_source.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
         on_message.forget(); // Leak for simplicity in this demo/agentic context, or store in cleanup
     });
@@ -1018,15 +1083,18 @@ fn ConsoleView(exp_id: String, selected: std::collections::HashSet<String>) -> i
     }.into_any()
 }
 
-
 #[component]
 fn SettingsPage() -> impl IntoView {
     let window = web_sys::window().expect("no global `window` exists");
-    let local_storage = window.local_storage().expect("no local storage exists").expect("no local storage exists");
-    let initial_debug = local_storage.get_item("debug_enabled").unwrap_or_default() == Some("true".to_string());
-    
+    let local_storage = window
+        .local_storage()
+        .expect("no local storage exists")
+        .expect("no local storage exists");
+    let initial_debug =
+        local_storage.get_item("debug_enabled").unwrap_or_default() == Some("true".to_string());
+
     let (debug_enabled, set_debug_enabled) = signal(initial_debug);
-    
+
     Effect::new(move |_| {
         let val = debug_enabled.get();
         let _ = local_storage.set_item("debug_enabled", if val { "true" } else { "false" });
@@ -1041,7 +1109,7 @@ fn SettingsPage() -> impl IntoView {
                         <h3 class="text-lg font-medium text-white">"Debug Logs"</h3>
                         <p class="text-sm text-slate-400">"Show detailed debug messages in the browser console. Requires page reload."</p>
                     </div>
-                    <button 
+                    <button
                         on:click=move |_| set_debug_enabled.update(|v| *v = !*v)
                         class=move || format!(
                             "w-12 h-6 rounded-full transition-colors relative {}",
@@ -1067,15 +1135,24 @@ fn NotFound() -> impl IntoView {
             <p class="text-slate-400">"Page not found"</p>
             <A href="/" attr:class="text-blue-400 hover:underline">"Back to Dashboard"</A>
         </div>
-    }.into_any()
+    }
+    .into_any()
 }
 
 fn main() {
     let window = web_sys::window().expect("no global `window` exists");
-    let local_storage = window.local_storage().expect("no local storage exists").expect("no local storage exists");
-    let debug_enabled = local_storage.get_item("debug_enabled").unwrap_or_default() == Some("true".to_string());
-    
-    let level = if debug_enabled { log::Level::Debug } else { log::Level::Info };
+    let local_storage = window
+        .local_storage()
+        .expect("no local storage exists")
+        .expect("no local storage exists");
+    let debug_enabled =
+        local_storage.get_item("debug_enabled").unwrap_or_default() == Some("true".to_string());
+
+    let level = if debug_enabled {
+        log::Level::Debug
+    } else {
+        log::Level::Info
+    };
     _ = console_log::init_with_level(level);
     console_error_panic_hook::set_once();
     mount_to_body(App);
@@ -1088,7 +1165,8 @@ fn RunsTableView(exp_id: String) -> impl IntoView {
     });
 
     // Which metric columns are currently visible (None = all visible)
-    let (selected_metrics, set_selected_metrics) = signal(std::collections::HashSet::<String>::new());
+    let (selected_metrics, set_selected_metrics) =
+        signal(std::collections::HashSet::<String>::new());
     let (metrics_initialized, set_metrics_initialized) = signal(false);
 
     view! {

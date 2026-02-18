@@ -5,10 +5,10 @@
 //! all I/O asynchronously.
 
 pub mod engine;
+pub mod error;
 pub mod models;
 pub mod storage;
-pub mod error;
 
-pub use engine::{LoggingEngine, LogLevel};
-pub use models::{ExperimentConfig, MetricRow, MetricValue, RunStatus};
+pub use engine::{LogLevel, LoggingEngine};
 pub use error::ExpmanError;
+pub use models::{ExperimentConfig, MetricRow, MetricValue, RunStatus};

@@ -26,13 +26,25 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/experiments", get(list_experiments))
         .route("/experiments/:exp/runs", get(list_runs))
-        .route("/experiments/:exp/metadata", get(get_experiment_metadata).patch(update_experiment_metadata))
+        .route(
+            "/experiments/:exp/metadata",
+            get(get_experiment_metadata).patch(update_experiment_metadata),
+        )
         .route("/experiments/:exp/runs/:run/metrics", get(get_metrics))
-        .route("/experiments/:exp/runs/:run/metrics/stream", get(stream_metrics))
+        .route(
+            "/experiments/:exp/runs/:run/metrics/stream",
+            get(stream_metrics),
+        )
         .route("/experiments/:exp/runs/:run/config", get(get_config))
-        .route("/experiments/:exp/runs/:run/metadata", get(get_run_metadata).patch(update_run_metadata))
+        .route(
+            "/experiments/:exp/runs/:run/metadata",
+            get(get_run_metadata).patch(update_run_metadata),
+        )
         .route("/experiments/:exp/runs/:run/artifacts", get(list_artifacts))
-        .route("/experiments/:exp/runs/:run/artifacts/content", get(get_artifact_content))
+        .route(
+            "/experiments/:exp/runs/:run/artifacts/content",
+            get(get_artifact_content),
+        )
         .route("/experiments/:exp/runs/:run/log/stream", get(stream_log))
         .route("/experiments/:exp/stats", get(get_experiment_stats))
         .route("/config", get(get_server_config))
@@ -87,7 +99,10 @@ async fn list_runs(
 ) -> impl IntoResponse {
     // Parse optional metric filter
     let metric_filter: Option<std::collections::HashSet<String>> = q.metrics.map(|s| {
-        s.split(',').map(|k| k.trim().to_string()).filter(|k| !k.is_empty()).collect()
+        s.split(',')
+            .map(|k| k.trim().to_string())
+            .filter(|k| !k.is_empty())
+            .collect()
     });
 
     let exp_dir = exp_dir(&state.base_dir, &exp);
@@ -111,7 +126,10 @@ async fn list_runs(
                 if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
                     if !scalars.is_empty() {
                         let filtered = match &metric_filter {
-                            Some(keys) => scalars.into_iter().filter(|(k, _)| keys.contains(k)).collect(),
+                            Some(keys) => scalars
+                                .into_iter()
+                                .filter(|(k, _)| keys.contains(k))
+                                .collect(),
                             None => scalars,
                         };
                         meta.metrics = Some(filtered);
@@ -400,18 +418,17 @@ async fn get_experiment_stats(
     let mut stats = vec![];
     for run_name in &runs {
         let dir = run_dir(&state.base_dir, &exp, run_name);
-        let meta = storage::load_run_metadata(&dir).unwrap_or_else(|_| {
-            expman_core::models::RunMetadata {
+        let meta =
+            storage::load_run_metadata(&dir).unwrap_or_else(|_| expman_core::models::RunMetadata {
                 name: run_name.clone(),
                 experiment: exp.clone(),
                 status: expman_core::models::RunStatus::Crashed,
                 started_at: chrono::Utc::now(),
                 ..Default::default()
-            }
-        });
+            });
 
-        let last_metrics = storage::read_latest_scalar_metrics(&dir.join("metrics.parquet"))
-            .unwrap_or_default();
+        let last_metrics =
+            storage::read_latest_scalar_metrics(&dir.join("metrics.parquet")).unwrap_or_default();
 
         stats.push(serde_json::json!({
             "run": run_name,

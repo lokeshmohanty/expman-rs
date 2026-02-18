@@ -34,7 +34,10 @@ fn test_log_metrics_writes_parquet() {
 
     for i in 0..100u64 {
         let mut m = HashMap::new();
-        m.insert("loss".to_string(), MetricValue::Float(1.0 - i as f64 * 0.01));
+        m.insert(
+            "loss".to_string(),
+            MetricValue::Float(1.0 - i as f64 * 0.01),
+        );
         m.insert("acc".to_string(), MetricValue::Float(i as f64 * 0.01));
         engine.log_metrics(m, Some(i));
     }
@@ -42,7 +45,10 @@ fn test_log_metrics_writes_parquet() {
     engine.close(RunStatus::Finished);
 
     let metrics_path = engine.config().run_dir().join("metrics.parquet");
-    assert!(metrics_path.exists(), "metrics.parquet should exist after close");
+    assert!(
+        metrics_path.exists(),
+        "metrics.parquet should exist after close"
+    );
 
     let rows = expman_core::storage::read_metrics(&metrics_path).unwrap();
     assert_eq!(rows.len(), 100, "Should have 100 metric rows");
@@ -54,8 +60,14 @@ fn test_log_params_writes_yaml() {
     let engine = make_engine(&tmp, "params_test");
 
     let mut params = HashMap::new();
-    params.insert("lr".to_string(), serde_yaml::Value::String("0.001".to_string()));
-    params.insert("epochs".to_string(), serde_yaml::Value::Number(serde_yaml::Number::from(100i64)));
+    params.insert(
+        "lr".to_string(),
+        serde_yaml::Value::String("0.001".to_string()),
+    );
+    params.insert(
+        "epochs".to_string(),
+        serde_yaml::Value::Number(serde_yaml::Number::from(100i64)),
+    );
     engine.log_params(params);
 
     engine.close(RunStatus::Finished);
@@ -109,12 +121,12 @@ fn test_run_status_written_on_close() {
 fn test_save_artifact_relative_path() {
     let tmp = TempDir::new().unwrap();
     let engine = make_engine(&tmp, "artifact_test");
-    
+
     // Create a dummy file in the current temp dir (simulating relative path)
     let file_path = tmp.path().join("my_artifact.txt");
     std::fs::write(&file_path, "artifact content").unwrap();
-    
-    // In our test, we pass the absolute path for src, 
+
+    // In our test, we pass the absolute path for src,
     // but the destination will use it as a relative fragment if we're not careful.
     // Actually, LoggingEngine::save_artifact takes a PathBuf.
     // Let's test the behavior.

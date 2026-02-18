@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use expman_core::{ExperimentConfig, LoggingEngine, LogLevel, MetricValue, RunStatus};
+use expman_core::{ExperimentConfig, LogLevel, LoggingEngine, MetricValue, RunStatus};
 
 /// Python-facing Experiment class.
 #[pyclass]
@@ -87,7 +87,7 @@ impl Experiment {
     /// Save an artifact file asynchronously. Non-blocking.
     ///
     /// Args:
-    ///     path: Path to the file to save. This path will be preserved relative to 
+    ///     path: Path to the file to save. This path will be preserved relative to
     ///           the artifacts directory.
     #[pyo3(signature = (path))]
     fn save_artifact(&self, path: &str) -> PyResult<()> {
@@ -127,7 +127,9 @@ impl Experiment {
                 return Ok(engine.config().run_dir().to_string_lossy().to_string());
             }
         }
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Engine is closed"))
+        Err(pyo3::exceptions::PyRuntimeError::new_err(
+            "Engine is closed",
+        ))
     }
 
     /// Get the run name.
@@ -138,7 +140,9 @@ impl Experiment {
                 return Ok(engine.config().run_name.clone());
             }
         }
-        Err(pyo3::exceptions::PyRuntimeError::new_err("Engine is closed"))
+        Err(pyo3::exceptions::PyRuntimeError::new_err(
+            "Engine is closed",
+        ))
     }
 
     /// Gracefully close the experiment: flush all pending metrics and write final metadata.
@@ -198,9 +202,7 @@ impl Experiment {
 
 // ─── Type conversion helpers ──────────────────────────────────────────────────
 
-fn py_dict_to_metrics(
-    dict: &Bound<'_, PyDict>,
-) -> PyResult<HashMap<String, MetricValue>> {
+fn py_dict_to_metrics(dict: &Bound<'_, PyDict>) -> PyResult<HashMap<String, MetricValue>> {
     let mut map = HashMap::new();
     for (k, v) in dict.iter() {
         let key: String = k.extract()?;
@@ -220,9 +222,7 @@ fn py_dict_to_metrics(
     Ok(map)
 }
 
-fn py_dict_to_yaml(
-    dict: &Bound<'_, PyDict>,
-) -> PyResult<HashMap<String, serde_yaml::Value>> {
+fn py_dict_to_yaml(dict: &Bound<'_, PyDict>) -> PyResult<HashMap<String, serde_yaml::Value>> {
     let mut map = HashMap::new();
     for (k, v) in dict.iter() {
         let key: String = k.extract()?;
@@ -231,9 +231,7 @@ fn py_dict_to_yaml(
         } else if let Ok(i) = v.extract::<i64>() {
             serde_yaml::Value::Number(serde_yaml::Number::from(i))
         } else if let Ok(f) = v.extract::<f64>() {
-            serde_yaml::Value::Number(
-                serde_yaml::Number::from(f)
-            )
+            serde_yaml::Value::Number(serde_yaml::Number::from(f))
         } else if let Ok(s) = v.extract::<String>() {
             serde_yaml::Value::String(s)
         } else {

@@ -166,7 +166,11 @@ impl LoggingEngine {
     /// Blocks until complete. Should be called at experiment end.
     pub fn close(&self, status: RunStatus) {
         let (tx, rx) = oneshot::channel();
-        if self.sender.send(LogCommand::Shutdown { status, reply: tx }).is_ok() {
+        if self
+            .sender
+            .send(LogCommand::Shutdown { status, reply: tx })
+            .is_ok()
+        {
             // Block current thread until background task confirms shutdown.
             // We use the runtime's block_on for this.
             let _ = self._runtime.block_on(rx);
@@ -182,13 +186,17 @@ impl Drop for LoggingEngine {
     fn drop(&mut self) {
         // Best-effort graceful shutdown on drop
         let (tx, rx) = oneshot::channel();
-        if self.sender.send(LogCommand::Shutdown {
-            status: RunStatus::Finished,
-            reply: tx,
-        }).is_ok() {
-            let _ = self._runtime.block_on(async {
-                tokio::time::timeout(Duration::from_secs(5), rx).await
-            });
+        if self
+            .sender
+            .send(LogCommand::Shutdown {
+                status: RunStatus::Finished,
+                reply: tx,
+            })
+            .is_ok()
+        {
+            let _ = self
+                ._runtime
+                .block_on(async { tokio::time::timeout(Duration::from_secs(5), rx).await });
         }
     }
 }
@@ -336,6 +344,11 @@ fn handle_artifact(artifacts_dir: &std::path::Path, path: PathBuf) {
         }
     }
     if let Err(e) = fs::copy(&path, &dest) {
-        error!("Failed to copy artifact {} -> {}: {}", path.display(), dest.display(), e);
+        error!(
+            "Failed to copy artifact {} -> {}: {}",
+            path.display(),
+            dest.display(),
+            e
+        );
     }
 }

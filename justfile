@@ -74,9 +74,13 @@ fmt-check:
 fmt:
     cargo fmt --all
 
-# Run clippy
+# Run clippy (excludes frontend WASM crate — use lint-frontend for that)
 lint:
-    cargo clippy --workspace --all-targets -- -D warnings
+    cargo clippy --workspace --exclude frontend --all-targets -- -D warnings
+
+# Run clippy on the frontend (requires wasm32-unknown-unknown target)
+lint-frontend:
+    cargo clippy -p frontend --target wasm32-unknown-unknown -- -D warnings
 
 # Full CI check
 ci: fmt-check lint test

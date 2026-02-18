@@ -3,8 +3,8 @@
 pub mod api;
 pub mod state;
 
-use std::net::SocketAddr;
 use axum::Router;
+use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 

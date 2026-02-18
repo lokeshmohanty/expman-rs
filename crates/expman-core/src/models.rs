@@ -1,9 +1,9 @@
 //! Data models for expman-rs.
 
-use std::collections::HashMap;
-use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// Configuration for a single experiment run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,9 +38,7 @@ impl ExperimentConfig {
     }
 
     pub fn run_dir(&self) -> PathBuf {
-        self.base_dir
-            .join(&self.name)
-            .join(&self.run_name)
+        self.base_dir.join(&self.name).join(&self.run_name)
     }
 
     pub fn experiment_dir(&self) -> PathBuf {
@@ -59,28 +57,44 @@ pub enum MetricValue {
 }
 
 impl From<f64> for MetricValue {
-    fn from(v: f64) -> Self { MetricValue::Float(v) }
+    fn from(v: f64) -> Self {
+        MetricValue::Float(v)
+    }
 }
 impl From<f32> for MetricValue {
-    fn from(v: f32) -> Self { MetricValue::Float(v as f64) }
+    fn from(v: f32) -> Self {
+        MetricValue::Float(v as f64)
+    }
 }
 impl From<i64> for MetricValue {
-    fn from(v: i64) -> Self { MetricValue::Int(v) }
+    fn from(v: i64) -> Self {
+        MetricValue::Int(v)
+    }
 }
 impl From<i32> for MetricValue {
-    fn from(v: i32) -> Self { MetricValue::Int(v as i64) }
+    fn from(v: i32) -> Self {
+        MetricValue::Int(v as i64)
+    }
 }
 impl From<usize> for MetricValue {
-    fn from(v: usize) -> Self { MetricValue::Int(v as i64) }
+    fn from(v: usize) -> Self {
+        MetricValue::Int(v as i64)
+    }
 }
 impl From<bool> for MetricValue {
-    fn from(v: bool) -> Self { MetricValue::Bool(v) }
+    fn from(v: bool) -> Self {
+        MetricValue::Bool(v)
+    }
 }
 impl From<String> for MetricValue {
-    fn from(v: String) -> Self { MetricValue::Text(v) }
+    fn from(v: String) -> Self {
+        MetricValue::Text(v)
+    }
 }
 impl From<&str> for MetricValue {
-    fn from(v: &str) -> Self { MetricValue::Text(v.to_string()) }
+    fn from(v: &str) -> Self {
+        MetricValue::Text(v.to_string())
+    }
 }
 
 /// A row of metrics logged at a specific step/time.

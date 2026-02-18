@@ -94,7 +94,12 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Serve { dir, host, port, no_live } => {
+        Commands::Serve {
+            dir,
+            host,
+            port,
+            no_live,
+        } => {
             cmd_serve(dir, host, port, !no_live).await?;
         }
         Commands::List { dir, experiment } => {
@@ -103,10 +108,19 @@ async fn main() -> Result<()> {
         Commands::Inspect { run_dir } => {
             cmd_inspect(run_dir)?;
         }
-        Commands::Clean { experiment, dir, keep, force } => {
+        Commands::Clean {
+            experiment,
+            dir,
+            keep,
+            force,
+        } => {
             cmd_clean(dir, experiment, keep, force)?;
         }
-        Commands::Export { run_dir, format, output } => {
+        Commands::Export {
+            run_dir,
+            format,
+            output,
+        } => {
             cmd_export(run_dir, format, output)?;
         }
     }
@@ -152,14 +166,15 @@ fn cmd_list(dir: PathBuf, experiment: Option<String>) -> Result<()> {
 
         for run_name in &runs {
             let run_dir = exp_dir.join(run_name);
-            let meta = storage::load_run_metadata(&run_dir)
-                .unwrap_or_else(|_| expman_core::models::RunMetadata {
+            let meta = storage::load_run_metadata(&run_dir).unwrap_or_else(|_| {
+                expman_core::models::RunMetadata {
                     name: run_name.clone(),
                     experiment: exp_name.clone(),
                     status: expman_core::models::RunStatus::Crashed,
                     started_at: chrono::Utc::now(),
                     ..Default::default()
-                });
+                }
+            });
 
             let duration = meta
                 .duration_secs

@@ -5,21 +5,17 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
-use arrow::array::{
-    ArrayRef, Float64Array, Int64Array, StringArray, TimestampMicrosecondArray,
-};
+use arrow::array::{ArrayRef, Float64Array, Int64Array, StringArray, TimestampMicrosecondArray};
 use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use arrow::record_batch::RecordBatch;
 use chrono::{DateTime, Utc};
-use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::file::properties::WriterProperties;
 use serde_yaml;
 
 use crate::error::Result;
-use crate::models::{
-    ExperimentMetadata, MetricRow, MetricValue, RunMetadata, RunStatus,
-};
+use crate::models::{ExperimentMetadata, MetricRow, MetricValue, RunMetadata, RunStatus};
 
 // ─── Directory helpers ────────────────────────────────────────────────────────
 
@@ -79,9 +75,18 @@ pub fn list_artifacts(run_dir: &Path) -> Result<Vec<ArtifactInfo>> {
             if path.is_file() {
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 // Include specific default files
-                if name == "metrics.parquet" || name == "config.yaml" || name == "run.yaml" || name == "run.log" || name == "console.log" {
+                if name == "metrics.parquet"
+                    || name == "config.yaml"
+                    || name == "run.yaml"
+                    || name == "run.log"
+                    || name == "console.log"
+                {
                     let size = path.metadata()?.len();
-                    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+                    let ext = path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("")
+                        .to_lowercase();
                     files.push(ArtifactInfo {
                         path: name.to_string(),
                         name: name.to_string(),
@@ -99,7 +104,7 @@ pub fn list_artifacts(run_dir: &Path) -> Result<Vec<ArtifactInfo>> {
     if artifacts_dir.exists() {
         collect_files(&artifacts_dir, &artifacts_dir, &mut files)?;
     }
-    
+
     Ok(files)
 }
 
@@ -112,13 +117,15 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<ArtifactInfo>) -> Result
         } else {
             let rel = path.strip_prefix(root).unwrap_or(&path);
             let size = path.metadata()?.len();
-            let ext = path.extension()
+            let ext = path
+                .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("")
                 .to_lowercase();
             out.push(ArtifactInfo {
                 path: rel.to_string_lossy().to_string(),
-                name: path.file_name()
+                name: path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("")
                     .to_string(),
@@ -148,8 +155,7 @@ pub fn save_yaml<T: serde::Serialize>(path: &Path, data: &T) -> Result<()> {
     Ok(())
 }
 
-pub fn load_yaml<T: serde::de::DeserializeOwned + Default>(path: &Path) -> Result<T>
-{
+pub fn load_yaml<T: serde::de::DeserializeOwned + Default>(path: &Path) -> Result<T> {
     if !path.exists() {
         return Ok(T::default());
     }
@@ -354,17 +360,20 @@ fn align_batch(batch: &RecordBatch, target_schema: &Schema) -> Result<RecordBatc
             let null_array: ArrayRef = match field.data_type() {
                 DataType::Float64 => Arc::new(Float64Array::from(vec![None::<f64>; n])),
                 DataType::Int64 => Arc::new(Int64Array::from(vec![None::<i64>; n])),
-                DataType::Timestamp(TimeUnit::Microsecond, _) => {
-                    Arc::new(TimestampMicrosecondArray::from(vec![None::<i64>; n])
-                        .with_timezone_opt(Some("UTC".to_string())))
-                }
+                DataType::Timestamp(TimeUnit::Microsecond, _) => Arc::new(
+                    TimestampMicrosecondArray::from(vec![None::<i64>; n])
+                        .with_timezone_opt(Some("UTC".to_string())),
+                ),
                 _ => Arc::new(StringArray::from(vec![None::<&str>; n])),
             };
             columns.push(null_array);
         }
     }
 
-    Ok(RecordBatch::try_new(Arc::new(target_schema.clone()), columns)?)
+    Ok(RecordBatch::try_new(
+        Arc::new(target_schema.clone()),
+        columns,
+    )?)
 }
 
 fn rows_to_record_batch(rows: &[MetricRow]) -> Result<RecordBatch> {
@@ -413,8 +422,7 @@ fn rows_to_record_batch(rows: &[MetricRow]) -> Result<RecordBatch> {
         .map(|r| Some(r.timestamp.timestamp_micros()))
         .collect();
     arrays.push(Arc::new(
-        TimestampMicrosecondArray::from(timestamps)
-            .with_timezone_opt(Some("UTC".to_string())),
+        TimestampMicrosecondArray::from(timestamps).with_timezone_opt(Some("UTC".to_string())),
     ));
 
     // metric value columns
@@ -457,9 +465,7 @@ fn rows_to_record_batch(rows: &[MetricRow]) -> Result<RecordBatch> {
     Ok(RecordBatch::try_new(schema, arrays)?)
 }
 
-fn record_batch_to_rows(
-    batch: &RecordBatch,
-) -> Result<Vec<HashMap<String, serde_json::Value>>> {
+fn record_batch_to_rows(batch: &RecordBatch) -> Result<Vec<HashMap<String, serde_json::Value>>> {
     let schema = batch.schema();
     let n = batch.num_rows();
     let mut rows = vec![HashMap::new(); n];
@@ -494,8 +500,7 @@ fn record_batch_to_rows(
                         .downcast_ref::<TimestampMicrosecondArray>()
                         .unwrap();
                     let micros = arr.value(row_idx);
-                    let dt = DateTime::<Utc>::from_timestamp_micros(micros)
-                        .unwrap_or_default();
+                    let dt = DateTime::<Utc>::from_timestamp_micros(micros).unwrap_or_default();
                     serde_json::json!(dt.to_rfc3339())
                 }
                 DataType::Utf8 => {
