@@ -1,0 +1,61 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for release commit
+        id: check
+        run: |
+          message="${{ github.event.head_commit.message }}"
+          if [[ "$message" =~ ^release:\ bump\ version\ to\ ([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              echo "should_release=true" >> $GITHUB_OUTPUT
+              echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+              echo "Detected release for version ${BASH_REMATCH[1]}"
+          else
+              echo "should_release=false" >> $GITHUB_OUTPUT
+              echo "Not a release commit"
+          fi
+
+  publish-crates:
+    needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish expman-core
+        run: cargo publish -p expman-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Publish expman-server
+        run: cargo publish -p expman-server --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Publish expman-cli
+        run: cargo publish -p expman-cli --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      # Wait a bit for crates.io index to update
+      - run: sleep 60
+
+  publish-pypi:
+    needs: [check-release, publish-crates]
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build and publish to PyPI
+        uses: PyO3/maturin-action@v1
+        with:
+          command: publish
+          args: --non-interactive --skip-existing --manifest-path crates/expman-py/Cargo.toml
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

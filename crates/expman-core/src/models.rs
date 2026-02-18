@@ -139,4 +139,5 @@ pub struct RunMetadata {
 pub struct ExperimentMetadata {
     pub display_name: Option<String>,
     pub description: Option<String>,
+    pub tags: Vec<String>,
 }

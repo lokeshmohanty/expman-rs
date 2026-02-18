@@ -293,7 +293,7 @@ async fn background_task(
     }
 }
 
-fn flush_metrics(path: &PathBuf, buffer: &mut Vec<MetricRow>) {
+fn flush_metrics(path: &std::path::Path, buffer: &mut Vec<MetricRow>) {
     if buffer.is_empty() {
         return;
     }
@@ -303,7 +303,7 @@ fn flush_metrics(path: &PathBuf, buffer: &mut Vec<MetricRow>) {
     buffer.clear();
 }
 
-fn flush_logs(path: &PathBuf, lines: &mut Vec<String>) {
+fn flush_logs(path: &std::path::Path, lines: &mut Vec<String>) {
     if lines.is_empty() {
         return;
     }
@@ -319,7 +319,7 @@ fn flush_logs(path: &PathBuf, lines: &mut Vec<String>) {
     lines.clear();
 }
 
-fn handle_params(config_path: &PathBuf, new_params: HashMap<String, serde_yaml::Value>) {
+fn handle_params(config_path: &std::path::Path, new_params: HashMap<String, serde_yaml::Value>) {
     // Load existing, merge, save
     let mut existing: HashMap<String, serde_yaml::Value> =
         storage::load_yaml(config_path).unwrap_or_default();
@@ -329,7 +329,7 @@ fn handle_params(config_path: &PathBuf, new_params: HashMap<String, serde_yaml::
     }
 }
 
-fn handle_artifact(artifacts_dir: &PathBuf, path: PathBuf) {
+fn handle_artifact(artifacts_dir: &std::path::Path, path: PathBuf) {
     let dest = artifacts_dir.join(&path);
     if let Some(parent) = dest.parent() {
         if let Err(e) = fs::create_dir_all(parent) {

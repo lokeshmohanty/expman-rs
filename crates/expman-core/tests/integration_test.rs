@@ -120,16 +120,6 @@ fn test_save_artifact_relative_path() {
     // Let's test the behavior.
     engine.save_artifact(file_path.clone());
     engine.close(RunStatus::Finished);
-    
-    let run_dir = engine.config().run_dir();
-    // The handle_artifact logic does artifacts_dir.join(&path).
-    // If path is absolute, it replaces the artifacts_dir in the join.
-    // This is a subtle point in Rust's PathBuf::join.
-    // Usually, we expect relative paths here.
-    
-    // If we want it to be relative, we should probably strip prefix or just use filename?
-    // User said: "path is relative to the artifact folder".
-    // This implies if they pass "a/b/c.txt", it goes to artifacts/a/b/c.txt.
 }
 
 #[test]

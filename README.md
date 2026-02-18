@@ -1,5 +1,8 @@
 # expman-rs
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-deploy-blue)](https://lokeshmohanty.github.io/expman-rs)
+
 High-performance experiment manager written in Rust, with a Python wrapper for non-blocking logging, a live web dashboard, and a friendly CLI.
 
 ## Features
@@ -57,7 +60,14 @@ just test                      # run all tests
 just dev-py                    # build Python extension (maturin develop)
 just serve ./experiments       # start dashboard
 just watch                     # watch mode for tests
+just build-docs                # build and open documentation
 ```
+
+### Dashboard Features
+- **Live Metrics**: Real-time SSE streaming of experiment metrics and logs.
+- **Deep Inspection**: View detailed run configurations, metadata, and artifacts.
+- **Artifact Browser**: Preview `parquet`, `csv`, and other files directly in the browser.
+- **Comparison View**: Overlay multiple runs on a shared timeline for analysis.
 
 ## Examples
 

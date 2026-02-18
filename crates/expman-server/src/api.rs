@@ -30,21 +30,22 @@ pub fn router() -> Router<AppState> {
         .route("/experiments/:exp/runs/:run/metrics", get(get_metrics))
         .route("/experiments/:exp/runs/:run/metrics/stream", get(stream_metrics))
         .route("/experiments/:exp/runs/:run/config", get(get_config))
-        .route("/experiments/:exp/runs/:run/metadata", get(get_run_metadata))
+        .route("/experiments/:exp/runs/:run/metadata", get(get_run_metadata).patch(update_run_metadata))
         .route("/experiments/:exp/runs/:run/artifacts", get(list_artifacts))
         .route("/experiments/:exp/runs/:run/artifacts/content", get(get_artifact_content))
         .route("/experiments/:exp/runs/:run/log/stream", get(stream_log))
         .route("/experiments/:exp/stats", get(get_experiment_stats))
         .route("/config", get(get_server_config))
+        .route("/stats", get(get_global_stats))
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-fn run_dir(base: &PathBuf, exp: &str, run: &str) -> PathBuf {
+fn run_dir(base: &std::path::Path, exp: &str, run: &str) -> PathBuf {
     base.join(exp).join(run)
 }
 
-fn exp_dir(base: &PathBuf, exp: &str) -> PathBuf {
+fn exp_dir(base: &std::path::Path, exp: &str) -> PathBuf {
     base.join(exp)
 }
 
@@ -53,18 +54,19 @@ fn exp_dir(base: &PathBuf, exp: &str) -> PathBuf {
 async fn list_experiments(State(state): State<AppState>) -> impl IntoResponse {
     match storage::list_experiments(&state.base_dir) {
         Ok(names) => {
-            let result: Vec<serde_json::Value> = names
-                .iter()
-                .map(|name| {
-                    let exp_dir = exp_dir(&state.base_dir, name);
-                    let meta = storage::load_experiment_metadata(&exp_dir).unwrap_or_default();
-                    serde_json::json!({
-                        "id": name,
-                        "display_name": meta.display_name.unwrap_or_else(|| name.clone()),
-                        "description": meta.description,
-                    })
-                })
-                .collect();
+            let mut result = vec![];
+            for name in names {
+                let exp_dir = exp_dir(&state.base_dir, &name);
+                let runs = storage::list_runs(&exp_dir).unwrap_or_default();
+                let meta = storage::load_experiment_metadata(&exp_dir).unwrap_or_default();
+                result.push(serde_json::json!({
+                    "id": name,
+                    "display_name": meta.display_name.unwrap_or_else(|| name.clone()),
+                    "description": meta.description,
+                    "tags": meta.tags,
+                    "runs_count": runs.len(),
+                }));
+            }
             Json(result).into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
@@ -77,7 +79,25 @@ async fn list_runs(
 ) -> impl IntoResponse {
     let exp_dir = exp_dir(&state.base_dir, &exp);
     match storage::list_runs(&exp_dir) {
-        Ok(runs) => Json(runs).into_response(),
+        Ok(run_names) => {
+            let mut result = vec![];
+            for name in run_names {
+                let dir = run_dir(&state.base_dir, &exp, &name);
+                let meta = storage::load_run_metadata(&dir).unwrap_or_else(|_| {
+                    expman_core::models::RunMetadata {
+                        name: name.clone(),
+                        experiment: exp.clone(),
+                        status: expman_core::models::RunStatus::Crashed,
+                        started_at: chrono::Utc::now(),
+                        finished_at: None,
+                        duration_secs: None,
+                        description: None,
+                    }
+                });
+                result.push(meta);
+            }
+            Json(result).into_response()
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
@@ -97,6 +117,7 @@ async fn get_experiment_metadata(
 struct MetadataUpdate {
     display_name: Option<String>,
     description: Option<String>,
+    tags: Option<Vec<String>>,
 }
 
 async fn update_experiment_metadata(
@@ -112,8 +133,40 @@ async fn update_experiment_metadata(
     if let Some(desc) = update.description {
         meta.description = Some(desc);
     }
+    if let Some(tags) = update.tags {
+        meta.tags = tags;
+    }
     match storage::save_experiment_metadata(&dir, &meta) {
         Ok(_) => Json(meta).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct RunMetadataUpdate {
+    name: Option<String>,
+    description: Option<String>,
+}
+
+async fn update_run_metadata(
+    State(state): State<AppState>,
+    Path((exp, run)): Path<(String, String)>,
+    Json(update): Json<RunMetadataUpdate>,
+) -> impl IntoResponse {
+    let dir = run_dir(&state.base_dir, &exp, &run);
+    match storage::load_run_metadata(&dir) {
+        Ok(mut meta) => {
+            if let Some(n) = update.name {
+                meta.name = n;
+            }
+            if let Some(desc) = update.description {
+                meta.description = Some(desc);
+            }
+            match storage::save_run_metadata(&dir, &meta) {
+                Ok(_) => Json(meta).into_response(),
+                Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            }
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
@@ -254,13 +307,7 @@ async fn get_artifact_content(
 ) -> impl IntoResponse {
     let dir = run_dir(&state.base_dir, &exp, &run);
     
-    // The path could be a root file like "metrics.parquet" or inside "artifacts/..."
-    // storage::list_artifacts returns "metrics.parquet" for root files, 
-    // and "sub/file.txt" for files inside "artifacts/".
-    // So we try artifacts/ first, then root if not found? 
-    // No, storage::list_artifacts for user artifacts uses collect_files with artifacts_dir as root.
-    // So if q.path is "model.pt", it might be artifacts/model.pt or if it's default, it's model.pt in root.
-    
+    // Determine if the path is in the artifacts subdirectory or a root file
     let file_path = if dir.join("artifacts").join(&q.path).exists() {
         dir.join("artifacts").join(&q.path)
     } else {
@@ -362,6 +409,34 @@ async fn get_experiment_stats(
     Json(stats).into_response()
 }
 
+async fn get_global_stats(State(state): State<AppState>) -> impl IntoResponse {
+    let experiments = storage::list_experiments(&state.base_dir).unwrap_or_default();
+    let mut total_runs = 0;
+    let mut active_runs = 0;
+    
+    for exp in &experiments {
+        let exp_dir = exp_dir(&state.base_dir, exp);
+        let runs = storage::list_runs(&exp_dir).unwrap_or_default();
+        total_runs += runs.len();
+        
+        for run in runs {
+            let dir = run_dir(&state.base_dir, exp, &run);
+            if let Ok(meta) = storage::load_run_metadata(&dir) {
+                if meta.status == expman_core::models::RunStatus::Running {
+                    active_runs += 1;
+                }
+            }
+        }
+    }
+
+    Json(serde_json::json!({
+        "total_experiments": experiments.len(),
+        "total_runs": total_runs,
+        "active_runs": active_runs,
+        "total_storage_bytes": 0, // Placeholder for now
+    }))
+}
+
 async fn get_server_config() -> impl IntoResponse {
     Json(serde_json::json!({"live_mode": true, "version": env!("CARGO_PKG_VERSION")}))
 }
@@ -395,4 +470,5 @@ pub async fn serve_frontend(uri: axum::http::Uri) -> impl IntoResponse {
 #[include = "*.html"]
 #[include = "*.js"]
 #[include = "*.css"]
+#[include = "*.wasm"]
 struct Assets;

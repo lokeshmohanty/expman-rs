@@ -165,7 +165,7 @@ fn cmd_list(dir: PathBuf, experiment: Option<String>) -> Result<()> {
 
             let duration = meta
                 .duration_secs
-                .map(|d| format_duration(d))
+                .map(format_duration)
                 .unwrap_or_else(|| "running".to_string());
 
             table.add_row([

@@ -148,9 +148,7 @@ pub fn save_yaml<T: serde::Serialize>(path: &Path, data: &T) -> Result<()> {
     Ok(())
 }
 
-pub fn load_yaml<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T>
-where
-    T: Default,
+pub fn load_yaml<T: serde::de::DeserializeOwned + Default>(path: &Path) -> Result<T>
 {
     if !path.exists() {
         return Ok(T::default());
@@ -454,10 +452,10 @@ fn record_batch_to_rows(
         let col = batch.column(col_idx);
         let name = field.name().clone();
 
-        for row_idx in 0..n {
+        for (row_idx, row) in rows.iter_mut().enumerate().take(n) {
             use arrow::array::Array;
             if col.is_null(row_idx) {
-                rows[row_idx].insert(name.clone(), serde_json::Value::Null);
+                row.insert(name.clone(), serde_json::Value::Null);
                 continue;
             }
             let val = match field.data_type() {
@@ -490,7 +488,7 @@ fn record_batch_to_rows(
                 }
                 _ => serde_json::Value::Null,
             };
-            rows[row_idx].insert(name.clone(), val);
+            row.insert(name.clone(), val);
         }
     }
 

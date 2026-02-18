@@ -27,13 +27,15 @@
           "rustfmt"
           "rust-analyzer"
         ];
+        
+        # Combined toolchain with WASM target
+        fullToolchain = pkgs.fenix.combine [
+          rustToolchain
+          pkgs.fenix.targets.wasm32-unknown-unknown.stable.rust-std
+        ];
 
-        # Python environment for development
-        pythonEnv = pkgs.python312.withPackages (ps: with ps; [
-          pip
-          pytest
-          numpy
-        ]);
+        # Base Python for uv
+        pythonBase = pkgs.python312;
 
       in {
         devShells.default = pkgs.mkShell {
@@ -41,14 +43,15 @@
 
           packages = [
             # Rust
-            rustToolchain
+            fullToolchain
             pkgs.cargo-watch      # cargo watch -x test
             pkgs.cargo-nextest    # faster test runner
             pkgs.cargo-edit       # cargo add/rm
             pkgs.cargo-expand     # macro expansion debugging
 
             # Python + maturin for PyO3 builds
-            pythonEnv
+            pythonBase
+            pkgs.uv
             pkgs.maturin
 
             # Build tools
@@ -59,6 +62,8 @@
             pkgs.just             # justfile task runner
             pkgs.hyperfine        # benchmarking
             pkgs.tokei            # code stats
+            pkgs.trunk            # WASM builder
+            pkgs.wasm-bindgen-cli # WASM glue
           ];
 
           # Environment variables
@@ -66,19 +71,27 @@
           RUST_BACKTRACE = "1";
 
           # Ensure maturin can find Python
-          PYO3_PYTHON = "${pythonEnv}/bin/python3";
+          PYO3_PYTHON = "${pythonBase}/bin/python3";
+          
+          # We'll use uv to manage the environment now
 
           shellHook = ''
-            echo "🦀 expman-rs dev environment"
+            echo "🦀 expman-rs dev environment (uv-managed)"
             echo "  Rust: $(rustc --version)"
             echo "  Python: $(python3 --version)"
-            echo "  Maturin: $(maturin --version)"
+            echo "  UV: $(uv --version)"
             echo ""
             echo "Commands:"
+            echo "  just build                 - build everything (Rust + Python)"
             echo "  cargo nextest run          - run all tests"
             echo "  cargo watch -x 'nextest run' - watch mode"
-            echo "  maturin develop            - build + install Python extension"
+            echo "  just dev-py                - build Python extension (auto-handles uv venv)"
             echo "  cargo run -p expman-cli -- serve ./experiments"
+            echo ""
+            
+            if [ ! -d ".venv" ]; then
+              echo "💡 Run 'just dev-py' to initialize the uv virtual environment."
+            fi
           '';
         };
 

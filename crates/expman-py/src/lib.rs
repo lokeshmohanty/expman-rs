@@ -1,4 +1,5 @@
 //! PyO3 Python extension module for expman-rs.
+#![allow(clippy::useless_conversion)]
 //!
 //! Exposes `Experiment` class to Python. All I/O is non-blocking:
 //! `log_metrics()` is a channel send on the background tokio runtime,
