@@ -53,7 +53,7 @@ try:
 except ImportError as e:
     raise ImportError(
         "expman Rust extension not found. "
-        "Build it with: maturin develop\n"
+        "Build it with: just dev-py (or uv pip install -e .)\n"
         f"Original error: {e}"
     ) from e
 

@@ -84,7 +84,7 @@ expman export ./experiments/resnet/runs/20240101_120000 --format csv
 ```bash
 nix develop                    # enter dev shell
 just test                      # run all tests
-just dev-py                    # build Python extension (maturin develop)
+just dev-py                    # build Python extension (uv pip install -e .)
 just serve ./experiments       # start dashboard
 just watch                     # watch mode for tests
 just build-docs                # build and open documentation

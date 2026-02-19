@@ -31,7 +31,7 @@ jobs:
     needs: check-release
     if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-latest
-    environment: Publish
+    environment: CARGO
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -48,19 +48,20 @@ jobs:
     needs: [check-release, publish-crates]
     if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-latest
-    environment: Publish
+    environment: PYPI
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: astral-sh/setup-uv@v5
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build and publish to PyPI
-        uses: PyO3/maturin-action@v1
-        with:
-          command: publish
-          args: --non-interactive --skip-existing --manifest-path crates/expman-py/Cargo.toml
+        run: |
+          uv build --manifest-path crates/expman-py/Cargo.toml
+          uv publish
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
   github-release:
     needs: [check-release]
@@ -77,11 +78,9 @@ jobs:
       - name: Build Rust CLI binary
         run: cargo build --release -p expman
 
+      - uses: astral-sh/setup-uv@v5
       - name: Build Python Wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          args: --release --out dist --manifest-path crates/expman-py/Cargo.toml
+        run: uv build --out dist
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

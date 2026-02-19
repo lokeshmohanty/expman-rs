@@ -41,7 +41,7 @@ build-py:
     @if [ ! -d ".venv" ]; then \
         uv venv --seed --python 3.12; \
     fi
-    uv run maturin build --manifest-path crates/expman-py/Cargo.toml --out target/python-wheels
+    uv build --out target/python-wheels
     # Copy the built library into the python package for local use without full install
     cp target/debug/libexpman.so python/expman/expman.so 2>/dev/null || cp target/debug/libexpman.dylib python/expman/expman.so 2>/dev/null || true
 
@@ -52,7 +52,7 @@ dev-py:
         uv venv --seed --python 3.12; \
     fi
     @# Note: we use 'uv run' to ensure maturin uses the venv
-    uv run maturin develop --manifest-path crates/expman-py/Cargo.toml
+    uv pip install -e .
     uv pip install -e ".[dev]"
 
 # Run the CLI
@@ -107,9 +107,10 @@ clean:
     cargo clean
     rm -rf python/expman/*.so
 
-# Publish to PyPI (requires MATURIN_PYPI_TOKEN)
+# Publish to PyPI (requires UV_PUBLISH_TOKEN)
 publish:
-    maturin publish
+    uv build
+    uv publish
 
 # Show code statistics
 stats:

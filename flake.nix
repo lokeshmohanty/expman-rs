@@ -88,7 +88,7 @@
             echo "  just build                 - build everything (Rust + Python)"
             echo "  just test                  - run all tests"
             echo "  cargo watch -x 'nextest run' - watch mode"
-            echo "  just dev-py                - build Python extension (auto-handles uv venv)"
+            echo "  just dev-py                - build Python extension (uv pip install -e .)"
             echo "  just serve ./experiments"
             echo ""
 
