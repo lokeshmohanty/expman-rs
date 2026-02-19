@@ -118,8 +118,7 @@ bump-version VERSION:
     @sed -i 's/^version = "[0-9.]\+"/version = "{{VERSION}}"/' Cargo.toml
     @# Update pyproject.toml (project version)
     @sed -i 's/^version = "[0-9.]\+"/version = "{{VERSION}}"/' pyproject.toml
-    @# Update Cargo.lock
     @cargo check > /dev/null 2>&1 || true
-    @git add Cargo.toml Cargo.lock pyproject.toml
+    @git add Cargo.toml pyproject.toml
     @git commit -m "release: bump version to {{VERSION}}"
     @echo "Bumped version to {{VERSION}}"
