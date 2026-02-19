@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "crates/expman-core",
     "crates/expman-server",
-    "crates/expman-cli",
+    "crates/expman",
     "crates/expman-py", "frontend",
 ]
 

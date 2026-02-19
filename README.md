@@ -14,6 +14,21 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 - **Efficient storage**: Batched Arrow/Parquet writes, not per-step read-concat-write
 - **Nix dev environment**: Reproducible with `nix develop`
 
+## Installation
+
+### For CLI & Dashboard (Rust)
+Install the `expman` command-line tool via cargo:
+```bash
+cargo install expman
+```
+
+### For Python Logging (PyPI)
+Install the `expman-rs` library via pip:
+```bash
+pip install expman-rs
+```
+This includes the `expman` CLI as well.
+
 ## Quick Start
 
 ### Python Logging
@@ -79,9 +94,9 @@ Practical code samples are provided in the `examples/` directory:
 - **Python**: `python examples/python/basic_training.py`
 To run the Python example, ensure you have built the extension first with `maturin develop`.
 
-## For Rust Beginners
+## For Rust
 
-If you are new to Rust and want to use `expman-rs` in your own project:
+To use `expman-rs` in your own project:
 
 1. **Install Rust**: Use [rustup](https://rustup.rs/)
 2. **Setup Just**: We use `just` for task management. Install it with `cargo install just`.
@@ -92,11 +107,11 @@ If you are new to Rust and want to use `expman-rs` in your own project:
    Add this to your `Cargo.toml`:
    ```toml
    [dependencies]
-   expman-core = { path = "./path/to/expman-rs/crates/expman-core" }
+   expman = "0.1"
    ```
    Basic usage:
    ```rust
-   use expman_core::{ExperimentConfig, LoggingEngine, RunStatus};
+   use expman::{ExperimentConfig, LoggingEngine, RunStatus};
 
    fn main() -> anyhow::Result<()> {
        let config = ExperimentConfig::new("my_rust_exp", "./experiments");
@@ -153,7 +168,7 @@ graph TD
         API -- "SSE Push" --> DASH
     end
 
-    subgraph "expman-cli"
+    subgraph "expman"
         CLI_CMD["CLI Commands"]
         CLI_CMD -- "read metrics" --> PARQUET
         CLI_CMD -- "start" --> API
@@ -174,11 +189,3 @@ experiments/
       artifacts/           # user-saved files
 ```
 
-## Efficiency vs Python expMan
-
-| Operation | Python expMan | expman-rs |
-|---|---|---|
-| `log_metrics()` | Read+concat+write Parquet (O(n)) | Channel send ~100ns (O(1)) |
-| Web server | uvicorn (Python) | Axum (Rust) |
-| Live updates | Client polling | SSE push |
-| Binary | Python + many deps | Single ~10MB binary |

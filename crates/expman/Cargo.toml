@@ -1,5 +1,5 @@
 [package]
-name = "expman-cli"
+name = "expman"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
