@@ -16,7 +16,7 @@ crate-type = ["cdylib"]
 doc = false
 
 [dependencies]
-expman-core = { path = "../expman-core", version = "0.1.1" }
+expman-core = { path = "../expman-core", version = "0.1.2" }
 pyo3 = { workspace = true, features = ["extension-module"] }
 tokio = { workspace = true }
 serde_json = { workspace = true }
