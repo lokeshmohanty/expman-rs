@@ -116,9 +116,11 @@ bump-version VERSION:
     @echo "Bumping version to {{VERSION}}..."
     @# Update Cargo.toml (workspace package version)
     @sed -i 's/^version = "[0-9.]\+"/version = "{{VERSION}}"/' Cargo.toml
+    @# Update all internal dependency versions in crates
+    @find crates -name "Cargo.toml" -exec sed -i 's/version = "[0-9.]\+"/version = "{{VERSION}}"/g' {} +
     @# Update pyproject.toml (project version)
     @sed -i 's/^version = "[0-9.]\+"/version = "{{VERSION}}"/' pyproject.toml
     @cargo check > /dev/null 2>&1 || true
-    @git add Cargo.toml pyproject.toml
+    @git add Cargo.toml pyproject.toml crates/*/Cargo.toml
     @git commit -m "release: bump version to {{VERSION}}"
     @echo "Bumped version to {{VERSION}}"

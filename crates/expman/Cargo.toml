@@ -4,14 +4,19 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "High-performance experiment manager with Rust backend (CLI and library)"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme = "README.md"
 
 [[bin]]
 name = "expman"
 path = "src/main.rs"
 
 [dependencies]
-expman-core = { path = "../expman-core" }
-expman-server = { path = "../expman-server" }
+expman-core = { path = "../expman-core", version = "0.1.1" }
+expman-server = { path = "../expman-server", version = "0.1.1" }
 tokio = { workspace = true }
 clap = { workspace = true }
 comfy-table = { workspace = true }

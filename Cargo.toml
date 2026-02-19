@@ -12,6 +12,11 @@ version = "0.1.1"
 edition = "2021"
 authors = ["Lokesh Mohanty <lokesh1197@gmail.com>"]
 license = "MIT"
+description = "High-performance experiment manager with Rust backend"
+repository = "https://github.com/lokeshmohanty/expman-rs"
+homepage = "https://github.com/lokeshmohanty/expman-rs"
+documentation = "https://docs.rs/expman"
+readme = "README.md"
 
 [workspace.dependencies]
 # Async runtime
