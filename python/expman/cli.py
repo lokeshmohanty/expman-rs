@@ -1,6 +1,6 @@
-import sys
 import subprocess
-import os
+import sys
+
 
 def main():
     """
@@ -11,11 +11,11 @@ def main():
     # expect it to be in the same directory as the package.
     # For now, we'll try to find the binary that maturin might have installed
     # or just call 'expman' and hope it's on the PATH.
-    
-    # Ideally, expman-rs should bundle the binary. 
+
+    # Ideally, expman-rs should bundle the binary.
     # Since this is a hybrid package, we can also implement some logic here if needed.
     # But often maturin users prefer to use the Rust CLI directly.
-    
+
     try:
         # Check if expman is available in the path
         # If not, we might need a more sophisticated way to find the bundled binary.
@@ -24,6 +24,7 @@ def main():
     except FileNotFoundError:
         print("Error: 'expman' binary not found. Please ensure 'expman' is installed.")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

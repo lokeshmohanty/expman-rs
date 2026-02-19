@@ -19,13 +19,14 @@ Context manager:
             exp.log_metrics({"loss": 1.0 - i * 0.01}, step=i)
 """
 
+from __future__ import annotations
+
 import atexit
-import sys
 import os
-from typing import Any, Dict, Optional, Set
+import sys
+from typing import Any
 
-
-_current_exp: Optional["Experiment"] = None
+_current_exp: Experiment | None = None
 
 
 class Tee:
@@ -44,9 +45,11 @@ class Tee:
     def __getattr__(self, attr):
         return getattr(self.primary_file, attr)
 
+
 # Import the compiled Rust extension
 try:
-    from .expman import Experiment as _RustExperiment, __version__
+    from .expman import Experiment as _RustExperiment
+    from .expman import __version__
 except ImportError as e:
     raise ImportError(
         "expman Rust extension not found. "
@@ -75,7 +78,7 @@ class Experiment:
     def __init__(
         self,
         name: str,
-        run_name: Optional[str] = None,
+        run_name: str | None = None,
         base_dir: str = "experiments",
         flush_interval_rows: int = 50,
         flush_interval_ms: int = 500,
@@ -106,14 +109,14 @@ class Experiment:
 
         atexit.register(self.close)
 
-    def log_params(self, params: Dict[str, Any]) -> None:
+    def log_params(self, params: dict[str, Any]) -> None:
         """Log hyperparameters/configuration. Non-blocking."""
         self._exp.log_params(params)
 
     def log_metrics(
         self,
-        metrics: Dict[str, float],
-        step: Optional[int] = None,
+        metrics: dict[str, float],
+        step: int | None = None,
     ) -> None:
         """
         Log a dictionary of metrics. Non-blocking (~100ns).
@@ -170,11 +173,11 @@ class Experiment:
             self._closed = True
             self._exp.close()
 
-    def __enter__(self) -> "Experiment":
+    def __enter__(self) -> Experiment:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
-        self.close() # Restore redirection first
+        self.close()  # Restore redirection first
         self._exp.__exit__(exc_type, exc_val, exc_tb)
         return False
 
@@ -184,7 +187,7 @@ class Experiment:
 
 def init(
     name: str,
-    run_name: Optional[str] = None,
+    run_name: str | None = None,
     base_dir: str = "experiments",
     flush_interval_rows: int = 50,
     flush_interval_ms: int = 500,
@@ -194,7 +197,7 @@ def init(
     global _current_exp
     if _current_exp:
         _current_exp.close()
-    
+
     _current_exp = Experiment(
         name=name,
         run_name=run_name,
@@ -206,7 +209,7 @@ def init(
     return _current_exp
 
 
-def log_params(params: Dict[str, Any]) -> None:
+def log_params(params: dict[str, Any]) -> None:
     """Log parameters to the current global experiment."""
     if _current_exp:
         _current_exp.log_params(params)
@@ -214,7 +217,7 @@ def log_params(params: Dict[str, Any]) -> None:
         print("Warning: No active experiment. Call expman.init() first.")
 
 
-def log_metrics(metrics: Dict[str, float], step: Optional[int] = None) -> None:
+def log_metrics(metrics: dict[str, float], step: int | None = None) -> None:
     """Log metrics to the current global experiment."""
     if _current_exp:
         _current_exp.log_metrics(metrics, step=step)
@@ -250,4 +253,14 @@ def close() -> None:
         _current_exp = None
 
 
-__all__ = ["Experiment", "init", "log_metrics", "log_params", "save_artifact", "info", "warn", "close", "__version__"]
+__all__ = [
+    "Experiment",
+    "init",
+    "log_metrics",
+    "log_params",
+    "save_artifact",
+    "info",
+    "warn",
+    "close",
+    "__version__",
+]

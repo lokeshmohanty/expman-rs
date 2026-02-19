@@ -8,6 +8,7 @@ license.workspace = true
 [lib]
 name = "expman"
 crate-type = ["cdylib"]
+doc = false
 
 [dependencies]
 expman-core = { path = "../expman-core" }

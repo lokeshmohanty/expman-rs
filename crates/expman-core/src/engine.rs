@@ -336,7 +336,19 @@ fn handle_params(config_path: &std::path::Path, new_params: HashMap<String, serd
 }
 
 fn handle_artifact(artifacts_dir: &std::path::Path, path: PathBuf) {
-    let dest = artifacts_dir.join(&path);
+    // If path is absolute, join() will replace artifacts_dir.
+    // We want to save the file into artifacts_dir, preserving its filename.
+    let dest = if path.is_absolute() {
+        if let Some(filename) = path.file_name() {
+            artifacts_dir.join(filename)
+        } else {
+            error!("Invalid artifact path: {}", path.display());
+            return;
+        }
+    } else {
+        artifacts_dir.join(&path)
+    };
+
     if let Some(parent) = dest.parent() {
         if let Err(e) = fs::create_dir_all(parent) {
             error!("Failed to create artifact dir: {}", e);

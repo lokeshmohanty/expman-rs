@@ -53,18 +53,19 @@ dev-py:
     fi
     @# Note: we use 'uv run' to ensure maturin uses the venv
     uv run maturin develop --manifest-path crates/expman-py/Cargo.toml
+    uv pip install -e ".[dev]"
 
 # Run the CLI
 run *ARGS:
-    cargo run -p expman-cli -- {{ARGS}}
+    cargo run -p expman -- {{ARGS}}
 
 # Start the dashboard server
 serve DIR="./experiments":
-    cargo run -p expman-cli -- serve {{DIR}}
+    cargo run -p expman -- serve {{DIR}}
 
 # List experiments
 list DIR="./experiments":
-    cargo run -p expman-cli -- list {{DIR}}
+    cargo run -p expman -- list {{DIR}}
 
 # Check formatting
 fmt-check:
@@ -82,8 +83,16 @@ lint:
 lint-frontend:
     cargo clippy -p frontend --target wasm32-unknown-unknown -- -D warnings
 
+# Run Python linter (ruff)
+lint-py:
+    uv run ruff check python/ examples/
+
+# Run Python tests (pytest)
+test-py:
+    uv run pytest python/tests
+
 # Full CI check
-ci: fmt-check lint test
+ci: fmt-check lint test lint-py test-py
 
 # Clean build artifacts
 clean:

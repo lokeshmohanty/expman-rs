@@ -27,7 +27,7 @@
           "rustfmt"
           "rust-analyzer"
         ];
-        
+
         # Combined toolchain with WASM target
         fullToolchain = pkgs.fenix.combine [
           rustToolchain
@@ -64,6 +64,9 @@
             pkgs.tokei            # code stats
             pkgs.trunk            # WASM builder
             pkgs.wasm-bindgen-cli # WASM glue
+            pkgs.pre-commit       # pre-commit hooks
+            pkgs.ruff             # Python linter
+            pkgs.python312Packages.pytest # Python testing
           ];
 
           # Environment variables
@@ -72,7 +75,7 @@
 
           # Ensure maturin can find Python
           PYO3_PYTHON = "${pythonBase}/bin/python3";
-          
+
           # We'll use uv to manage the environment now
 
           shellHook = ''
@@ -83,12 +86,12 @@
             echo ""
             echo "Commands:"
             echo "  just build                 - build everything (Rust + Python)"
-            echo "  cargo nextest run          - run all tests"
+            echo "  just test                  - run all tests"
             echo "  cargo watch -x 'nextest run' - watch mode"
             echo "  just dev-py                - build Python extension (auto-handles uv venv)"
-            echo "  cargo run -p expman-cli -- serve ./experiments"
+            echo "  just serve ./experiments"
             echo ""
-            
+
             if [ ! -d ".venv" ]; then
               echo "💡 Run 'just dev-py' to initialize the uv virtual environment."
             fi

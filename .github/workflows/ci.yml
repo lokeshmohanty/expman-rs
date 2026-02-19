@@ -58,3 +58,23 @@ jobs:
 
       - name: Check frontend compiles for wasm32
         run: cargo check -p frontend --target wasm32-unknown-unknown
+
+  python-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Python lint (Ruff)
+        run: uv run ruff check python/ examples/
+
+  python-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v5
+      - name: Build Rust extension and run tests
+        run: |
+          uv run maturin develop --manifest-path crates/expman-py/Cargo.toml
+          uv run pytest python/tests

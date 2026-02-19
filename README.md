@@ -29,6 +29,17 @@ pip install expman-rs
 ```
 This includes the `expman` CLI as well.
 
+### Alternatively: Download or Install from GitHub
+- **Direct Download**: Download the pre-built `expman` binary or Python wheels from [GitHub Releases](https://github.com/lokeshmohanty/expman-rs/releases).
+- **Python (pip)**:
+  ```bash
+  pip install git+https://github.com/lokeshmohanty/expman-rs.git
+  ```
+- **Rust (cargo)**:
+  ```bash
+  cargo install --git https://github.com/lokeshmohanty/expman-rs.git expman
+  ```
+
 ## Quick Start
 
 ### Python Logging
@@ -116,9 +127,9 @@ To use `expman-rs` in your own project:
    fn main() -> anyhow::Result<()> {
        let config = ExperimentConfig::new("my_rust_exp", "./experiments");
        let engine = LoggingEngine::new(config)?;
-       
+
        engine.log_metrics([("loss".to_string(), 0.5.into())].into(), Some(0));
-       
+
        engine.close(RunStatus::Finished);
        Ok(())
    }
@@ -143,7 +154,7 @@ graph TD
         BUF["Flush Buffer"]
         CHAN["mpsc Channel"]
         TASK["Tokio Background Task"]
-        
+
         CORE_FFI -- "send" --> CHAN
         CHAN -- "receive" --> TASK
         TASK -- "batch" --> BUF
@@ -153,7 +164,7 @@ graph TD
         PARQUET[("metrics.parquet")]
         YAML[("config.yaml / run.yaml")]
         LOG[("run.log")]
-        
+
         BUF -- "every 50 rows / 500ms" --> PARQUET
         TASK -- "write" --> YAML
         TASK -- "append" --> LOG
@@ -162,7 +173,7 @@ graph TD
     subgraph "expman-server (Axum)"
         API["REST API / SSE Server"]
         DASH["Embedded Dashboard"]
-        
+
         PARQUET -.-> API
         YAML -.-> API
         API -- "SSE Push" --> DASH
@@ -188,4 +199,3 @@ experiments/
       run.log              # text log
       artifacts/           # user-saved files
 ```
-

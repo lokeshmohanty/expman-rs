@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "numpy"]
+dev = ["pytest", "numpy", "pre-commit", "ruff"]
 
 [project.scripts]
 expman = "expman.cli:main"
@@ -31,4 +31,23 @@ manifest-path = "crates/expman-py/Cargo.toml"
 python-source = "python"
 # Module name (must match #[pymodule] fn name in Rust)
 module-name = "expman.expman"
+# Allow the extension to be imported from the python/expman directory
 features = ["pyo3/extension-module"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["expman"]
