@@ -85,11 +85,11 @@ lint-frontend:
 
 # Run Python linter (ruff)
 lint-py:
-    uv run ruff check python/ examples/
+    uv run --extra dev ruff check python/ examples/
 
 # Run Python tests (pytest)
 test-py:
-    uv run pytest python/tests
+    uv run --extra dev pytest python/tests
 
 # Full CI check
 ci: fmt-check lint test lint-py test-py

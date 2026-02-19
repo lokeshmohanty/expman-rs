@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - name: Python lint (Ruff)
-        run: uv run ruff check python/ examples/
+        run: uv run --extra dev ruff check python/ examples/
 
   python-test:
     runs-on: ubuntu-latest
@@ -76,5 +76,5 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: Build Rust extension and run tests
         run: |
-          uv run maturin develop --manifest-path crates/expman-py/Cargo.toml
-          uv run pytest python/tests
+          uv run --extra dev maturin develop --manifest-path crates/expman-py/Cargo.toml
+          uv run --extra dev pytest python/tests

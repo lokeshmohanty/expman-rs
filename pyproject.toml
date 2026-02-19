@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "numpy", "pre-commit", "ruff"]
+dev = ["pytest", "numpy", "pre-commit", "ruff", "maturin"]
 
 [project.scripts]
 expman = "expman.cli:main"
