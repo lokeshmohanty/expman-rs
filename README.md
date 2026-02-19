@@ -100,10 +100,16 @@ just build-docs                # build and open documentation
 
 ## Examples
 
-Practical code samples are provided in the `examples/` directory:
+Practical code samples are provided in the [examples/](examples/) directory:
 
-- **Python**: `python examples/python/basic_training.py`
-To run the Python example, ensure you have built the extension first with `maturin develop`.
+- **Python**: [examples/python/basic_training.py](examples/python/basic_training.py)
+- **Rust**: [examples/rust/logging.rs](examples/rust/logging.rs)
+
+To run the Python examples, ensure you have built the extension first with `just dev-py`.
+To run the Rust example, use:
+```bash
+cargo run --example logging -p expman
+```
 
 ## For Rust
 

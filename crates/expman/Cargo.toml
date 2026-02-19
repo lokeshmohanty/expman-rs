@@ -14,6 +14,10 @@ readme = "README.md"
 name = "expman"
 path = "src/main.rs"
 
+[[example]]
+name = "logging"
+path = "../../examples/rust/logging.rs"
+
 [dependencies]
 expman-core = { path = "../expman-core", version = "0.1.1" }
 expman-server = { path = "../expman-server", version = "0.1.1" }

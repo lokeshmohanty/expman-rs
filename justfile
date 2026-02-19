@@ -91,6 +91,14 @@ lint-py:
 test-py:
     uv run --extra dev pytest python/tests
 
+# Run the Rust logging example
+example-rust:
+    cargo run --example logging -p expman
+
+# Run the Python basic training example
+example-py: dev-py
+    uv run python examples/python/basic_training.py
+
 # Full CI check
 ci: fmt-check lint test lint-py test-py
 
