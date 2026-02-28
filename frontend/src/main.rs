@@ -1,3 +1,4 @@
+#![doc = include_str!("../../docs/frontend.md")]
 use chrono::{DateTime, Local};
 use leptos::prelude::*;
 use leptos::task::spawn_local;

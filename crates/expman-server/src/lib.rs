@@ -1,3 +1,4 @@
+#![doc = include_str!("../../../docs/expman-server.md")]
 //! expman-server: Axum web server with REST API and SSE live streaming.
 
 pub mod api;

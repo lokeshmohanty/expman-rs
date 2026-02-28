@@ -11,7 +11,7 @@ documentation.workspace = true
 readme = "README.md"
 
 [lib]
-name = "expman"
+name = "expman_py"
 crate-type = ["cdylib"]
 doc = false
 

@@ -25,7 +25,7 @@ impl JupyterManager {
 
     /// Checks if `jupyter notebook` is available in the current environment.
     ///
-    /// This is used by the frontend to determine whether to enable the 
+    /// This is used by the frontend to determine whether to enable the
     /// "Launch Live Jupyter Notebook" button or show a warning.
     pub async fn is_available() -> bool {
         match tokio::process::Command::new("jupyter")
@@ -40,7 +40,7 @@ impl JupyterManager {
     }
 
     /// Finds an available TCP port starting from a base port.
-    /// 
+    ///
     /// Scans ports from 8000 to 9000 to find the first one that can be bound to `127.0.0.1`.
     fn get_available_port() -> Option<u16> {
         (8000..9000).find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
@@ -251,11 +251,11 @@ mod tests {
         let p = port.unwrap();
         assert!((8000..9000).contains(&p));
     }
-    
+
     #[tokio::test]
     async fn test_jupyter_manager_stop_non_existent() {
         let manager = JupyterManager::new();
-        // Stopping a non-existent notebook shouldn't error 
+        // Stopping a non-existent notebook shouldn't error
         let res = manager.stop("exp1", "run1").await;
         assert!(res.is_ok());
     }

@@ -1,5 +1,8 @@
 # expman-rs
 
+[![Crates.io](https://img.shields.io/crates/v/expman.svg)](https://crates.io/crates/expman)
+[![PyPI](https://img.shields.io/pypi/v/expman-rs.svg)](https://pypi.org/project/expman-rs/)
+[![GitHub Repo](https://img.shields.io/badge/github-repo-blue.svg?logo=github)](https://github.com/lokeshmohanty/expman-rs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-deploy-blue)](https://lokeshmohanty.github.io/expman-rs)
 
@@ -16,33 +19,35 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 
 ## Installation
 
-### For CLI & Dashboard (Rust)
-Install the `expman` command-line tool via cargo:
+### From Cargo
+
 ```bash
 cargo install expman
 ```
 
-### For Python Logging (PyPI)
-Install the `expman-rs` library via pip:
+### From PYPI
+
 ```bash
 pip install expman-rs
 ```
-This includes the `expman` CLI as well.
 
 ### Alternatively: Download or Install from GitHub
+
 - **Direct Download**: Download the pre-built `expman` binary or Python wheels from [GitHub Releases](https://github.com/lokeshmohanty/expman-rs/releases).
 - **Python (pip)**:
+
   ```bash
   pip install git+https://github.com/lokeshmohanty/expman-rs.git
   ```
 - **Rust (cargo)**:
+
   ```bash
   cargo install --git https://github.com/lokeshmohanty/expman-rs.git expman
   ```
 
 ## Quick Start
 
-### Python Logging
+### Python
 
 **Option A: Global Singleton (Easiest)**
 ```python
@@ -61,6 +66,24 @@ from expman import Experiment
 with Experiment("resnet_cifar10") as exp:
     exp.log_metrics({"loss": 0.5}, step=0)
 ```
+
+## For Rust
+
+Basic usage:
+
+```rust
+use expman::{ExperimentConfig, LoggingEngine, RunStatus};
+
+fn main() -> anyhow::Result<()> {
+   let config = ExperimentConfig::new("my_rust_exp", "./experiments");
+   let engine = LoggingEngine::new(config)?;
+
+   engine.log_metrics([("loss".to_string(), 0.5.into())].into(), Some(0));
+
+   engine.close(RunStatus::Finished);
+   Ok(())
+}
+   ```
 
 ### Dashboard
 
@@ -90,8 +113,18 @@ just watch                     # watch mode for tests
 just build-docs                # build and open documentation
 ```
 
+## Documentation
+
+For detailed usage, refer to the standalone documentation files for each component:
+- [`expman-cli`](docs/expman-cli.md) - Command-line interface definitions and references.
+- [`expman-core`](docs/expman-core.md) - Core high-performance async Rust logging engine.
+- [`expman-py`](docs/expman-py.md) - Python extension for non-blocking logging.
+- [`expman-server`](docs/expman-server.md) - Axum web server and SSE live streaming API.
+
+
 ### Dashboard Features
 - **Live Metrics**: Real-time SSE streaming of experiment metrics and logs.
+- **Live Jupyter Notebooks**: Instantly spawn a live Jupyter instance natively bound to any run's execution environment directly from the UI, with auto-generated analytics boilerplate (Polars).
 - **Scalar Filter**: Toggle individual metric columns in the Runs table via chip buttons — no page reload.
 - **Deep Inspection**: View detailed run configurations, metadata, and artifacts.
 - **Artifact Browser**: Preview `parquet`, `csv`, and other files directly in the browser.
@@ -106,40 +139,12 @@ Practical code samples are provided in the [examples/](examples/) directory:
 - **Rust**: [examples/rust/logging.rs](examples/rust/logging.rs)
 
 To run the Python examples, ensure you have built the extension first with `just dev-py`.
+
 To run the Rust example, use:
+
 ```bash
 cargo run --example logging -p expman
 ```
-
-## For Rust
-
-To use `expman-rs` in your own project:
-
-1. **Install Rust**: Use [rustup](https://rustup.rs/)
-2. **Setup Just**: We use `just` for task management. Install it with `cargo install just`.
-3. **Project Structure**:
-   - `crates/expman-core`: The main library.
-   - `crates/expman-cli`: The terminal tool and dashboard server.
-4. **Using the library**:
-   Add this to your `Cargo.toml`:
-   ```toml
-   [dependencies]
-   expman = "0.1"
-   ```
-   Basic usage:
-   ```rust
-   use expman::{ExperimentConfig, LoggingEngine, RunStatus};
-
-   fn main() -> anyhow::Result<()> {
-       let config = ExperimentConfig::new("my_rust_exp", "./experiments");
-       let engine = LoggingEngine::new(config)?;
-
-       engine.log_metrics([("loss".to_string(), 0.5.into())].into(), Some(0));
-
-       engine.close(RunStatus::Finished);
-       Ok(())
-   }
-   ```
 
 ## Architecture
 

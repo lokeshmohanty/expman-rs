@@ -1,3 +1,4 @@
+#![doc = include_str!("../../../docs/expman-py.md")]
 //! PyO3 Python extension module for expman-rs.
 #![allow(clippy::useless_conversion)]
 //!

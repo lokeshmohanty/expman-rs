@@ -1,3 +1,4 @@
+#![doc = include_str!("../../../docs/expman-cli.md")]
 //! expman CLI: friendly command-line interface for experiment management.
 
 use std::path::PathBuf;
