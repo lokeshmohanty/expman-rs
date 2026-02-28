@@ -1,6 +1,7 @@
 //! expman-server: Axum web server with REST API and SSE live streaming.
 
 pub mod api;
+pub mod jupyter;
 pub mod state;
 
 use axum::Router;

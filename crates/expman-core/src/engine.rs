@@ -74,6 +74,8 @@ impl LoggingEngine {
             experiment: config.name.clone(),
             status: RunStatus::Running,
             started_at: Utc::now(),
+            language: Some(config.language.clone()),
+            env_path: config.env_path.clone(),
             ..Default::default()
         };
         storage::save_run_metadata(&run_dir, &meta)?;

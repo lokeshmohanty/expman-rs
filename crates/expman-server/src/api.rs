@@ -49,6 +49,19 @@ pub fn router() -> Router<AppState> {
         .route("/experiments/:exp/stats", get(get_experiment_stats))
         .route("/config", get(get_server_config))
         .route("/stats", get(get_global_stats))
+        .route(
+            "/experiments/:exp/runs/:run/jupyter/start",
+            axum::routing::post(start_jupyter),
+        )
+        .route(
+            "/experiments/:exp/runs/:run/jupyter/stop",
+            axum::routing::post(stop_jupyter),
+        )
+        .route(
+            "/experiments/:exp/runs/:run/jupyter/status",
+            get(status_jupyter),
+        )
+        .route("/jupyter/available", get(available_jupyter))
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -473,6 +486,82 @@ async fn get_global_stats(State(state): State<AppState>) -> impl IntoResponse {
 
 async fn get_server_config() -> impl IntoResponse {
     Json(serde_json::json!({"live_mode": true, "version": env!("CARGO_PKG_VERSION")}))
+}
+
+// ─── Jupyter Endpoints ───────────────────────────────────────────────────────
+
+/// Endpoint to start a Jupyter Notebook for a specific run.
+///
+/// If a notebook is already running for the run, returns its port.
+/// Otherwise, finds an available port and spawns a new `jupyter notebook` process
+/// in the background, bound to the run's directory.
+async fn start_jupyter(
+    State(state): State<AppState>,
+    Path((exp, run)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let dir = run_dir(&state.base_dir, &exp, &run);
+
+    // Load metadata to find the environment path
+    let meta = match storage::load_run_metadata(&dir) {
+        Ok(m) => m,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    };
+
+    let env_path = match meta.env_path {
+        Some(p) => p,
+        None => "python".to_string(), // Fallback
+    };
+
+    let is_python = meta
+        .language
+        .unwrap_or_else(|| "python".to_string())
+        .to_lowercase()
+        != "rust";
+
+    match state
+        .jupyter
+        .spawn(&exp, &run, &env_path, dir.clone(), is_python)
+        .await
+    {
+        Ok(port) => Json(serde_json::json!({ "port": port })).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+/// Endpoint to stop a running Jupyter Notebook for a specific run.
+///
+/// Looks up the tracked process and kills it. Returns 200 OK if successful
+/// or if no notebook was running.
+async fn stop_jupyter(
+    State(state): State<AppState>,
+    Path((exp, run)): Path<(String, String)>,
+) -> impl IntoResponse {
+    match state.jupyter.stop(&exp, &run).await {
+        Ok(_) => (StatusCode::OK, "Stopped").into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+/// Endpoint to get the status of a Jupyter Notebook for a specific run.
+///
+/// Returns `{"running": true, "port": u16}` if running, else `{"running": false}`.
+async fn status_jupyter(
+    State(state): State<AppState>,
+    Path((exp, run)): Path<(String, String)>,
+) -> impl IntoResponse {
+    if let Some(port) = state.jupyter.status(&exp, &run) {
+        Json(serde_json::json!({ "running": true, "port": port })).into_response()
+    } else {
+        Json(serde_json::json!({ "running": false })).into_response()
+    }
+}
+
+/// Endpoint to check if `jupyter` command is available system-wide.
+///
+/// Returns `{"available": bool}`.
+async fn available_jupyter() -> impl IntoResponse {
+    let available = crate::jupyter::JupyterManager::is_available().await;
+    Json(serde_json::json!({ "available": available })).into_response()
 }
 
 // ─── Frontend (embedded) ─────────────────────────────────────────────────────

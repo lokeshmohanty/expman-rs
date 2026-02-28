@@ -33,6 +33,7 @@ impl Experiment {
     #[new]
     #[pyo3(signature = (name, run_name=None, base_dir="experiments", flush_interval_rows=50, flush_interval_ms=500))]
     fn new(
+        py: Python<'_>,
         name: &str,
         run_name: Option<&str>,
         base_dir: &str,
@@ -42,6 +43,15 @@ impl Experiment {
         let mut config = ExperimentConfig::new(name, base_dir);
         config.flush_interval_rows = flush_interval_rows;
         config.flush_interval_ms = flush_interval_ms;
+        config.language = "python".to_string();
+
+        if let Ok(sys) = py.import_bound("sys") {
+            if let Ok(exec_obj) = sys.getattr("executable") {
+                if let Ok(executable) = exec_obj.extract::<String>() {
+                    config.env_path = Some(executable);
+                }
+            }
+        }
         if let Some(rn) = run_name {
             config = config.with_run_name(rn);
         }

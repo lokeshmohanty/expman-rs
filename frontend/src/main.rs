@@ -5,7 +5,7 @@ use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    ChevronRight, FlaskConical, LayoutDashboard, Package, Settings as SettingsIcon,
+    ChevronRight, FlaskConical, LayoutDashboard, Package, Settings as SettingsIcon, TriangleAlert,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -42,6 +42,8 @@ pub struct Run {
     pub duration_secs: Option<f64>,
     pub description: Option<String>,
     pub metrics: Option<std::collections::HashMap<String, f64>>,
+    pub language: Option<String>,
+    pub env_path: Option<String>,
 }
 
 async fn fetch_experiments() -> Result<Vec<Experiment>, String> {
@@ -620,7 +622,7 @@ fn ExperimentDetail() -> impl IntoView {
             <div class="flex-grow flex flex-col space-y-4 min-h-0">
                 // Tabs
                 <div class="flex space-x-1 bg-slate-900 border border-slate-800 p-1 rounded-xl w-fit flex-shrink-0">
-                    {["runs", "metrics", "artifacts", "console"].into_iter().map(|t| {
+                    {["runs", "metrics", "artifacts", "console", "interactive"].into_iter().map(|t| {
                         let tab = t.to_string();
                         let tab_click = tab.clone();
                         let is_active = move || active_tab.get() == tab;
@@ -645,6 +647,7 @@ fn ExperimentDetail() -> impl IntoView {
                         "metrics" => view! { <MetricsView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "artifacts" => view! { <ArtifactView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "console" => view! { <ConsoleView exp_id=id() selected=selected_runs.get() /> }.into_any(),
+                        "interactive" => view! { <InteractiveView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         _ => view! { <div class="p-8 text-slate-500 text-center">"Select a tab"</div> }.into_any(),
                     }}
                 </div>
@@ -1123,6 +1126,323 @@ fn SettingsPage() -> impl IntoView {
                     </button>
                 </div>
             </div>
+        </div>
+    }.into_any()
+}
+
+async fn fetch_run_metadata(exp_id: String, run_id: String) -> Result<Run, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/metadata",
+        exp_id, run_id
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error fetching run metadata: {}", resp.status()));
+    }
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct JupyterStatus {
+    running: bool,
+    port: Option<u16>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct JupyterAvailableResponse {
+    available: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct JupyterStartResponse {
+    port: u16,
+}
+
+async fn check_jupyter_available() -> Result<bool, String> {
+    let resp = gloo_net::http::Request::get("/api/jupyter/available")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    let res: JupyterAvailableResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(res.available)
+}
+
+async fn fetch_jupyter_status(exp: String, run: String) -> Result<JupyterStatus, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/jupyter/status",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+async fn start_jupyter(exp: String, run: String) -> Result<u16, String> {
+    let resp = gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/runs/{}/jupyter/start",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    let res: JupyterStartResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(res.port)
+}
+
+async fn stop_jupyter(exp: String, run: String) -> Result<(), String> {
+    gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/runs/{}/jupyter/stop",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[component]
+fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
+    if selected.is_empty() {
+        return view! {
+            <div class="flex-grow flex flex-col items-center justify-center p-12 text-center space-y-4">
+                <div class="p-4 bg-slate-800 rounded-full text-blue-500">
+                    <FlaskConical size=48 />
+                </div>
+                <h3 class="text-xl font-bold text-white">"No Run Selected"</h3>
+                <p class="text-slate-400 max-w-sm">"Select a single run from the sidebar to view interactive analysis tools."</p>
+            </div>
+        }.into_any();
+    }
+
+    if selected.len() > 1 {
+        return view! {
+            <div class="flex-grow flex flex-col items-center justify-center p-12 text-center space-y-4">
+                <div class="p-4 bg-slate-800 rounded-full text-blue-500">
+                    <FlaskConical size=48 />
+                </div>
+                <h3 class="text-xl font-bold text-white">"Multiple Runs Selected"</h3>
+                <p class="text-slate-400 max-w-sm">"Please select exactly one run to view its interactive notebook."</p>
+            </div>
+        }.into_any();
+    }
+
+    let run_id = selected.into_iter().next().unwrap();
+
+    let exp_id_clone_status = exp_id.clone();
+    let run_id_clone_status = run_id.clone();
+    let jupyter_status = LocalResource::new(move || {
+        let eid = exp_id_clone_status.clone();
+        let rid = run_id_clone_status.clone();
+        async move { fetch_jupyter_status(eid, rid).await }
+    });
+
+    let (is_loading, set_is_loading) = signal(false);
+    let (jupyter_port, set_jupyter_port) = signal(None::<u16>);
+
+    Effect::new(move |_| {
+        if let Some(Ok(status)) = jupyter_status.get().as_deref() {
+            if status.running {
+                set_jupyter_port.set(status.port);
+            }
+        }
+    });
+
+    let run_id_outer = run_id.clone();
+    let exp_id_outer = exp_id.clone();
+
+    let run_data = LocalResource::new(move || {
+        let eid = exp_id.clone();
+        let rid = run_id.clone();
+        async move { fetch_run_metadata(eid, rid).await }
+    });
+
+    let jupyter_available =
+        LocalResource::new(|| async move { check_jupyter_available().await.unwrap_or(false) });
+
+    view! {
+        <div class="flex-grow p-6 space-y-6 overflow-auto bg-[#e5e5e5] dark:bg-slate-950 flex flex-col h-full">
+            <Suspense fallback=|| view! { <div class="p-8 text-center text-slate-500 animate-pulse">"Loading notebook status..."</div> }>
+                {move || {
+                    let port_opt = jupyter_port.get();
+                    let loading = is_loading.get();
+                    let rt_exp_id = exp_id_outer.clone();
+                    let rt_run_id = run_id_outer.clone();
+
+                    let start_notebook = move |_| {
+                        let eid = rt_exp_id.clone();
+                        let rid = rt_run_id.clone();
+                        set_is_loading.set(true);
+                        spawn_local(async move {
+                            if let Ok(port) = start_jupyter(eid, rid).await {
+                                set_jupyter_port.set(Some(port));
+                            }
+                            set_is_loading.set(false);
+                        });
+                    };
+
+                    let rt_exp_id2 = exp_id_outer.clone();
+                    let rt_run_id2 = run_id_outer.clone();
+
+                    let stop_notebook = move |_| {
+                        let eid = rt_exp_id2.clone();
+                        let rid = rt_run_id2.clone();
+                        set_is_loading.set(true);
+                        spawn_local(async move {
+                            let _ = stop_jupyter(eid, rid).await;
+                            set_jupyter_port.set(None);
+                            set_is_loading.set(false);
+                        });
+                    };
+
+                    Suspend::new(async move {
+                        let run = run_data.get().as_deref().cloned().unwrap_or(Err("Failed to load".to_string()));
+                        let view_result: leptos::prelude::AnyView = match run {
+                            Ok(run_info) => {
+                                let lang = run_info.language.clone().unwrap_or_else(|| "python".to_string()).to_lowercase();
+                                let env_str = run_info.env_path.clone().unwrap_or_else(|| "unknown".to_string());
+                                let is_py = lang != "rust";
+                                let snippet = if is_py {
+                                    format!(
+                                        "# Environment: {}\n# Install required dependencies into this environment\nimport sys\n!uv pip install polars matplotlib pyarrow fastparquet --python {{sys.executable}}\n\nimport polars as pl\nimport matplotlib.pyplot as plt\n\n# Load run metrics\nmetrics_path = 'metrics.parquet'\ndf = pl.read_parquet(metrics_path)\n\n# Display the latest metrics\ndf.tail()",
+                                        env_str
+                                    )
+                                } else {
+                                    format!(
+                                        "// Environment: {}\nuse polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {{\n    // Load run metrics\n    let mut file = std::fs::File::open(\"metrics.parquet\").unwrap();\n    let df = ParquetReader::new(&mut file).finish()?;\n\n    println!(\"{{:?}}\", df.tail(Some(5)));\n    Ok(())\n}}",
+                                        env_str
+                                    )
+                                };
+
+                                let name_str = run_info.name.clone();
+
+                                if let Some(p) = port_opt {
+                                    let url = format!("http://localhost:{}/notebooks/interactive.ipynb", p);
+                                    view! {
+                                        <div class="flex flex-col h-full space-y-4 min-h-[700px]">
+                                            <div class="flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-slate-300 dark:border-slate-700 mx-1">
+                                                <div class="flex items-center space-x-3">
+                                                    <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                                    <span class="font-semibold text-slate-800 dark:text-white">"Live Jupyter Notebook Active"</span>
+                                                </div>
+                                                <div class="flex items-center space-x-3">
+                                                    <a href=url.clone() target="_blank" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded transition-colors border border-slate-300 dark:border-slate-600">
+                                                        "Pop-out"
+                                                    </a>
+                                                    <button
+                                                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+                                                        on:click=stop_notebook
+                                                        disabled=loading
+                                                    >
+                                                        {if loading { "Stopping..." } else { "Stop Notebook" }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm mx-1">
+                                                <iframe src=url class="w-full h-full border-none min-h-[600px]"/>
+                                            </div>
+                                        </div>
+                                    }.into_any()
+                                } else {
+                                    let env_disp = env_str.clone();
+                                    let name_disp = name_str.clone();
+                                    let snippet_disp = snippet.clone();
+                                    let lang_disp = if is_py { "Python" } else { "Rust" };
+
+                                    let available_res = jupyter_available.get();
+                                    let is_available = match available_res.as_deref() {
+                                        Some(&avail) => avail,
+                                        None => false, // Loading or error
+                                    };
+
+                                    view! {
+                                        <div class="max-w-4xl mx-auto w-full space-y-6">
+                                            <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-300 dark:border-slate-700 p-8 text-center space-y-4">
+                                                <div class="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+                                                    <ChevronRight size=28 />
+                                                </div>
+                                                <h3 class="text-2xl font-bold text-slate-800 dark:text-white">"Launch Live Analysis"</h3>
+                                                <p class="text-slate-500 max-w-lg mx-auto leading-relaxed">
+                                                    "Spawn a fully functional Jupyter instance inside this run's folder {" 
+                                                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{name_disp}</span> 
+                                                    "}, globally tied to the dashboard execution environment:"
+                                                    <br/><br/>
+                                                    <code class="text-xs font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded inline-block shadow-inner">{env_disp}</code>
+                                                </p>
+                                                <div class="pt-6">
+                                                    <button
+                                                        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 focus:ring focus:ring-blue-500/50 text-white font-medium rounded-lg transition-all flex items-center justify-center mx-auto space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                                                        on:click=start_notebook
+                                                        disabled=move || loading || !is_available || jupyter_available.get().is_none()
+                                                    >
+                                                        <span>{if loading { "Launching Notebook..." } else if !is_available { "Jupyter Not Available" } else { "▶ Launch Live Jupyter Notebook" }}</span>
+                                                    </button>
+                                                    {
+                                                        if !is_available && jupyter_available.get().is_some() {
+                                                            view! {
+                                                                <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md max-w-lg mx-auto flex items-start space-x-3 text-left">
+                                                                    <div class="text-yellow-600 dark:text-yellow-500 mt-0.5">
+                                                                       <TriangleAlert size=18 />
+                                                                    </div>
+                                                                    <div class="text-sm text-yellow-800 dark:text-yellow-200">
+                                                                        <p class="font-bold">"Jupyter Notebook is not installed"</p>
+                                                                        <p class="mt-1">"To enable this feature, install Jupyter in the environment where the ExpMan Dashboard is running (e.g., "<code class="text-xs bg-yellow-100 dark:bg-yellow-900 px-1 rounded">"pip install notebook"</code>")."</p>
+                                                                    </div>
+                                                                </div>
+                                                            }.into_any()
+                                                        } else {
+                                                            view! { <span class="hidden"></span> }.into_any()
+                                                        }
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center space-x-4 my-8 mx-12">
+                                                <div class="h-px bg-slate-300 dark:bg-slate-700 flex-grow"></div>
+                                                <span class="text-slate-400 text-xs font-bold uppercase tracking-widest whitespace-nowrap">"Or Use Snippet Manually"</span>
+                                                <div class="h-px bg-slate-300 dark:bg-slate-700 flex-grow"></div>
+                                            </div>
+                                            <div class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
+                                                <div class="flex bg-slate-50 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 px-4 py-3 text-xs text-slate-500 items-center justify-between">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="font-mono bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-2 py-0.5 rounded font-bold">"In [1]:"</span>
+                                                        <span class="font-medium text-slate-700 dark:text-slate-300">{lang_disp}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="p-5 font-mono text-sm overflow-x-auto text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-950">
+                                                    <pre><code class="leading-relaxed">{snippet_disp}</code></pre>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }.into_any()
+                                }
+                            },
+                            Err(e) => {
+                                let err_msg = e.clone();
+                                view! {
+                                    <div class="p-8 text-red-500 text-center bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg max-w-md mx-auto mt-10">
+                                        <div class="font-bold flex items-center justify-center space-x-2 mb-2">
+                                            <span>"Failed to Load Run"</span>
+                                        </div>
+                                        <p class="text-sm opacity-80">{err_msg}</p>
+                                    </div>
+                                }.into_any()
+                            }
+                        };
+                        view_result
+                    })
+                }}
+            </Suspense>
         </div>
     }.into_any()
 }

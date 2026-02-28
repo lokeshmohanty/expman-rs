@@ -6,12 +6,14 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct AppState {
     pub base_dir: Arc<PathBuf>,
+    pub jupyter: crate::jupyter::JupyterManager,
 }
 
 impl AppState {
     pub fn new(base_dir: PathBuf) -> Self {
         Self {
             base_dir: Arc::new(base_dir),
+            jupyter: crate::jupyter::JupyterManager::new(),
         }
     }
 }

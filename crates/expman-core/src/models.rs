@@ -18,6 +18,10 @@ pub struct ExperimentConfig {
     pub flush_interval_rows: usize,
     /// Flush metrics to disk every N milliseconds (default: 500)
     pub flush_interval_ms: u64,
+    /// Language used for the run (e.g. "rust", "python")
+    pub language: String,
+    /// Environment path or executable (e.g. python executable path)
+    pub env_path: Option<String>,
 }
 
 impl ExperimentConfig {
@@ -29,6 +33,8 @@ impl ExperimentConfig {
             base_dir: base_dir.into(),
             flush_interval_rows: 50,
             flush_interval_ms: 500,
+            language: "rust".to_string(),
+            env_path: None,
         }
     }
 
@@ -149,6 +155,12 @@ pub struct RunMetadata {
     /// Latest scalar metrics (numeric only) from the last logged row.
     #[serde(default)]
     pub metrics: Option<HashMap<String, f64>>,
+    /// Language of the run
+    #[serde(default)]
+    pub language: Option<String>,
+    /// Environment path or executable used
+    #[serde(default)]
+    pub env_path: Option<String>,
 }
 
 impl Default for RunMetadata {
@@ -162,6 +174,8 @@ impl Default for RunMetadata {
             duration_secs: None,
             description: None,
             metrics: None,
+            language: None,
+            env_path: None,
         }
     }
 }

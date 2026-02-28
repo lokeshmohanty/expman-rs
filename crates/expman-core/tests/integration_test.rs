@@ -13,6 +13,8 @@ fn make_engine(tmp: &TempDir, name: &str) -> LoggingEngine {
         base_dir: tmp.path().to_path_buf(),
         flush_interval_rows: 10,
         flush_interval_ms: 100,
+        language: "rust".to_string(),
+        env_path: None,
     };
     LoggingEngine::new(config).expect("Failed to create LoggingEngine")
 }
