@@ -511,11 +511,12 @@ async fn start_jupyter(
     let dir = run_dir(&state.base_dir, &exp, &run);
 
     let is_python = match storage::load_run_metadata(&dir) {
-        Ok(meta) => meta
-            .language
-            .unwrap_or_else(|| "python".to_string())
-            .to_lowercase()
-            != "rust",
+        Ok(meta) => {
+            meta.language
+                .unwrap_or_else(|| "python".to_string())
+                .to_lowercase()
+                != "rust"
+        }
         Err(_) => true,
     };
 
@@ -548,7 +549,6 @@ async fn status_jupyter(
     }
 }
 
-
 /// Endpoint to check if `interactive.ipynb` exists and return its content.
 ///
 /// Returns `{"exists": true, "content": "..."}` or `{"exists": false, "content": null}`.
@@ -580,11 +580,12 @@ async fn create_jupyter_notebook(
     let dir = run_dir(&state.base_dir, &exp, &run);
 
     let is_python = match storage::load_run_metadata(&dir) {
-        Ok(meta) => meta
-            .language
-            .unwrap_or_else(|| "python".to_string())
-            .to_lowercase()
-            != "rust",
+        Ok(meta) => {
+            meta.language
+                .unwrap_or_else(|| "python".to_string())
+                .to_lowercase()
+                != "rust"
+        }
         Err(_) => true, // Default to Python
     };
 
@@ -596,9 +597,7 @@ async fn create_jupyter_notebook(
                 .unwrap_or_default();
             Json(serde_json::json!({ "created": true, "content": content })).into_response()
         }
-        Ok(false) => {
-            (StatusCode::CONFLICT, "Notebook already exists").into_response()
-        }
+        Ok(false) => (StatusCode::CONFLICT, "Notebook already exists").into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
 }

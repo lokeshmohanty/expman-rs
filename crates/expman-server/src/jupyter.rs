@@ -57,7 +57,7 @@ pub fn generate_notebook_content(is_python: bool) -> String {
     "df.tail()"
    ]
   }"##
-            .to_string()
+        .to_string()
     } else {
         let snippet = "use polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {\n    // Load run metrics\n    let mut file = std::fs::File::open(\"metrics.parquet\").unwrap();\n    let df = ParquetReader::new(&mut file).finish()?;\n\n    println!(\"{:?}\", df.tail(Some(5)));\n    Ok(())\n}";
         format!(
@@ -225,7 +225,13 @@ impl JupyterManager {
         }
 
         let mut instances = self.instances.lock().unwrap();
-        instances.insert(key, JupyterInstance { port, process: child });
+        instances.insert(
+            key,
+            JupyterInstance {
+                port,
+                process: child,
+            },
+        );
 
         Ok(port)
     }
@@ -308,7 +314,11 @@ mod tests {
         let content = generate_notebook_content(true);
         let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
         let cells = parsed["cells"].as_array().unwrap();
-        assert_eq!(cells.len(), 2, "Python notebook should have exactly 2 cells");
+        assert_eq!(
+            cells.len(),
+            2,
+            "Python notebook should have exactly 2 cells"
+        );
         assert_eq!(parsed["nbformat"], 4);
     }
 

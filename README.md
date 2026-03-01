@@ -17,6 +17,17 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 - **Efficient storage**: Batched Arrow/Parquet writes, not per-step read-concat-write
 - **Nix dev environment**: Reproducible with `nix develop`
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/dashboard-interactive.png" width="400" />
+  <img src="assets/dashboard-metrics.png" width="400" />
+</p>
+<p align="center">
+  <img src="assets/dashboard-artifacts.png" width="400" />
+  <img src="assets/dashboard-interactive-notebook.png" width="400" />
+</p>
+
 ## Installation
 
 ### From Cargo

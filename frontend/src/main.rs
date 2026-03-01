@@ -1333,8 +1333,7 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
         async move { fetch_run_metadata(eid, rid).await }
     });
 
-    let backend_info =
-        LocalResource::new(|| async move { check_backend().await });
+    let backend_info = LocalResource::new(|| async move { check_backend().await });
 
     // Fetch notebook content from server (reactive to notebook_version for refresh)
     let nb_exp_id = exp_id_outer.clone();
@@ -1374,7 +1373,6 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                         .mode(RequestMode::NoCors)
                                         .send()
                                         .await;
-                                    
                                     if resp.is_ok() {
                                         set_is_ready.set(true);
                                         break;
