@@ -1,5 +1,6 @@
 import os
-
+import yaml
+import pytest
 import expman
 
 
@@ -39,12 +40,50 @@ def test_artifact_save(tmp_path):
     artifact_file.write_text("hello world")
 
     with expman.Experiment("artifact_exp", base_dir=str(exp_dir)) as exp:
-        # Pass absolute path. Rust engine should handle it.
         exp.save_artifact(str(artifact_file))
         run_dir = exp.run_dir
 
-    # Artifacts are saved asynchronously, but close() waits for background task
     artifact_path = os.path.join(run_dir, "artifacts", "model.txt")
     assert os.path.exists(artifact_path)
     with open(artifact_path) as f:
         assert f.read() == "hello world"
+
+
+def test_complex_types(tmp_path):
+    """Test logging complex types (converted to strings or handled)."""
+    exp_dir = tmp_path / "experiments"
+    
+    with expman.Experiment("complex_exp", base_dir=str(exp_dir)) as exp:
+        exp.log_params({
+            "list": [1, 2, 3],
+            "dict": {"a": 1},
+            "tuple": (1, 2)
+        })
+        run_dir = exp.run_dir
+        
+    config_path = os.path.join(run_dir, "config.yaml")
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
+        # Verify they are logged (likely as strings)
+        assert "list" in cfg
+        assert "dict" in cfg
+
+
+def test_experiment_crash(tmp_path):
+    """Test that crash (exception) sets status to FAILED."""
+    exp_dir = tmp_path / "experiments"
+    
+    run_dir = None
+    try:
+        with expman.Experiment("crash_exp", base_dir=str(exp_dir)) as exp:
+            run_dir = exp.run_dir
+            raise RuntimeError("Intentional crash")
+    except RuntimeError:
+        pass
+        
+    assert run_dir is not None
+    run_yaml_path = os.path.join(run_dir, "run.yaml")
+    assert os.path.exists(run_yaml_path)
+    with open(run_yaml_path) as f:
+        meta = yaml.safe_load(f)
+        assert meta["status"] == "FAILED"

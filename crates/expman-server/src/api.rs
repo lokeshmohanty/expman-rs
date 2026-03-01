@@ -25,45 +25,45 @@ use crate::state::AppState;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/experiments", get(list_experiments))
-        .route("/experiments/:exp/runs", get(list_runs))
+        .route("/experiments/{exp}/runs", get(list_runs))
         .route(
-            "/experiments/:exp/metadata",
+            "/experiments/{exp}/metadata",
             get(get_experiment_metadata).patch(update_experiment_metadata),
         )
-        .route("/experiments/:exp/runs/:run/metrics", get(get_metrics))
+        .route("/experiments/{exp}/runs/{run}/metrics", get(get_metrics))
         .route(
-            "/experiments/:exp/runs/:run/metrics/stream",
+            "/experiments/{exp}/runs/{run}/metrics/stream",
             get(stream_metrics),
         )
-        .route("/experiments/:exp/runs/:run/config", get(get_config))
+        .route("/experiments/{exp}/runs/{run}/config", get(get_config))
         .route(
-            "/experiments/:exp/runs/:run/metadata",
+            "/experiments/{exp}/runs/{run}/metadata",
             get(get_run_metadata).patch(update_run_metadata),
         )
-        .route("/experiments/:exp/runs/:run/artifacts", get(list_artifacts))
+        .route("/experiments/{exp}/runs/{run}/artifacts", get(list_artifacts))
         .route(
-            "/experiments/:exp/runs/:run/artifacts/content",
+            "/experiments/{exp}/runs/{run}/artifacts/content",
             get(get_artifact_content),
         )
-        .route("/experiments/:exp/runs/:run/log/stream", get(stream_log))
-        .route("/experiments/:exp/stats", get(get_experiment_stats))
+        .route("/experiments/{exp}/runs/{run}/log/stream", get(stream_log))
+        .route("/experiments/{exp}/stats", get(get_experiment_stats))
         .route("/config", get(get_server_config))
         .route("/stats", get(get_global_stats))
         .route("/jupyter/available", get(available_jupyter))
         .route(
-            "/experiments/:exp/runs/:run/jupyter/start",
+            "/experiments/{exp}/runs/{run}/jupyter/start",
             post(start_jupyter),
         )
         .route(
-            "/experiments/:exp/runs/:run/jupyter/stop",
+            "/experiments/{exp}/runs/{run}/jupyter/stop",
             post(stop_jupyter),
         )
         .route(
-            "/experiments/:exp/runs/:run/jupyter/status",
+            "/experiments/{exp}/runs/{run}/jupyter/status",
             get(status_jupyter),
         )
         .route(
-            "/experiments/:exp/runs/:run/jupyter/notebook",
+            "/experiments/{exp}/runs/{run}/jupyter/notebook",
             get(get_jupyter_notebook).post(create_jupyter_notebook),
         )
 }

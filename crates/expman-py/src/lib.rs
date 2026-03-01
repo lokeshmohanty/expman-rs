@@ -156,12 +156,20 @@ impl Experiment {
         ))
     }
 
-    /// Gracefully close the experiment: flush all pending metrics and write final metadata.
-    /// Called automatically by __del__ and context manager __exit__.
-    fn close(&self) -> PyResult<()> {
+    /// Gracefully close the experiment.
+    /// Args:
+    ///     status: Optional status string ("FINISHED", "FAILED", "CRASHED")
+    #[pyo3(signature = (status=None))]
+    fn close(&self, status: Option<String>) -> PyResult<()> {
+        let run_status = match status.as_deref() {
+            Some("FINISHED") => RunStatus::Finished,
+            Some("FAILED") => RunStatus::Failed,
+            Some("CRASHED") => RunStatus::Crashed,
+            _ => RunStatus::Finished,
+        };
         if let Ok(mut guard) = self.engine.lock() {
             if let Some(engine) = guard.take() {
-                engine.close(RunStatus::Finished);
+                engine.close(run_status);
             }
         }
         Ok(())

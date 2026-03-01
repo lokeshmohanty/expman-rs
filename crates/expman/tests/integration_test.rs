@@ -1,6 +1,7 @@
 //! Integration tests for expman.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 
 use expman::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
@@ -186,4 +187,70 @@ fn test_read_latest_scalar_metrics() {
     // "step" and "timestamp" should not appear
     assert!(!scalars.contains_key("step"));
     assert!(!scalars.contains_key("timestamp"));
+}
+
+#[test]
+fn test_corrupt_yaml_metadata() {
+    let tmp = TempDir::new().unwrap();
+    let run_dir = tmp.path().join("corrupt_exp").join("run1");
+    std::fs::create_dir_all(&run_dir).unwrap();
+
+    // Write invalid YAML
+    std::fs::write(run_dir.join("run.yaml"), "{ invalid: [ yaml }").unwrap();
+
+    // Should fallback to default/crashed metadata instead of panicking
+    let meta = expman::storage::load_run_metadata(&run_dir).unwrap();
+    assert_eq!(meta.status, RunStatus::Crashed);
+}
+
+#[test]
+fn test_concurrent_metrics_logging() {
+    let tmp = TempDir::new().unwrap();
+    let engine = Arc::new(make_engine(&tmp, "concurrent_test"));
+
+    let mut handles = vec![];
+    for t in 0..4 {
+        let engine_clone = engine.clone();
+        handles.push(std::thread::spawn(move || {
+            for i in 0..100 {
+                let mut m = HashMap::new();
+                m.insert(format!("thread_{}", t), MetricValue::Int(i));
+                engine_clone.log_metrics(m, Some((t * 100 + i) as u64));
+            }
+        }));
+    }
+
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    engine.close(RunStatus::Finished);
+
+    let metrics_path = engine.config().run_dir().join("metrics.parquet");
+    let rows = expman::storage::read_metrics(&metrics_path).unwrap();
+    assert_eq!(rows.len(), 400);
+}
+
+#[test]
+fn test_save_artifact_absolute_path() {
+    let tmp = TempDir::new().unwrap();
+    let engine = make_engine(&tmp, "abs_artifact_test");
+
+    let external_dir = TempDir::new().unwrap();
+    let abs_path = external_dir.path().join("external_file.txt");
+    std::fs::write(&abs_path, "external content").unwrap();
+
+    engine.save_artifact(abs_path.clone());
+    engine.close(RunStatus::Finished);
+
+    let artifact_dest = engine
+        .config()
+        .run_dir()
+        .join("artifacts")
+        .join("external_file.txt");
+    assert!(artifact_dest.exists());
+    assert_eq!(
+        std::fs::read_to_string(artifact_dest).unwrap(),
+        "external content"
+    );
 }

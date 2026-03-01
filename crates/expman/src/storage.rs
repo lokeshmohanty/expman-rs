@@ -179,28 +179,34 @@ pub fn save_run_metadata(run_dir: &Path, meta: &RunMetadata) -> Result<()> {
 pub fn load_run_metadata(run_dir: &Path) -> Result<RunMetadata> {
     let path = run_dir.join("run.yaml");
     if !path.exists() {
-        // Construct a minimal metadata from directory name
-        let name = run_dir
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-        let exp = run_dir
-            .parent()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-        return Ok(RunMetadata {
-            name,
-            experiment: exp,
-            status: RunStatus::Crashed,
-            started_at: Utc::now(),
-            ..Default::default()
-        });
+        return Ok(minimal_run_metadata(run_dir));
     }
     let content = std::fs::read_to_string(&path)?;
-    Ok(serde_yaml::from_str(&content)?)
+    match serde_yaml::from_str(&content) {
+        Ok(meta) => Ok(meta),
+        Err(_) => Ok(minimal_run_metadata(run_dir)),
+    }
+}
+
+fn minimal_run_metadata(run_dir: &Path) -> RunMetadata {
+    let name = run_dir
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string();
+    let exp = run_dir
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string();
+    RunMetadata {
+        name,
+        experiment: exp,
+        status: RunStatus::Crashed,
+        started_at: Utc::now(),
+        ..Default::default()
+    }
 }
 
 pub fn save_experiment_metadata(exp_dir: &Path, meta: &ExperimentMetadata) -> Result<()> {

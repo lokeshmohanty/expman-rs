@@ -155,11 +155,15 @@ class Experiment:
         """Name of this run."""
         return self._exp.run_name
 
-    def close(self) -> None:
+    def close(self, status: str = "FINISHED") -> None:
         """
         Gracefully close the experiment.
         Flushes all pending metrics and writes final metadata.
         Called automatically via atexit and context manager __exit__.
+
+        Args:
+            status: Final status of the run ("FINISHED", "FAILED", "CRASHED").
+                    Default: "FINISHED".
         """
         if not self._closed:
             # Restore stdout/stderr
@@ -171,14 +175,14 @@ class Experiment:
                 self._console_file.close()
 
             self._closed = True
-            self._exp.close()
+            self._exp.close(status=status)
 
     def __enter__(self) -> Experiment:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
-        self.close()  # Restore redirection first
-        self._exp.__exit__(exc_type, exc_val, exc_tb)
+        status = "FAILED" if exc_type is not None else "FINISHED"
+        self.close(status=status)
         return False
 
     def __repr__(self) -> str:
