@@ -33,7 +33,8 @@ pub fn build_router(state: AppState) -> Router {
 /// Start the server on the given address.
 pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
     let state = AppState::new(config.base_dir.clone());
-    let state_shutdown = state.clone();
+    let state_shutdown_all = state.clone();
+    let state_shutdown_token = state.clone();
     let app = build_router(state);
 
     let addr: SocketAddr = format!("{}:{}", config.host, config.port).parse()?;
@@ -47,12 +48,13 @@ pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
                 .await
                 .expect("failed to install CTRL+C handler");
             info!("Shutting down ExpMan server...");
+            state_shutdown_token.shutdown_token.cancel();
         })
         .await?;
 
     // Cleanup all Jupyter instances
     info!("Cleaning up interactive notebooks...");
-    state_shutdown.jupyter.shutdown_all().await;
+    state_shutdown_all.jupyter.shutdown_all().await;
 
     Ok(())
 }

@@ -1,5 +1,6 @@
 //! REST API handlers and SSE streaming for expman-server.
 
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -14,7 +15,8 @@ use axum::{
 };
 use serde::Deserialize;
 use tokio_stream::wrappers::IntervalStream;
-use tokio_stream::StreamExt;
+use futures_util::StreamExt as _;
+use tracing::info;
 
 use expman::storage;
 
@@ -141,18 +143,25 @@ async fn list_runs(
                     }
                 });
 
-                // Attach latest scalar metrics, filtered if requested
+                // Attach latest metrics (including scalars), filtered if requested
                 let metrics_path = dir.join("metrics.parquet");
-                if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
-                    if !scalars.is_empty() {
-                        let filtered = match &metric_filter {
-                            Some(keys) => scalars
+                // Note: meta.metrics is already loaded from run.yaml if it exists.
+                // If it's empty, we can try to backfill from parquet if it exists.
+                if meta.metrics.is_none() || meta.metrics.as_ref().unwrap().is_empty() {
+                    if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
+                        if !scalars.is_empty() {
+                            let converted: HashMap<String, expman::models::MetricValue> = scalars
                                 .into_iter()
-                                .filter(|(k, _)| keys.contains(k))
-                                .collect(),
-                            None => scalars,
-                        };
-                        meta.metrics = Some(filtered);
+                                .map(|(k, v)| (k, expman::models::MetricValue::Float(v)))
+                                .collect();
+                            meta.metrics = Some(converted);
+                        }
+                    }
+                }
+
+                if let Some(metrics) = &mut meta.metrics {
+                    if let Some(keys) = &metric_filter {
+                        metrics.retain(|k, _| keys.contains(k));
                     }
                 }
 
@@ -260,7 +269,10 @@ async fn stream_metrics(
     let mut last_step: Option<u64> = None;
 
     let interval = tokio::time::interval(Duration::from_millis(500));
-    let stream = IntervalStream::new(interval).map(move |_| {
+    let shutdown = state.shutdown_token.clone();
+    let stream = IntervalStream::new(interval)
+        .take_until(async move { shutdown.cancelled().await })
+        .map(move |_| {
         let rows = storage::read_metrics_since(&path, last_step).unwrap_or_default();
         for row in &rows {
             if let Some(step) = row.get("step").and_then(|v| v.as_u64()) {
@@ -287,7 +299,10 @@ async fn stream_log(
     let mut last_pos: u64 = 0;
 
     let interval = tokio::time::interval(Duration::from_millis(500));
-    let stream = IntervalStream::new(interval).map(move |_| {
+    let shutdown = state.shutdown_token.clone();
+    let stream = IntervalStream::new(interval)
+        .take_until(async move { shutdown.cancelled().await })
+        .map(move |_| {
         let mut data = String::new();
         if let Ok(file) = std::fs::File::open(&path) {
             use std::io::{Read, Seek, SeekFrom};
@@ -339,7 +354,11 @@ async fn get_run_metadata(
             let metrics_path = dir.join("metrics.parquet");
             if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
                 if !scalars.is_empty() {
-                    meta.metrics = Some(scalars);
+                    let converted: HashMap<String, expman::models::MetricValue> = scalars
+                        .into_iter()
+                        .map(|(k, v)| (k, expman::models::MetricValue::Float(v)))
+                        .collect();
+                    meta.metrics = Some(converted);
                 }
             }
             Json(meta).into_response()

@@ -279,7 +279,7 @@ impl JupyterManager {
 
         for mut inst in all {
             let _ = inst.process.kill().await;
-            let _ = inst.process.wait().await;
+            let _ = tokio::time::timeout(tokio::time::Duration::from_secs(5), inst.process.wait()).await;
         }
     }
 }

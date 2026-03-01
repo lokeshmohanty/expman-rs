@@ -2,11 +2,13 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
 pub struct AppState {
     pub base_dir: Arc<PathBuf>,
     pub jupyter: crate::jupyter::JupyterManager,
+    pub shutdown_token: CancellationToken,
 }
 
 impl AppState {
@@ -14,6 +16,7 @@ impl AppState {
         Self {
             base_dir: Arc::new(base_dir),
             jupyter: crate::jupyter::JupyterManager::new(),
+            shutdown_token: CancellationToken::new(),
         }
     }
 }

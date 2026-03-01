@@ -24,6 +24,8 @@ use crate::storage;
 enum LogCommand {
     /// Log a row of metrics.
     Metric(MetricRow),
+    /// Log a single scalar value (replaces if exists).
+    Scalar(HashMap<String, MetricValue>),
     /// Update the config/params YAML.
     Params(HashMap<String, serde_yaml::Value>),
     /// Copy an artifact file into the run's artifacts directory.
@@ -138,6 +140,13 @@ impl LoggingEngine {
         let _ = self.sender.send(LogCommand::Metric(row));
     }
 
+    /// Log a single scalar value. Non-blocking — replaces existing value for the key.
+    pub fn log_scalar(&self, key: String, value: MetricValue) {
+        let mut map = HashMap::new();
+        map.insert(key, value);
+        let _ = self.sender.send(LogCommand::Scalar(map));
+    }
+
     /// Log/update experiment parameters (config). Non-blocking.
     pub fn log_params(&self, params: HashMap<String, serde_yaml::Value>) {
         let _ = self.sender.send(LogCommand::Params(params));
@@ -218,6 +227,7 @@ async fn background_task(
     let artifacts_dir = run_dir.join("artifacts");
 
     let mut metric_buffer: Vec<MetricRow> = Vec::with_capacity(flush_interval_rows * 2);
+    let mut current_scalars: HashMap<String, MetricValue> = HashMap::new();
     let mut log_lines: Vec<String> = Vec::new();
     let mut flush_ticker = interval(Duration::from_millis(flush_interval_ms));
     flush_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -238,10 +248,18 @@ async fn background_task(
                         break;
                     }
                     Some(LogCommand::Metric(row)) => {
+                        // Update current scalars with latest values from this row
+                        for (k, v) in &row.values {
+                            current_scalars.insert(k.clone(), v.clone());
+                        }
+
                         metric_buffer.push(row);
                         if metric_buffer.len() >= flush_interval_rows {
                             flush_metrics(&metrics_path, &mut metric_buffer);
                         }
+                    }
+                    Some(LogCommand::Scalar(scalars)) => {
+                        current_scalars.extend(scalars);
                     }
                     Some(LogCommand::Params(params)) => {
                         handle_params(&config_path, params);
@@ -271,7 +289,7 @@ async fn background_task(
                         flush_metrics(&metrics_path, &mut metric_buffer);
                         flush_logs(&log_path, &mut log_lines);
 
-                        // Update run metadata with final status
+                        // Update run metadata with final status and latest scalars
                         let finished_at = Utc::now();
                         let duration = (finished_at - started_at).num_milliseconds() as f64 / 1000.0;
 
@@ -279,6 +297,9 @@ async fn background_task(
                             meta.status = status;
                             meta.finished_at = Some(finished_at);
                             meta.duration_secs = Some(duration);
+                            if !current_scalars.is_empty() {
+                                meta.metrics = Some(current_scalars.clone());
+                            }
                             let _ = storage::save_run_metadata(&run_dir, &meta);
                         }
 
@@ -295,6 +316,14 @@ async fn background_task(
                 }
                 if !log_lines.is_empty() {
                     flush_logs(&log_path, &mut log_lines);
+                }
+
+                // Update metadata with current scalars periodically
+                if !current_scalars.is_empty() {
+                    if let Ok(mut meta) = storage::load_run_metadata(&run_dir) {
+                        meta.metrics = Some(current_scalars.clone());
+                        let _ = storage::save_run_metadata(&run_dir, &meta);
+                    }
                 }
             }
         }

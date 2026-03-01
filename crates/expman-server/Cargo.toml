@@ -17,8 +17,10 @@ path = "src/lib.rs"
 [dependencies]
 expman = { path = "../expman", version = "0.2.7" }
 tokio = { workspace = true }
+tokio-util = { version = "0.7", features = ["rt"] }
 tokio-stream = { workspace = true }
-axum = { workspace = true }
+futures-util = "0.3"
+axum = { version = "0.8", features = ["macros"] }
 tower-http = { workspace = true }
 rust-embed = { workspace = true }
 serde = { workspace = true }
