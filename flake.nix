@@ -39,7 +39,7 @@
 
       in {
         devShells.default = pkgs.mkShell {
-          name = "expman-rs-dev";
+          name = "expman-rs";
 
           packages = [
             # Rust

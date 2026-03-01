@@ -33,12 +33,26 @@ pub fn build_router(state: AppState) -> Router {
 /// Start the server on the given address.
 pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
     let state = AppState::new(config.base_dir.clone());
+    let state_shutdown = state.clone();
     let app = build_router(state);
 
     let addr: SocketAddr = format!("{}:{}", config.host, config.port).parse()?;
     info!("ExpMan dashboard at http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to install CTRL+C handler");
+            info!("Shutting down ExpMan server...");
+        })
+        .await?;
+
+    // Cleanup all Jupyter instances
+    info!("Cleaning up interactive notebooks...");
+    state_shutdown.jupyter.shutdown_all().await;
+
     Ok(())
 }

@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
+use web_sys::RequestMode;
 
 use std::rc::Rc;
 #[derive(Clone, Copy)]
@@ -1311,12 +1312,14 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
 
     let (is_loading, set_is_loading) = signal(false);
     let (jupyter_port, set_jupyter_port) = signal(None::<u16>);
+    let (is_ready, set_is_ready) = signal(false);
     let (notebook_version, set_notebook_version) = signal(0u32);
 
     Effect::new(move |_| {
         if let Some(Ok(status)) = jupyter_status.get().as_deref() {
             if status.running {
                 set_jupyter_port.set(status.port);
+                set_is_ready.set(true);
             }
         }
     });
@@ -1358,9 +1361,28 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                         let eid = rt_exp_id.clone();
                         let rid = rt_run_id.clone();
                         set_is_loading.set(true);
+                        set_is_ready.set(false);
                         spawn_local(async move {
                             if let Ok(port) = start_jupyter(eid, rid).await {
                                 set_jupyter_port.set(Some(port));
+                                // Ping the root URL until it responds. 
+                                // We use NoCors mode because the dashboard and jupyter are on different ports.
+                                // Any response (even a 302 redirect) indicates the server is UP.
+                                let url = format!("http://localhost:{}/", port);
+                                for _ in 0..20 { // Try for 20 seconds
+                                    let resp = gloo_net::http::Request::get(&url)
+                                        .mode(RequestMode::NoCors)
+                                        .send()
+                                        .await;
+                                    
+                                    if resp.is_ok() {
+                                        set_is_ready.set(true);
+                                        break;
+                                    }
+                                    gloo_timers::future::TimeoutFuture::new(1000).await;
+                                }
+                                // Fallback: set ready even if ping fails after timeout to show the iframe (user can refresh)
+                                set_is_ready.set(true);
                             }
                             set_is_loading.set(false);
                         });
@@ -1436,8 +1458,23 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div class="flex-grow bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm mx-1">
-                                                <iframe src=url class="w-full h-full border-none min-h-[600px]"/>
+                                            <div class="flex-grow bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm mx-1 relative">
+                                                {move || if is_ready.get() {
+                                                    view! {
+                                                        <iframe src=url.clone() class="w-full h-full border-none min-h-[600px]"/>
+                                                    }.into_any()
+                                                } else {
+                                                    view! {
+                                                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-slate-900 space-y-4">
+                                                            <div class="flex space-x-2">
+                                                                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+                                                            </div>
+                                                            <span class="text-sm text-slate-500 animate-pulse">"Waiting for Jupyter server to initialize..."</span>
+                                                        </div>
+                                                    }.into_any()
+                                                }}
                                             </div>
                                         </div>
                                     }.into_any()
