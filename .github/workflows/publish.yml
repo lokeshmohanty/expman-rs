@@ -52,13 +52,10 @@ jobs:
     environment: PYPI
     steps:
       - uses: actions/checkout@v4
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          args: --release --out dist --find-interpreter
-          manylinux: auto
+      - uses: dtolnay/rust-toolchain@stable
       - uses: astral-sh/setup-uv@v5
+      - name: Build wheels
+        run: uv build --wheel --out dist
       - name: Publish to PyPI
         run: uv publish dist/*
         env:
@@ -79,12 +76,10 @@ jobs:
       - name: Build Rust CLI binary
         run: cargo build --release -p expman-cli
 
+      - uses: astral-sh/setup-uv@v5
+
       - name: Build Python Wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          args: --release --out dist --find-interpreter
-          manylinux: auto
+        run: uv build --wheel --out dist
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -92,7 +87,7 @@ jobs:
           tag_name: v${{ needs.check-release.outputs.version }}
           name: Release v${{ needs.check-release.outputs.version }}
           files: |
-            target/release/expman
+            target/release/exp
             dist/*.whl
             dist/*.tar.gz
           generate_release_notes: true

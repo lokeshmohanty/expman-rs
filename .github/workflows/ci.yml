@@ -76,5 +76,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: Build Rust extension and run tests
         run: |
-          uv run --extra dev maturin develop --manifest-path crates/expman-py/Cargo.toml
-          uv run --extra dev pytest python/tests
+          uv sync --extra dev
+          uv build --wheel --out dist
+          uv pip install dist/*.whl
+          uv run pytest python/tests
