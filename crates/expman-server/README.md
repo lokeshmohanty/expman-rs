@@ -20,7 +20,7 @@ You typically do not need to use `expman-server` directly in your code, as the `
 To run the server via the CLI wrapper:
 ```bash
 # Starts the server on http://localhost:8000
-expman serve ./experiments
+exp serve ./experiments
 ```
 
 ## API Endpoints Overview

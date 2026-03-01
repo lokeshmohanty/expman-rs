@@ -1,10 +1,10 @@
 # Expman CLI
 
-Friendly command-line interface for managing and inspecting your `expman-rs` experiments.
+Friendly command-line interface for managing and inspecting your experiments.
 
 ## Overview
 
-The `expman` CLI tool provides various commands to serve the web dashboard, inspect experiment runs, clean up old runs, and export metrics.
+The `exp` CLI tool provides various commands to serve the web dashboard, inspect experiment runs, clean up old runs, and export metrics.
 
 ## Commands
 
@@ -12,7 +12,7 @@ The `expman` CLI tool provides various commands to serve the web dashboard, insp
 Start the web dashboard server to view experiments and real-time metrics.
 
 ```bash
-expman serve [OPTIONS]
+exp serve [OPTIONS]
 ```
 **Options:**
 - `[DIR]`: Path to experiments directory (default: `./experiments`)
@@ -24,7 +24,7 @@ expman serve [OPTIONS]
 List all experiments, or runs for a specific experiment.
 
 ```bash
-expman list [OPTIONS]
+exp list [OPTIONS]
 ```
 **Options:**
 - `[DIR]`: Path to experiments directory (default: `./experiments`)
@@ -34,14 +34,14 @@ expman list [OPTIONS]
 Inspect a specific run, showing its configuration, metadata, and the last recorded metrics.
 
 ```bash
-expman inspect <RUN_DIR>
+exp inspect <RUN_DIR>
 ```
 
 ### `clean`
 Remove old runs, keeping only the N most recent to save disk space.
 
 ```bash
-expman clean <EXPERIMENT> [OPTIONS]
+exp clean <EXPERIMENT> [OPTIONS]
 ```
 **Options:**
 - `--dir`: Path to experiments directory (default: `./experiments`)
@@ -52,7 +52,7 @@ expman clean <EXPERIMENT> [OPTIONS]
 Export metrics from a particular run to CSV or JSON formats.
 
 ```bash
-expman export <RUN_DIR> [OPTIONS]
+exp export <RUN_DIR> [OPTIONS]
 ```
 **Options:**
 - `--format, -f <csv|json>`: Output format (default: `csv`)

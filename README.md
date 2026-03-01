@@ -13,7 +13,7 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 - **Non-blocking Python logging**: `log_metrics()` is a ~100ns channel send — never blocks your training loop
 - **Live dashboard**: SSE-powered real-time metric streaming, run comparison charts, artifact browser
 - **Scalar metric filtering**: Toggle which metric columns appear in the runs table with one click
-- **Single binary**: CLI + web server in one `expman` binary — no Python runtime needed for the server
+- **Single binary**: CLI + web server in one `exp` binary — no Python runtime needed for the server
 - **Efficient storage**: Batched Arrow/Parquet writes, not per-step read-concat-write
 - **Nix dev environment**: Reproducible with `nix develop`
 
@@ -33,7 +33,7 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 ### From Cargo
 
 ```bash
-cargo install expman
+cargo install expman-cli
 ```
 
 ### From PYPI
@@ -44,7 +44,7 @@ pip install expman-rs
 
 ### Alternatively: Download or Install from GitHub
 
-- **Direct Download**: Download the pre-built `expman` binary or Python wheels from [GitHub Releases](https://github.com/lokeshmohanty/expman-rs/releases).
+- **Direct Download**: Download the pre-built `exp` binary or Python wheels from [GitHub Releases](https://github.com/lokeshmohanty/expman-rs/releases).
 - **Python (pip)**:
 
   ```bash
@@ -53,7 +53,7 @@ pip install expman-rs
 - **Rust (cargo)**:
 
   ```bash
-  cargo install --git https://github.com/lokeshmohanty/expman-rs.git expman
+  cargo install --git https://github.com/lokeshmohanty/expman-rs.git expman-cli
   ```
 
 ## Quick Start
@@ -62,11 +62,11 @@ pip install expman-rs
 
 **Option A: Global Singleton (Easiest)**
 ```python
-import expman
+import expman as exp
 
-expman.init("resnet_cifar10")
-expman.log_params({"lr": 0.001})
-expman.log_metrics({"loss": 0.5}, step=0)
+exp.init("resnet_cifar10")
+exp.log_params({"lr": 0.001})
+exp.log_metrics({"loss": 0.5}, step=0)
 # Auto-closes on script exit
 ```
 
@@ -99,18 +99,18 @@ fn main() -> anyhow::Result<()> {
 ### Dashboard
 
 ```bash
-expman serve ./experiments
+exp serve ./experiments
 # Open http://localhost:8000
 ```
 
 ### CLI
 
 ```bash
-expman list ./experiments              # list all experiments
-expman list ./experiments -e resnet    # list runs for an experiment
-expman inspect ./experiments/resnet/runs/20240101_120000
-expman clean resnet --keep 5 --force   # delete old runs
-expman export ./experiments/resnet/runs/20240101_120000 --format csv
+exp list ./experiments              # list all experiments
+exp list ./experiments -e resnet    # list runs for an experiment
+exp inspect ./experiments/resnet/runs/20240101_120000
+exp clean resnet --keep 5 --force   # delete old runs
+exp export ./experiments/resnet/runs/20240101_120000 --format csv
 ```
 
 ## Development (Nix)
@@ -127,7 +127,7 @@ just build-docs                # build and open documentation
 ## Documentation
 
 For detailed usage, refer to the standalone documentation files for each component:
-- [`expman-cli`](crates/expman/README.md) - Command-line interface definitions and references.
+- [`expman-cli`](crates/expman-cli/README.md) - Command-line interface definitions and references.
 - [`expman`](crates/expman/README.md) - Core high-performance async Rust logging engine.
 - [`expman-py`](crates/expman-py/README.md) - Python extension for non-blocking logging.
 - [`expman-server`](crates/expman-server/README.md) - Axum web server and SSE live streaming API.

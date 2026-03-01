@@ -17,12 +17,12 @@ def main():
     # But often maturin users prefer to use the Rust CLI directly.
 
     try:
-        # Check if expman is available in the path
+        # Check if exp is available in the path
         # If not, we might need a more sophisticated way to find the bundled binary.
-        result = subprocess.run(["expman"] + sys.argv[1:])
+        result = subprocess.run(["exp"] + sys.argv[1:])
         sys.exit(result.returncode)
     except FileNotFoundError:
-        print("Error: 'expman' binary not found. Please ensure 'expman' is installed.")
+        print("Error: 'exp' binary not found. Please ensure 'expman-cli' is installed.")
         sys.exit(1)
 
 

@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "expman-rs"
-version = "0.2.5"
+version = "0.2.6"
 description = "High-performance experiment manager with Rust backend"
 authors = [{ name = "Lokesh Mohanty", email = "lokesh1197@gmail.com" }]
 license = { text = "MIT" }
@@ -22,7 +22,7 @@ classifiers = [
 dev = ["pytest", "numpy", "pre-commit", "ruff", "maturin"]
 
 [project.scripts]
-expman = "expman.cli:main"
+exp = "expman.cli:main"
 
 [tool.maturin]
 # The Rust crate that contains the PyO3 extension

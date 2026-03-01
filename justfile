@@ -132,7 +132,7 @@ test-py:
 
 # Run the Rust logging example
 example-rust:
-    cargo run --example logging -p expman-cli
+    cargo run --example logging -p expman
 
 # Run the Python basic training example
 example-py: dev-py
