@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use ::expman::{ExperimentConfig, LogLevel, LoggingEngine, MetricValue, RunStatus};
+use expman::{ExperimentConfig, LogLevel, LoggingEngine, MetricValue, RunStatus};
 
 /// Python-facing Experiment class.
 #[pyclass]
@@ -46,7 +46,7 @@ impl Experiment {
         config.flush_interval_ms = flush_interval_ms;
         config.language = "python".to_string();
 
-        if let Ok(sys) = py.import_bound("sys") {
+        if let Ok(sys) = py.import("sys") {
             if let Ok(exec_obj) = sys.getattr("executable") {
                 if let Ok(executable) = exec_obj.extract::<String>() {
                     config.env_path = Some(executable);

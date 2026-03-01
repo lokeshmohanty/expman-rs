@@ -25,17 +25,12 @@ dev = ["pytest", "numpy", "pre-commit", "ruff", "maturin"]
 exp = "expman.cli:main"
 
 [tool.maturin]
-# The Rust crate that contains the PyO3 extension
 manifest-path = "crates/expman-py/Cargo.toml"
-# Python package source
 python-source = "python"
-# Module name (must match #[pymodule] fn name in Rust)
 module-name = "expman.expman"
-# Allow the extension to be imported from the python/expman directory
-# Features to enable
 features = ["pyo3/extension-module"]
-# Include documentation files
 include = ["docs/**/*", "README.md"]
+binaries = ["exp"]
 
 [tool.ruff]
 line-length = 100

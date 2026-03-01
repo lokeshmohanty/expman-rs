@@ -13,15 +13,26 @@ readme = "README.md"
 [lib]
 name = "expman_py"
 crate-type = ["cdylib"]
-# doc enabled for library
+
+[[bin]]
+name = "exp"
+path = "../expman-cli/src/main.rs"
 
 [dependencies]
 expman = { path = "../expman", version = "0.2.7" }
+expman-cli = { path = "../expman-cli", version = "0.2.7" }
+expman-server = { path = "../expman-server", version = "0.2.7" }
 pyo3 = { workspace = true, features = ["extension-module"] }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 serde_yaml = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+comfy-table = { workspace = true }
+indicatif = { workspace = true }
+chrono = { workspace = true }
 
 [features]
 default = ["pyo3/extension-module"]

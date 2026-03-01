@@ -7,7 +7,7 @@ use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    ChevronRight, FlaskConical, LayoutDashboard, Package, Settings as SettingsIcon, TriangleAlert,
+    ChevronRight, Cog as SettingsIcon, FlaskConical, LayoutDashboard, Package, TriangleAlert,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -222,8 +222,8 @@ fn Dashboard() -> impl IntoView {
 
             <Suspense fallback=|| view! { <div class="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-6"><div class="bg-slate-900 h-32 rounded-xl"></div><div class="bg-slate-900 h-32 rounded-xl"></div><div class="bg-slate-900 h-32 rounded-xl"></div></div> }>
                 {move || Suspend::new(async move {
-                    let s = stats.get().as_deref().cloned().unwrap_or(Ok(GlobalStats::default())).unwrap_or_default();
-                    let exps = experiments.get().as_deref().cloned().unwrap_or(Ok(vec![])).unwrap_or_default();
+                    let s = stats.get().and_then(|r| r.ok()).unwrap_or_default();
+                    let exps = experiments.get().and_then(|r| r.ok()).unwrap_or_default();
 
                     view! {
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -305,7 +305,7 @@ fn Experiments() -> impl IntoView {
                     <tbody class="divide-y divide-slate-800">
                         <Suspense fallback=|| view! { <tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">"Loading..."</td></tr> }>
                             {move || Suspend::new(async move {
-                                let exps = experiments.get().as_deref().cloned().unwrap_or(Ok(vec![])).unwrap_or_default();
+                                let exps = experiments.get().and_then(|r| r.ok()).unwrap_or_default();
                                 view! {
                                     {exps.into_iter().map(|exp| {
                                         let id = exp.id.clone();
@@ -454,7 +454,7 @@ fn ExperimentDetail() -> impl IntoView {
 
                                     let duration = run.duration_secs.map(|d| format!("{:.0}s", d));
 
-                                    view! {
+                                    let v: AnyView = view! {
                                         <div
                                             class=move || format!(
                                                 "p-2 rounded-lg transition-all duration-200 border group/item relative pr-8 {} {}",
@@ -487,7 +487,8 @@ fn ExperimentDetail() -> impl IntoView {
                                                 <SettingsIcon size=12 />
                                             </button>
                                         </div>
-                                    }
+                                    }.into_any();
+                                    v
                                 }).collect_view()}
                             }
                         })}
@@ -587,15 +588,15 @@ fn ExperimentDetail() -> impl IntoView {
             <div class="flex items-center justify-between pb-6 border-b border-slate-800 flex-shrink-0">
                 <div class="space-y-4 max-w-2xl">
                     <h1 class="text-3xl font-bold text-white flex items-center space-x-3">
-                        <div class="text-blue-500">< FlaskConical size=32 /></div>
-                        <span>{id}</span>
+                        <div class="text-blue-500"><FlaskConical size=32 /></div>
+                        <span> {id()} </span>
                     </h1>
                     <Suspense fallback=|| view! { <div class="h-4 bg-slate-800 rounded w-1/2 animate-pulse"></div> }.into_any()>
                         {move || Suspend::new(async move {
-                            let meta: Experiment = exp_metadata.get().as_deref().cloned().flatten().unwrap_or_default();
-                            let count = runs.get().as_deref().cloned().unwrap_or(Ok(vec![])).map(|r| r.len()).unwrap_or(0);
+                            let meta: Experiment = exp_metadata.get().flatten().unwrap_or_default();
+                            let count = runs.get().and_then(|r| r.ok()).map(|r| r.len()).unwrap_or(0);
 
-                            view! {
+                            let v: AnyView = view! {
                                 <div class="space-y-2">
                                     <p class="text-slate-400 text-sm leading-relaxed">{meta.description.unwrap_or_else(|| "No description provided.".to_string())}</p>
                                     <div class="flex flex-wrap gap-2 pt-2">
@@ -610,7 +611,8 @@ fn ExperimentDetail() -> impl IntoView {
                                         }).collect_view()}
                                     </div>
                                 </div>
-                            }.into_any()
+                            }.into_any();
+                            v
                         })}
                     </Suspense>
                 </div>
@@ -662,7 +664,7 @@ fn ExperimentDetail() -> impl IntoView {
 #[component]
 fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
     if selected.is_empty() {
-        return view! {
+        let v: AnyView = view! {
             <div class="flex-grow flex flex-col items-center justify-center p-12 text-center space-y-4">
                 <div class="p-4 bg-slate-800 rounded-full text-blue-500">
                     <LayoutDashboard size=48 />
@@ -671,6 +673,7 @@ fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> i
                 <p class="text-slate-400 max-w-sm">"Please select one or more runs from the left sidebar to visualize and compare metrics in real-time."</p>
             </div>
         }.into_any();
+        return v;
     }
 
     view! {
@@ -998,13 +1001,15 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
                                                 if is_active() { "bg-blue-600/10 text-blue-400 font-medium border border-blue-500/20" } else { "text-slate-400 hover:bg-slate-800 border border-transparent" }
                                             )
                                         >
-                                            <div class="flex items-center space-x-2">
-                                                <Package size=14 />
-                                                <span class="truncate">{a.name}</span>
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center space-x-2">
+                                                    <div class="w-2 h-2 rounded-full bg-slate-700"></div>
+                                                    <span class="truncate">{a.name}</span>
+                                                </div>
+                                                <span class="text-[10px] text-slate-600 font-mono">{(a.size / 1024).max(1)} " KB"</span>
                                             </div>
-                                            <p class="text-[10px] text-slate-600 mt-1">{(a.size as f64 / 1024.0).round()} " KB"</p>
                                         </div>
-                                    }
+                                    }.into_any()
                                 }).collect_view()}
                             </div>
                         }
@@ -1278,27 +1283,29 @@ fn extract_cell_sources(ipynb_content: &str) -> Vec<String> {
 #[component]
 fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
     if selected.is_empty() {
-        return view! {
+        let v: AnyView = view! {
             <div class="flex-grow flex flex-col items-center justify-center p-12 text-center space-y-4">
                 <div class="p-4 bg-slate-800 rounded-full text-blue-500">
-                    <FlaskConical size=48 />
+                    <FlaskConical size=28 />
                 </div>
-                <h3 class="text-xl font-bold text-white">"No Run Selected"</h3>
-                <p class="text-slate-400 max-w-sm">"Select a single run from the sidebar to view interactive analysis tools."</p>
+                <h3 class="text-xl font-bold text-white">"No Runs Selected"</h3>
+                <p class="text-slate-400 max-w-sm">"Please select a single run from the left sidebar to launch an interactive session."</p>
             </div>
         }.into_any();
+        return v;
     }
 
     if selected.len() > 1 {
-        return view! {
+        let v: AnyView = view! {
             <div class="flex-grow flex flex-col items-center justify-center p-12 text-center space-y-4">
                 <div class="p-4 bg-slate-800 rounded-full text-blue-500">
-                    <FlaskConical size=48 />
+                    <FlaskConical size=28 />
                 </div>
-                <h3 class="text-xl font-bold text-white">"Multiple Runs Selected"</h3>
-                <p class="text-slate-400 max-w-sm">"Please select exactly one run to view its interactive notebook."</p>
+                <h3 class="text-xl font-bold text-white">"Too Many Runs Selected"</h3>
+                <p class="text-slate-400 max-w-sm">"Please select only one run for an interactive session."</p>
             </div>
         }.into_any();
+        return v;
     }
 
     let run_id = selected.into_iter().next().unwrap();
@@ -1317,7 +1324,7 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
     let (notebook_version, set_notebook_version) = signal(0u32);
 
     Effect::new(move |_| {
-        if let Some(Ok(status)) = jupyter_status.get().as_deref() {
+        if let Some(Ok(status)) = jupyter_status.get().as_ref() {
             if status.running {
                 set_jupyter_port.set(status.port);
                 set_is_ready.set(true);
@@ -1466,9 +1473,9 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                                     view! {
                                                         <div class="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-slate-900 space-y-4">
                                                             <div class="flex space-x-2">
-                                                                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                                                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                                                <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+                                                                 <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                                 <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                                 <div class="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
                                                             </div>
                                                             <span class="text-sm text-slate-500 animate-pulse">"Waiting for Jupyter server to initialize..."</span>
                                                         </div>
@@ -1483,7 +1490,7 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                         <div class="max-w-4xl mx-auto w-full space-y-6">
                                             <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-300 dark:border-slate-700 p-8 text-center space-y-4">
                                                 <div class="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
-                                                    <ChevronRight size=28 />
+                                                    <SettingsIcon size=28 />
                                                 </div>
                                                 <h3 class="text-2xl font-bold text-slate-800 dark:text-white">"Interactive Analysis"</h3>
                                                 <p class="text-slate-500 max-w-lg mx-auto leading-relaxed">
@@ -1547,7 +1554,6 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                     // No Jupyter — ipython/python fallback: show code cells with copy guidance
                                     let tool_name = "Python";
                                     let tool_cmd = "python3";
-
                                     view! {
                                         <div class="max-w-4xl mx-auto w-full space-y-6">
                                             <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-300 dark:border-slate-700 p-8 text-center space-y-4">

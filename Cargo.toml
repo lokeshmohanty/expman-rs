@@ -25,8 +25,8 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 
 # Web
-axum = { version = "0.7", features = ["ws"] }
-tower-http = { version = "0.5", features = ["fs", "cors"] }
+axum = { version = "0.8", features = ["ws"] }
+tower-http = { version = "0.6", features = ["fs", "cors"] }
 rust-embed = { version = "8", features = ["include-exclude"] }
 
 # Serialization
@@ -35,8 +35,8 @@ serde_json = "1"
 serde_yaml = "0.9"
 
 # Arrow / Parquet
-arrow = { version = "53", features = ["ipc"] }
-parquet = { version = "53", features = ["arrow"] }
+arrow = { version = "58", features = ["ipc"] }
+parquet = { version = "58", features = ["arrow"] }
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
@@ -44,14 +44,14 @@ uuid = { version = "1", features = ["v4"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tracing-appender = "0.2"
-thiserror = "1"
+thiserror = "2"
 anyhow = "1"
 
 # CLI
 clap = { version = "4", features = ["derive", "color"] }
 mime_guess = "2"
 comfy-table = "7"
-indicatif = "0.17"
+indicatif = "0.18"
 
 # Python bindings
-pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+pyo3 = { version = "0.28", features = ["extension-module", "abi3-py39"] }

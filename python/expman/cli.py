@@ -1,28 +1,33 @@
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 
 def main():
     """
-    Entry point for the 'expman' command when installed via pip.
-    This wraps the Rust binary which should be bundled or available in the path.
+    Entry point for the 'exp' command when installed via pip.
+    Uses the Rust binary bundled by maturin under expman/bin/exp.
+    Falls back to PATH if the bundled binary is not found.
     """
-    # In a real maturin-built package, we might bundle the binary or
-    # expect it to be in the same directory as the package.
-    # For now, we'll try to find the binary that maturin might have installed
-    # or just call 'expman' and hope it's on the PATH.
+    # Try the bundled binary first (placed here by maturin)
+    bin_dir = Path(__file__).parent / "bin"
+    binary = bin_dir / ("exp.exe" if sys.platform == "win32" else "exp")
 
-    # Ideally, expman-rs should bundle the binary.
-    # Since this is a hybrid package, we can also implement some logic here if needed.
-    # But often maturin users prefer to use the Rust CLI directly.
+    if binary.exists():
+        if sys.platform != "win32":
+            os.chmod(binary, 0o755)
+        sys.exit(subprocess.call([str(binary)] + sys.argv[1:]))
 
+    # Fall back to PATH (e.g. when running in development with `cargo install`)
     try:
-        # Check if exp is available in the path
-        # If not, we might need a more sophisticated way to find the bundled binary.
-        result = subprocess.run(["exp"] + sys.argv[1:])
-        sys.exit(result.returncode)
+        sys.exit(subprocess.call(["exp"] + sys.argv[1:]))
     except FileNotFoundError:
-        print("Error: 'exp' binary not found. Please ensure 'expman-cli' is installed.")
+        print(
+            "Error: 'exp' binary not found. "
+            "Install via 'cargo install expman-cli' or reinstall the Python package.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 

@@ -48,6 +48,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
+      # maturin is being used instead of uv build because uv doesn't use manylinux container which leads to error
       - uses: actions/checkout@v4
       - uses: PyO3/maturin-action@v1
         with:
