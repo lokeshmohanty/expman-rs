@@ -67,7 +67,7 @@ jobs:
     needs: [check-release]
     if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-latest
-    environment: Publish
+    environment: GITHUB
     permissions:
       contents: write
     steps:

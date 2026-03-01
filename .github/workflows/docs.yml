@@ -2,7 +2,7 @@ name: Docs
 
 on:
   push:
-    branches: [main, master]
+    branches: ["main"]
 
 permissions:
   contents: write
@@ -15,19 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: dtolnay/rust-toolchain@stable
-
       - uses: Swatinem/rust-cache@v2
+      - uses: extractions/setup-just@v3
 
       - name: Build Rust API docs
-        run: cargo doc --no-deps --workspace
-
-      # Add a redirect from root to the main crate docs
-      - name: Add root redirect
-        run: |
-          echo '<meta http-equiv="refresh" content="0; url=expman_core/index.html">' \
-            > target/doc/index.html
+        run: just build-docs
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
