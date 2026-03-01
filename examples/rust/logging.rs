@@ -35,8 +35,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             MetricValue::Float((i as f64 * 0.1).cos()),
         );
 
-        // Non-blocking log_metrics
-        engine.log_metrics(metrics, Some(i));
+        // Non-blocking log_vector
+        engine.log_vector(metrics, Some(i));
 
         thread::sleep(Duration::from_millis(50));
     }

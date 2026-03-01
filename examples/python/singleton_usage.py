@@ -21,7 +21,7 @@ def train():
     # 3. Log metrics anywhere without passing an 'exp' object
     for step in range(10):
         val = random.random()
-        exp.log_metrics({"accuracy": val}, step=step)
+        exp.log_vector({"accuracy": val}, step=step)
         print(f"Step {step}: acc={val:.4f}")
         time.sleep(0.2)
 

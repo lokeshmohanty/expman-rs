@@ -37,6 +37,26 @@ pub struct Experiment {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(untagged)]
+pub enum MetricValue {
+    Float(f64),
+    Int(i64),
+    Bool(bool),
+    Text(String),
+}
+
+impl std::fmt::Display for MetricValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Float(v) => write!(f, "{}", v),
+            Self::Int(v) => write!(f, "{}", v),
+            Self::Bool(v) => write!(f, "{}", v),
+            Self::Text(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Run {
     pub name: String,
     pub status: String,
@@ -44,7 +64,8 @@ pub struct Run {
     pub finished_at: Option<String>,
     pub duration_secs: Option<f64>,
     pub description: Option<String>,
-    pub metrics: Option<std::collections::HashMap<String, f64>>,
+    pub scalars: Option<std::collections::HashMap<String, MetricValue>>,
+    pub vectors: Option<std::collections::HashMap<String, MetricValue>>,
     pub language: Option<String>,
     pub env_path: Option<String>,
 }
@@ -649,7 +670,10 @@ fn ExperimentDetail() -> impl IntoView {
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl flex-grow flex flex-col overflow-hidden min-h-0">
                     {move || match active_tab.get().as_str() {
                         "runs" => view! { <RunsTableView exp_id=id() /> }.into_any(),
-                        "metrics" => view! { <MetricsView exp_id=id() selected=selected_runs.get() /> }.into_any(),
+                        "metrics" => {
+                            let run_list: Vec<Run> = runs.get().and_then(|r| r.ok()).unwrap_or_default();
+                            view! { <MetricsView exp_id=id() selected=selected_runs.get() runs=run_list /> }.into_any()
+                        },
                         "artifacts" => view! { <ArtifactView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "console" => view! { <ConsoleView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "interactive" => view! { <InteractiveView exp_id=id() selected=selected_runs.get() /> }.into_any(),
@@ -662,7 +686,11 @@ fn ExperimentDetail() -> impl IntoView {
 }
 
 #[component]
-fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
+fn MetricsView(
+    exp_id: String,
+    selected: std::collections::HashSet<String>,
+    runs: Vec<Run>,
+) -> impl IntoView {
     if selected.is_empty() {
         let v: AnyView = view! {
             <div class="flex-grow flex flex-col items-center justify-center p-12 text-center space-y-4">
@@ -681,7 +709,7 @@ fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> i
             <div class="grid grid-cols-1 gap-6">
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 h-96 flex flex-col">
                     <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-sm font-semibold text-slate-300">"Metric Comparison"</h4>
+                        <h4 class="text-sm font-semibold text-slate-300">"Vector Comparison"</h4>
                         <div class="flex space-x-3">
                              {selected.clone().into_iter().enumerate().map(|(i, s)| {
                                  let colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
@@ -702,26 +730,56 @@ fn MetricsView(exp_id: String, selected: std::collections::HashSet<String>) -> i
             </div>
 
             <div class="bg-slate-950 border border-slate-800 rounded-xl p-6">
-                 <h4 class="text-sm font-semibold text-slate-300 mb-4">"Selected Runs Summary"</h4>
-                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {selected.into_iter().map(|run_name| {
-                        view! {
-                            <div class="p-4 bg-slate-900 border border-slate-800 rounded-lg">
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]"></div>
-                                        <span class="text-sm font-medium text-white">{run_name}</span>
-                                    </div>
-                                    <span class="text-[10px] text-slate-500 italic">"Active"</span>
-                                </div>
-                                <div class="space-y-1 text-[10px] text-slate-500">
-                                    <p class="flex justify-between"><span>"Loss"</span> <span class="text-slate-300">"0.123"</span></p>
-                                    <p class="flex justify-between"><span>"Accuracy"</span> <span class="text-slate-300">"98.2%"</span></p>
-                                    <p class="flex justify-between"><span>"Step"</span> <span class="text-slate-300">"145"</span></p>
-                                </div>
-                            </div>
-                        }
-                    }).collect_view()}
+                 <h4 class="text-sm font-semibold text-slate-300 mb-4">"Scalars Summary"</h4>
+                 <div class="overflow-x-auto">
+                     {
+                         // Collect all scalar keys from selected runs
+                         let selected_runs_data: Vec<&Run> = runs.iter().filter(|r| selected.contains(&r.name)).collect();
+                         let mut scalar_keys = std::collections::BTreeSet::new();
+                         for r in &selected_runs_data {
+                             if let Some(scalars) = &r.scalars {
+                                 for k in scalars.keys() {
+                                     scalar_keys.insert(k.clone());
+                                 }
+                             }
+                         }
+                         let keys: Vec<String> = scalar_keys.into_iter().collect();
+
+                         if keys.is_empty() {
+                             view! {
+                                 <p class="text-sm text-slate-500 italic">"No scalar data available for selected runs."</p>
+                             }.into_any()
+                         } else {
+                             let keys_for_header = keys.clone();
+                             view! {
+                                 <table class="w-full text-left border-collapse text-xs">
+                                     <thead class="bg-slate-900 text-slate-500 uppercase font-semibold">
+                                         <tr>
+                                             <th class="p-3 border-b border-slate-800">"Run"</th>
+                                             {keys_for_header.into_iter().map(|k| view! {
+                                                 <th class="p-3 border-b border-slate-800 text-blue-400">{k}</th>
+                                             }).collect_view()}
+                                         </tr>
+                                     </thead>
+                                     <tbody class="divide-y divide-slate-800/50 text-slate-300">
+                                         {selected_runs_data.into_iter().map(|r| {
+                                             let scalars = r.scalars.clone().unwrap_or_default();
+                                             let current_keys = keys.clone();
+                                             view! {
+                                                 <tr class="hover:bg-slate-800/20">
+                                                     <td class="p-3 font-medium text-white">{r.name.clone()}</td>
+                                                     {current_keys.into_iter().map(|k| {
+                                                         let val = scalars.get(&k).map(|v| v.to_string()).unwrap_or_else(|| "-".to_string());
+                                                         view! { <td class="p-3 font-mono text-slate-400">{val}</td> }
+                                                     }).collect_view()}
+                                                 </tr>
+                                             }
+                                         }).collect_view()}
+                                     </tbody>
+                                 </table>
+                             }.into_any()
+                         }
+                     }
                  </div>
             </div>
         </div>
@@ -771,7 +829,8 @@ fn LineChart(
 
             p.set_layout(layout);
 
-            // Mock data for now - in real app this would fetch from backend/SSE
+            // Vector data for selected runs
+            // TODO: fetch real vector data from /api/experiments/{exp}/runs/{run}/metrics
             for run_id in selected_runs.iter() {
                 let x: Vec<f64> = (0..20).map(|i| i as f64).collect();
                 let y: Vec<f64> = (0..20)
@@ -1674,12 +1733,12 @@ fn RunsTableView(exp_id: String) -> impl IntoView {
                         return view! { <div class="p-12 text-center text-slate-500">"No runs found for this experiment."</div> }.into_any();
                     }
 
-                    // Collect all unique metric keys (sorted)
-                    let all_metric_keys: Vec<String> = {
+                    // Collect all unique scalar keys (sorted)
+                    let all_scalar_keys: Vec<String> = {
                         let mut keys = std::collections::BTreeSet::new();
                         for run in &run_list {
-                            if let Some(metrics) = &run.metrics {
-                                for key in metrics.keys() {
+                            if let Some(scalars) = &run.scalars {
+                                for key in scalars.keys() {
                                     keys.insert(key.clone());
                                 }
                             }
@@ -1688,20 +1747,20 @@ fn RunsTableView(exp_id: String) -> impl IntoView {
                     };
 
                     // Initialize selected_metrics to all keys on first load
-                    if !metrics_initialized.get() && !all_metric_keys.is_empty() {
-                        set_selected_metrics.set(all_metric_keys.iter().cloned().collect());
+                    if !metrics_initialized.get() && !all_scalar_keys.is_empty() {
+                        set_selected_metrics.set(all_scalar_keys.iter().cloned().collect());
                         set_metrics_initialized.set(true);
                     }
 
-                    let keys_for_filter = all_metric_keys.clone();
-                    let keys_for_table = all_metric_keys.clone();
+                    let keys_for_filter = all_scalar_keys.clone();
+                    let keys_for_table = all_scalar_keys.clone();
 
                     view! {
                         // ── Metric filter chips ──────────────────────────────────
                         {if !keys_for_filter.is_empty() {
                             view! {
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Metrics:"</span>
+                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Scalars:"</span>
                                     {keys_for_filter.into_iter().map(|key| {
                                         let k1 = key.clone();
                                         let k2 = key.clone();
@@ -1758,8 +1817,8 @@ fn RunsTableView(exp_id: String) -> impl IntoView {
                                             _           => ("text-slate-400",   "bg-slate-600",   "border-slate-500"),
                                         };
                                         let dot_class = if run.status == "RUNNING" { "animate-pulse" } else { "" };
-                                        let run_metrics = run.metrics.clone().unwrap_or_default();
-                                        let metric_cols: Vec<String> = keys_for_table.iter()
+                                        let run_scalars = run.scalars.clone().unwrap_or_default();
+                                        let scalar_cols: Vec<String> = keys_for_table.iter()
                                             .filter(|k| selected_metrics.with(|s| s.contains(*k)))
                                             .cloned()
                                             .collect();
@@ -1775,9 +1834,9 @@ fn RunsTableView(exp_id: String) -> impl IntoView {
                                                         {run.status}
                                                     </span>
                                                 </td>
-                                                {metric_cols.into_iter().map(|k| {
-                                                    let val = run_metrics.get(&k)
-                                                        .map(|f| format!("{:.4}", f))
+                                                {scalar_cols.into_iter().map(|k| {
+                                                    let val = run_scalars.get(&k)
+                                                        .map(|v| v.to_string())
                                                         .unwrap_or_else(|| "-".to_string());
                                                     view! { <td class="p-4 font-mono text-slate-400">{val}</td> }
                                                 }).collect_view()}

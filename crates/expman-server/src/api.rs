@@ -13,10 +13,9 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use futures_util::StreamExt as _;
 use serde::Deserialize;
 use tokio_stream::wrappers::IntervalStream;
-use futures_util::StreamExt as _;
-use tracing::info;
 
 use expman::storage;
 
@@ -33,10 +32,8 @@ pub fn router() -> Router<AppState> {
             get(get_experiment_metadata).patch(update_experiment_metadata),
         )
         .route("/experiments/{exp}/runs/{run}/metrics", get(get_metrics))
-        .route(
-            "/experiments/{exp}/runs/{run}/metrics/stream",
-            get(stream_metrics),
-        )
+        .route("/run/{exp}/{run}/stream/vectors", get(stream_vectors))
+        .route("/run/{exp}/{run}/stream/log", get(stream_log))
         .route("/experiments/{exp}/runs/{run}/config", get(get_config))
         .route(
             "/experiments/{exp}/runs/{run}/metadata",
@@ -50,7 +47,6 @@ pub fn router() -> Router<AppState> {
             "/experiments/{exp}/runs/{run}/artifacts/content",
             get(get_artifact_content),
         )
-        .route("/experiments/{exp}/runs/{run}/log/stream", get(stream_log))
         .route("/experiments/{exp}/stats", get(get_experiment_stats))
         .route("/config", get(get_server_config))
         .route("/stats", get(get_global_stats))
@@ -143,25 +139,23 @@ async fn list_runs(
                     }
                 });
 
-                // Attach latest metrics (including scalars), filtered if requested
-                let metrics_path = dir.join("metrics.parquet");
-                // Note: meta.metrics is already loaded from run.yaml if it exists.
-                // If it's empty, we can try to backfill from parquet if it exists.
-                if meta.metrics.is_none() || meta.metrics.as_ref().unwrap().is_empty() {
-                    if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
+                // Attach latest vectors, backfilled from parquet if missing in metadata
+                let vectors_path = dir.join("vectors.parquet");
+                if meta.vectors.is_none() || meta.vectors.as_ref().unwrap().is_empty() {
+                    if let Ok(scalars) = storage::read_latest_scalar_metrics(&vectors_path) {
                         if !scalars.is_empty() {
                             let converted: HashMap<String, expman::models::MetricValue> = scalars
                                 .into_iter()
                                 .map(|(k, v)| (k, expman::models::MetricValue::Float(v)))
                                 .collect();
-                            meta.metrics = Some(converted);
+                            meta.vectors = Some(converted);
                         }
                     }
                 }
 
-                if let Some(metrics) = &mut meta.metrics {
+                if let Some(scalars) = &mut meta.scalars {
                     if let Some(keys) = &metric_filter {
-                        metrics.retain(|k, _| keys.contains(k));
+                        scalars.retain(|k, _| keys.contains(k));
                     }
                 }
 
@@ -252,20 +246,19 @@ async fn get_metrics(
     Path((exp, run)): Path<(String, String)>,
     Query(q): Query<MetricsQuery>,
 ) -> impl IntoResponse {
-    let dir = run_dir(&state.base_dir, &exp, &run);
-    let path = dir.join("metrics.parquet");
-    match storage::read_metrics_since(&path, q.since_step) {
+    let path = run_dir(&state.base_dir, &exp, &run).join("vectors.parquet");
+    match storage::read_vectors_since(&path, q.since_step) {
         Ok(rows) => Json(rows).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
 
-/// SSE endpoint: streams new metric rows every 500ms.
-async fn stream_metrics(
+/// SSE endpoint: streams new vector metrics from vectors.parquet every 500ms.
+async fn stream_vectors(
     State(state): State<AppState>,
     Path((exp, run)): Path<(String, String)>,
 ) -> Sse<impl tokio_stream::Stream<Item = Result<axum::response::sse::Event, Infallible>>> {
-    let path = run_dir(&state.base_dir, &exp, &run).join("metrics.parquet");
+    let path = run_dir(&state.base_dir, &exp, &run).join("vectors.parquet");
     let mut last_step: Option<u64> = None;
 
     let interval = tokio::time::interval(Duration::from_millis(500));
@@ -273,15 +266,15 @@ async fn stream_metrics(
     let stream = IntervalStream::new(interval)
         .take_until(async move { shutdown.cancelled().await })
         .map(move |_| {
-        let rows = storage::read_metrics_since(&path, last_step).unwrap_or_default();
-        for row in &rows {
-            if let Some(step) = row.get("step").and_then(|v| v.as_u64()) {
-                last_step = Some(last_step.map_or(step, |ls| ls.max(step)));
+            let rows = storage::read_vectors_since(&path, last_step).unwrap_or_default();
+            for row in &rows {
+                if let Some(step) = row.get("step").and_then(|v| v.as_u64()) {
+                    last_step = Some(last_step.map_or(step, |ls| ls.max(step)));
+                }
             }
-        }
-        let data = serde_json::to_string(&rows).unwrap_or_default();
-        Ok(axum::response::sse::Event::default().data(data))
-    });
+            let data = serde_json::to_string(&rows).unwrap_or_default();
+            Ok(axum::response::sse::Event::default().data(data))
+        });
 
     Sse::new(stream).keep_alive(
         axum::response::sse::KeepAlive::new()
@@ -303,24 +296,24 @@ async fn stream_log(
     let stream = IntervalStream::new(interval)
         .take_until(async move { shutdown.cancelled().await })
         .map(move |_| {
-        let mut data = String::new();
-        if let Ok(file) = std::fs::File::open(&path) {
-            use std::io::{Read, Seek, SeekFrom};
-            let mut reader = std::io::BufReader::new(file);
-            let metadata = std::fs::metadata(&path).unwrap();
-            let len = metadata.len();
+            let mut data = String::new();
+            if let Ok(file) = std::fs::File::open(&path) {
+                use std::io::{Read, Seek, SeekFrom};
+                let mut reader = std::io::BufReader::new(file);
+                let metadata = std::fs::metadata(&path).unwrap();
+                let len = metadata.len();
 
-            if len < last_pos {
-                last_pos = 0;
+                if len < last_pos {
+                    last_pos = 0;
+                }
+                if len > last_pos {
+                    let _ = reader.seek(SeekFrom::Start(last_pos));
+                    let _ = reader.read_to_string(&mut data);
+                    last_pos = len;
+                }
             }
-            if len > last_pos {
-                let _ = reader.seek(SeekFrom::Start(last_pos));
-                let _ = reader.read_to_string(&mut data);
-                last_pos = len;
-            }
-        }
-        Ok(axum::response::sse::Event::default().data(data))
-    });
+            Ok(axum::response::sse::Event::default().data(data))
+        });
 
     Sse::new(stream).keep_alive(
         axum::response::sse::KeepAlive::new()
@@ -351,14 +344,14 @@ async fn get_run_metadata(
     let dir = run_dir(&state.base_dir, &exp, &run);
     match storage::load_run_metadata(&dir) {
         Ok(mut meta) => {
-            let metrics_path = dir.join("metrics.parquet");
-            if let Ok(scalars) = storage::read_latest_scalar_metrics(&metrics_path) {
-                if !scalars.is_empty() {
-                    let converted: HashMap<String, expman::models::MetricValue> = scalars
+            let vectors_path = dir.join("vectors.parquet");
+            if let Ok(scalars_map) = storage::read_latest_scalar_metrics(&vectors_path) {
+                if !scalars_map.is_empty() {
+                    let converted: HashMap<String, expman::models::MetricValue> = scalars_map
                         .into_iter()
                         .map(|(k, v)| (k, expman::models::MetricValue::Float(v)))
                         .collect();
-                    meta.metrics = Some(converted);
+                    meta.vectors = Some(converted);
                 }
             }
             Json(meta).into_response()
@@ -419,7 +412,7 @@ async fn get_artifact_content(
         .to_lowercase();
 
     if ext == "parquet" {
-        let rows = storage::read_metrics(&canonical_file).unwrap_or_default();
+        let rows = storage::read_vectors(&canonical_file).unwrap_or_default();
         let preview: Vec<_> = rows.into_iter().take(100).collect();
         return Json(serde_json::json!({"type": "parquet", "data": preview})).into_response();
     }
@@ -467,7 +460,7 @@ async fn get_experiment_stats(
             });
 
         let last_metrics =
-            storage::read_latest_scalar_metrics(&dir.join("metrics.parquet")).unwrap_or_default();
+            storage::read_latest_scalar_metrics(&dir.join("vectors.parquet")).unwrap_or_default();
 
         stats.push(serde_json::json!({
             "run": run_name,

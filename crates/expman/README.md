@@ -4,7 +4,7 @@ Core storage and logging engine for `expman-rs`.
 
 ## Overview 
 
-The `expman` module provides the foundational components for tracking, storing, and managing experiment data with high performance. Its central design principle ensures that logging operations (e.g., `log_metrics()`) are extremely fast (~100ns channel sends) and never block the main experiment process. 
+The `expman` module provides the foundational components for tracking, storing, and managing experiment data with high performance. Its central design principle ensures that logging operations (e.g., `log_vector()`) are extremely fast (~100ns channel sends) and never block the main experiment process. 
 All I/O operations are handled asynchronously via a background tokio task.
 
 ## Key Features
@@ -41,9 +41,9 @@ fn main() -> anyhow::Result<()> {
         let loss = 1.0 / (step as f64 + 1.0);
         let accuracy = step as f64 / 100.0;
         
-        // log_metrics takes a HashMap of metrics and an optional step counter.
+        // log_vector takes a HashMap of metrics and an optional step counter.
         // This operation takes ~100ns and does not block!
-        engine.log_metrics([
+        engine.log_vector([
             ("loss".to_string(), loss.into()),
             ("accuracy".to_string(), accuracy.into())
         ].into(), Some(step));
@@ -61,4 +61,4 @@ fn main() -> anyhow::Result<()> {
 - **`ExperimentConfig`**: Configures the base directory, experiment name, flush intervals, and environment metadata.
 - **`LoggingEngine`**: The main entry point. It manages the background writer task and exposes non-blocking methods to send data.
 - **`models`**: Contains definitions for `RunStatus`, `MetricValue` (which supports Floats, Ints, Bools, and Strings), and `MetricRow`.
-- **`storage`**: Internal module that handles the actual file I/O, writing `config.yaml`, `run.yaml`, `run.log`, and `metrics.parquet`.
+- **`storage`**: Internal module that handles the actual file I/O, writing `config.yaml`, `run.yaml`, `run.log`, and `vectors.parquet`.

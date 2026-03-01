@@ -36,7 +36,7 @@ def main():
             train_acc = 0.5 + (0.4 * (epoch / epochs)) + random.random() * 0.05
 
             # Log metrics (non-blocking)
-            exp.log_metrics(
+            exp.log_vector(
                 {
                     "train/loss": train_loss,
                     "train/acc": train_acc,
@@ -47,14 +47,14 @@ def main():
             # Log periodic validation metrics
             if epoch % 5 == 0:
                 val_acc = train_acc - 0.05 + random.random() * 0.02
-                exp.log_metrics({"val/acc": val_acc}, step=epoch)
+                exp.log_vector({"val/acc": val_acc}, step=epoch)
                 exp.info(f"Epoch {epoch}: val_acc={val_acc:.4f}")
 
         # 4. Log final summary metrics
         # These will be the "scalar metrics" visible in the Runs Table
-        exp.log_metrics(
-            {"final/loss": train_loss, "final/acc": train_acc, "final/val_acc": val_acc}
-        )
+        exp.log_scalar("final/loss", train_loss)
+        exp.log_scalar("final/acc", train_acc)
+        exp.log_scalar("final/val_acc", val_acc)
         print(f"Logged final metrics: acc={train_acc:.4f}, val_acc={val_acc:.4f}")
 
         # 4. Save an artifact

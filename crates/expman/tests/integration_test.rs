@@ -31,7 +31,7 @@ fn test_engine_creates_run_dir() {
 }
 
 #[test]
-fn test_log_metrics_writes_parquet() {
+fn test_log_vector_writes_parquet() {
     let tmp = TempDir::new().unwrap();
     let engine = make_engine(&tmp, "metrics_test");
 
@@ -42,18 +42,18 @@ fn test_log_metrics_writes_parquet() {
             MetricValue::Float(1.0 - i as f64 * 0.01),
         );
         m.insert("acc".to_string(), MetricValue::Float(i as f64 * 0.01));
-        engine.log_metrics(m, Some(i));
+        engine.log_vector(m, Some(i));
     }
 
     engine.close(RunStatus::Finished);
 
-    let metrics_path = engine.config().run_dir().join("metrics.parquet");
+    let metrics_path = engine.config().run_dir().join("vectors.parquet");
     assert!(
         metrics_path.exists(),
-        "metrics.parquet should exist after close"
+        "vectors.parquet should exist after close"
     );
 
-    let rows = expman::storage::read_metrics(&metrics_path).unwrap();
+    let rows = expman::storage::read_vectors(&metrics_path).unwrap();
     assert_eq!(rows.len(), 100, "Should have 100 metric rows");
 }
 
@@ -83,8 +83,8 @@ fn test_log_params_writes_yaml() {
 }
 
 #[test]
-fn test_log_metrics_is_fast() {
-    // Verify that 10,000 log_metrics calls complete in under 100ms
+fn test_log_vector_is_fast() {
+    // Verify that 10,000 log_vector calls complete in under 100ms
     let tmp = TempDir::new().unwrap();
     let engine = make_engine(&tmp, "perf_test");
 
@@ -92,14 +92,14 @@ fn test_log_metrics_is_fast() {
     for i in 0..10_000u64 {
         let mut m = HashMap::new();
         m.insert("loss".to_string(), MetricValue::Float(i as f64 * 0.0001));
-        engine.log_metrics(m, Some(i));
+        engine.log_vector(m, Some(i));
     }
     let elapsed = start.elapsed();
 
-    println!("10,000 log_metrics calls took: {:?}", elapsed);
+    println!("10,000 log_vector calls took: {:?}", elapsed);
     assert!(
         elapsed < Duration::from_millis(100),
-        "10k log_metrics should complete in < 100ms, took {:?}",
+        "10k log_vector should complete in < 100ms, took {:?}",
         elapsed
     );
 
@@ -145,22 +145,30 @@ fn test_parquet_schema_merge() {
 
     let mut m1 = HashMap::new();
     m1.insert("loss".to_string(), MetricValue::Float(0.5));
-    engine.log_metrics(m1, Some(0));
+    engine.log_vector(m1, Some(0));
 
     let mut m2 = HashMap::new();
     m2.insert("loss".to_string(), MetricValue::Float(0.4));
     m2.insert("acc".to_string(), MetricValue::Float(0.8)); // new key
-    engine.log_metrics(m2, Some(1));
+    engine.log_vector(m2, Some(1));
 
     engine.close(RunStatus::Finished);
 
-    let metrics_path = engine.config().run_dir().join("metrics.parquet");
-    let rows = expman::storage::read_metrics(&metrics_path).unwrap();
+    let metrics_path = engine.config().run_dir().join("vectors.parquet");
+    let rows = expman::storage::read_vectors(&metrics_path).unwrap();
     assert_eq!(rows.len(), 2);
     // Row 0 should have null for "acc"
-    assert!(rows[0].get("acc").map(|v| v.is_null()).unwrap_or(true));
+    assert!(rows[0]
+        .get("acc")
+        .map(|v: &serde_json::Value| v.is_null())
+        .unwrap_or(true));
     // Row 1 should have acc = 0.8
-    assert_eq!(rows[1].get("acc").and_then(|v| v.as_f64()), Some(0.8));
+    assert_eq!(
+        rows[1]
+            .get("acc")
+            .and_then(|v: &serde_json::Value| v.as_f64()),
+        Some(0.8)
+    );
 }
 
 #[test]
@@ -172,11 +180,11 @@ fn test_read_latest_scalar_metrics() {
         let mut m = HashMap::new();
         m.insert("loss".to_string(), MetricValue::Float(1.0 - i as f64 * 0.1));
         m.insert("acc".to_string(), MetricValue::Float(i as f64 * 0.1));
-        engine.log_metrics(m, Some(i));
+        engine.log_vector(m, Some(i));
     }
     engine.close(RunStatus::Finished);
 
-    let metrics_path = engine.config().run_dir().join("metrics.parquet");
+    let metrics_path = engine.config().run_dir().join("vectors.parquet");
     let scalars = expman::storage::read_latest_scalar_metrics(&metrics_path).unwrap();
 
     // Last row (step=4): loss = 0.6, acc = 0.4
@@ -215,7 +223,7 @@ fn test_concurrent_metrics_logging() {
             for i in 0..100 {
                 let mut m = HashMap::new();
                 m.insert(format!("thread_{}", t), MetricValue::Int(i));
-                engine_clone.log_metrics(m, Some((t * 100 + i) as u64));
+                engine_clone.log_vector(m, Some((t * 100 + i) as u64));
             }
         }));
     }
@@ -226,8 +234,8 @@ fn test_concurrent_metrics_logging() {
 
     engine.close(RunStatus::Finished);
 
-    let metrics_path = engine.config().run_dir().join("metrics.parquet");
-    let rows = expman::storage::read_metrics(&metrics_path).unwrap();
+    let metrics_path = engine.config().run_dir().join("vectors.parquet");
+    let rows = expman::storage::read_vectors(&metrics_path).unwrap();
     assert_eq!(rows.len(), 400);
 }
 
@@ -253,4 +261,40 @@ fn test_save_artifact_absolute_path() {
         std::fs::read_to_string(artifact_dest).unwrap(),
         "external content"
     );
+}
+
+#[test]
+fn test_log_vector_replaces_step() {
+    let tmp = TempDir::new().unwrap();
+    let config = ExperimentConfig::new("test_replace_exp", tmp.path().to_str().unwrap());
+
+    let run_dir = {
+        let engine = LoggingEngine::new(config).unwrap();
+        engine.log_vector([("loss".to_string(), 0.5.into())].into(), Some(1));
+
+        // At this point we log more vectors. engine.close() flushes everything.
+        engine.log_vector([("acc".to_string(), 0.9.into())].into(), Some(1)); // same step
+        engine.log_vector([("loss".to_string(), 0.2.into())].into(), Some(2)); // new step
+        let dir = engine.config().run_dir().clone();
+        engine.close(RunStatus::Finished);
+        dir
+    };
+
+    let vectors = expman::storage::read_vectors(&run_dir.join("vectors.parquet")).unwrap();
+    println!("VECTORS: {:?}", vectors);
+    assert_eq!(vectors.len(), 2);
+
+    let step_1 = vectors
+        .iter()
+        .find(|row| row.get("step").and_then(|v| v.as_i64()) == Some(1))
+        .unwrap();
+    let step_2 = vectors
+        .iter()
+        .find(|row| row.get("step").and_then(|v| v.as_i64()) == Some(2))
+        .unwrap();
+
+    assert_eq!(step_1.get("loss").and_then(|v| v.as_f64()), Some(0.5));
+    assert_eq!(step_1.get("acc").and_then(|v| v.as_f64()), Some(0.9));
+
+    assert_eq!(step_2.get("loss").and_then(|v| v.as_f64()), Some(0.2));
 }

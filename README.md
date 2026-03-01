@@ -10,7 +10,7 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 
 ## Features
 
-- **Non-blocking Python logging**: `log_metrics()` is a ~100ns channel send — never blocks your training loop
+- **Non-blocking Python logging**: `log_vector()` is a ~100ns channel send — never blocks your training loop
 - **Live dashboard**: SSE-powered real-time metric streaming, run comparison charts, artifact browser
 - **Scalar metric filtering**: Toggle which metric columns appear in the runs table with one click
 - **Single binary**: CLI + web server in one `exp` binary — no Python runtime needed for the server
@@ -66,7 +66,7 @@ import expman as exp
 
 exp.init("resnet_cifar10")
 exp.log_params({"lr": 0.001})
-exp.log_metrics({"loss": 0.5}, step=0)
+exp.log_vector({"loss": 0.5}, step=0)
 # Auto-closes on script exit
 ```
 
@@ -75,7 +75,7 @@ exp.log_metrics({"loss": 0.5}, step=0)
 from expman import Experiment
 
 with Experiment("resnet_cifar10") as exp:
-    exp.log_metrics({"loss": 0.5}, step=0)
+    exp.log_vector({"loss": 0.5}, step=0)
 ```
 
 ## For Rust
@@ -89,7 +89,7 @@ fn main() -> anyhow::Result<()> {
    let config = ExperimentConfig::new("my_rust_exp", "./experiments");
    let engine = LoggingEngine::new(config)?;
 
-   engine.log_metrics([("loss".to_string(), 0.5.into())].into(), Some(0));
+   engine.log_vector([("loss".to_string(), 0.5.into())].into(), Some(0));
 
    engine.close(RunStatus::Finished);
    Ok(())

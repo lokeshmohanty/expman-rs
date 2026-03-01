@@ -8,7 +8,7 @@ fn main() {
 
     let mut m = HashMap::new();
     m.insert("loss".to_string(), MetricValue::Float(0.123));
-    engine.log_metrics(m, Some(1));
+    engine.log_vector(m, Some(1));
 
     engine.close(RunStatus::Finished);
 }

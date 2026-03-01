@@ -123,5 +123,5 @@ fn test_cli_export_json() {
         .arg("json")
         .assert()
         .failure()
-        .stderr(predicates::str::contains("No metrics.parquet found"));
+        .stderr(predicates::str::contains("No vectors.parquet found"));
 }

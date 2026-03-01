@@ -8,7 +8,7 @@ Usage:
     exp.log_params({"lr": 0.001, "epochs": 100})
 
     for i in range(100):
-        exp.log_metrics({"loss": 1.0 - i * 0.01, "acc": i * 0.01}, step=i)
+        exp.log_vector({"loss": 1.0 - i * 0.01, "acc": i * 0.01}, step=i)
 
     exp.close()  # or use as context manager
 
@@ -16,7 +16,7 @@ Context manager:
     with Experiment("my_experiment") as exp:
         exp.log_params({"lr": 0.001})
         for i in range(100):
-            exp.log_metrics({"loss": 1.0 - i * 0.01}, step=i)
+            exp.log_vector({"loss": 1.0 - i * 0.01}, step=i)
 """
 
 from __future__ import annotations
@@ -113,19 +113,30 @@ class Experiment:
         """Log hyperparameters/configuration. Non-blocking."""
         self._exp.log_params(params)
 
-    def log_metrics(
+    def log_vector(
         self,
-        metrics: dict[str, float],
+        values: dict[str, float],
         step: int | None = None,
     ) -> None:
         """
-        Log a dictionary of metrics. Non-blocking (~100ns).
+        Log a dictionary of vector metrics. Non-blocking (~100ns).
 
         Args:
-            metrics: Dict of metric name → numeric value
+            values: Dict of metric name → numeric value
             step: Optional step/epoch number
         """
-        self._exp.log_metrics(metrics, step)
+        self._exp.log_vector(values, step)
+
+    def log_scalar(self, key: str, value: Any) -> None:
+        """
+        Log a single scalar value. Non-blocking.
+        Replaces existing value if already logged.
+
+        Args:
+            key: Metric name
+            value: Scalar value (float, int, bool, str)
+        """
+        self._exp.log_scalar(key, value)
 
     def save_artifact(self, path: str) -> None:
         """
@@ -221,10 +232,18 @@ def log_params(params: dict[str, Any]) -> None:
         print("Warning: No active experiment. Call expman.init() first.")
 
 
-def log_metrics(metrics: dict[str, float], step: int | None = None) -> None:
-    """Log metrics to the current global experiment."""
+def log_vector(values: dict[str, float], step: int | None = None) -> None:
+    """Log vector metrics to the current global experiment."""
     if _current_exp:
-        _current_exp.log_metrics(metrics, step=step)
+        _current_exp.log_vector(values, step=step)
+    else:
+        print("Warning: No active experiment. Call expman.init() first.")
+
+
+def log_scalar(key: str, value: Any) -> None:
+    """Log a scalar metric to the current global experiment."""
+    if _current_exp:
+        _current_exp.log_scalar(key, value)
     else:
         print("Warning: No active experiment. Call expman.init() first.")
 
@@ -260,7 +279,8 @@ def close() -> None:
 __all__ = [
     "Experiment",
     "init",
-    "log_metrics",
+    "log_vector",
+    "log_scalar",
     "log_params",
     "save_artifact",
     "info",

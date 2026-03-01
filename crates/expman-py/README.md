@@ -8,7 +8,7 @@ This module exposes the `Experiment` class to Python, allowing Python applicatio
 
 ## Key Features
 
-- **No Performance Penalty:** `log_metrics()` executes in ~100ns as it just sends data across a Rust channel. It does not wait for disk I/O.
+- **No Performance Penalty:** `log_vector()` executes in ~100ns as it just sends data across a Rust channel. It does not wait for disk I/O.
 - **Pythonic Interface:** Built with PyO3, the API looks and feels like native Python, supporting both object-oriented mapping and context managers.
 - **Automatic Environment Tracking:** Automatically records the Python executable's path and environment details.
 - **Safe Resource Management:** Automatically flushes queued metrics and marks runs as finished or failed through Python's `__del__` and `__exit__` hooks.
@@ -47,7 +47,7 @@ with Experiment("mnist_classifier") as exp:
         acc = epoch * 10 + random.uniform(0, 5)
 
         # 3. Log metrics (non-blocking!)
-        exp.log_metrics({
+        exp.log_vector({
             "train_loss": loss,
             "train_acc": acc
         }, step=epoch)
@@ -72,7 +72,7 @@ exp = expman.Experiment("resnet_cifar10", run_name="test_run_01")
 exp.log_params({"lr": 0.001})
 
 for step in range(100):
-    exp.log_metrics({"loss": 0.5 - (step * 0.001)}, step=step)
+    exp.log_vector({"loss": 0.5 - (step * 0.001)}, step=step)
 
 # The run will auto-close on script exit.
 # Alternatively, you can explicitly close it:

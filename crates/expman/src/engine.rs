@@ -1,7 +1,7 @@
 //! Async logging engine: the heart of expman-rs.
 //!
 //! `LoggingEngine::new()` spawns a background tokio task that owns all file handles.
-//! `log_metrics()` is a channel send — O(1), never blocks the experiment process.
+//! `log_vector()` is a channel send — O(1), never blocks the experiment process.
 //! The background task batches rows and flushes to Parquet periodically.
 
 use std::collections::HashMap;
@@ -17,13 +17,13 @@ use tokio::time::interval;
 use tracing::{error, info};
 
 use crate::error::{ExpmanError, Result};
-use crate::models::{ExperimentConfig, MetricRow, MetricValue, RunMetadata, RunStatus};
+use crate::models::{ExperimentConfig, MetricValue, RunMetadata, RunStatus, VectorRow};
 use crate::storage;
 
 /// Commands sent to the background logging task.
 enum LogCommand {
-    /// Log a row of metrics.
-    Metric(MetricRow),
+    /// Log a row of vector metrics.
+    Vector(VectorRow),
     /// Log a single scalar value (replaces if exists).
     Scalar(HashMap<String, MetricValue>),
     /// Update the config/params YAML.
@@ -133,11 +133,11 @@ impl LoggingEngine {
         })
     }
 
-    /// Log a row of metrics. Non-blocking — channel send only.
-    pub fn log_metrics(&self, values: HashMap<String, MetricValue>, step: Option<u64>) {
-        let row = MetricRow::new(values, step);
+    /// Log a row of vector metrics. Non-blocking — channel send only.
+    pub fn log_vector(&self, values: HashMap<String, MetricValue>, step: Option<u64>) {
+        let row = VectorRow::new(values, step);
         // If channel is closed (engine shut down), silently drop.
-        let _ = self.sender.send(LogCommand::Metric(row));
+        let _ = self.sender.send(LogCommand::Vector(row));
     }
 
     /// Log a single scalar value. Non-blocking — replaces existing value for the key.
@@ -221,13 +221,14 @@ async fn background_task(
     flush_interval_rows: usize,
     flush_interval_ms: u64,
 ) {
-    let metrics_path = run_dir.join("metrics.parquet");
+    let vectors_path = run_dir.join("vectors.parquet");
     let config_path = run_dir.join("config.yaml");
     let _meta_path = run_dir.join("run.yaml");
     let artifacts_dir = run_dir.join("artifacts");
 
-    let mut metric_buffer: Vec<MetricRow> = Vec::with_capacity(flush_interval_rows * 2);
+    let mut vector_buffer: Vec<VectorRow> = Vec::with_capacity(flush_interval_rows * 2);
     let mut current_scalars: HashMap<String, MetricValue> = HashMap::new();
+    let mut current_vectors: HashMap<String, MetricValue> = HashMap::new();
     let mut log_lines: Vec<String> = Vec::new();
     let mut flush_ticker = interval(Duration::from_millis(flush_interval_ms));
     flush_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -243,19 +244,19 @@ async fn background_task(
                 match cmd {
                     None => {
                         // Channel closed — flush and exit
-                        flush_metrics(&metrics_path, &mut metric_buffer);
+                        flush_vectors(&vectors_path, &mut vector_buffer);
                         flush_logs(&log_path, &mut log_lines);
                         break;
                     }
-                    Some(LogCommand::Metric(row)) => {
-                        // Update current scalars with latest values from this row
+                    Some(LogCommand::Vector(row)) => {
+                        // Update current vectors with latest values from this row
                         for (k, v) in &row.values {
-                            current_scalars.insert(k.clone(), v.clone());
+                            current_vectors.insert(k.clone(), v.clone());
                         }
 
-                        metric_buffer.push(row);
-                        if metric_buffer.len() >= flush_interval_rows {
-                            flush_metrics(&metrics_path, &mut metric_buffer);
+                        vector_buffer.push(row);
+                        if vector_buffer.len() >= flush_interval_rows {
+                            flush_vectors(&vectors_path, &mut vector_buffer);
                         }
                     }
                     Some(LogCommand::Scalar(scalars)) => {
@@ -280,13 +281,13 @@ async fn background_task(
                         }
                     }
                     Some(LogCommand::Flush(reply)) => {
-                        flush_metrics(&metrics_path, &mut metric_buffer);
+                        flush_vectors(&vectors_path, &mut vector_buffer);
                         flush_logs(&log_path, &mut log_lines);
                         let _ = reply.send(Ok(()));
                     }
                     Some(LogCommand::Shutdown { status, reply }) => {
                         // Final flush
-                        flush_metrics(&metrics_path, &mut metric_buffer);
+                        flush_vectors(&vectors_path, &mut vector_buffer);
                         flush_logs(&log_path, &mut log_lines);
 
                         // Update run metadata with final status and latest scalars
@@ -298,7 +299,10 @@ async fn background_task(
                             meta.finished_at = Some(finished_at);
                             meta.duration_secs = Some(duration);
                             if !current_scalars.is_empty() {
-                                meta.metrics = Some(current_scalars.clone());
+                                meta.scalars = Some(current_scalars.clone());
+                            }
+                            if !current_vectors.is_empty() {
+                                meta.vectors = Some(current_vectors.clone());
                             }
                             let _ = storage::save_run_metadata(&run_dir, &meta);
                         }
@@ -311,17 +315,18 @@ async fn background_task(
 
             // Periodic flush
             _ = flush_ticker.tick() => {
-                if !metric_buffer.is_empty() {
-                    flush_metrics(&metrics_path, &mut metric_buffer);
+                if !vector_buffer.is_empty() {
+                    flush_vectors(&vectors_path, &mut vector_buffer);
                 }
                 if !log_lines.is_empty() {
                     flush_logs(&log_path, &mut log_lines);
                 }
 
                 // Update metadata with current scalars periodically
-                if !current_scalars.is_empty() {
+                if !current_scalars.is_empty() || !current_vectors.is_empty() {
                     if let Ok(mut meta) = storage::load_run_metadata(&run_dir) {
-                        meta.metrics = Some(current_scalars.clone());
+                        meta.scalars = Some(current_scalars.clone());
+                        meta.vectors = Some(current_vectors.clone());
                         let _ = storage::save_run_metadata(&run_dir, &meta);
                     }
                 }
@@ -330,12 +335,12 @@ async fn background_task(
     }
 }
 
-fn flush_metrics(path: &std::path::Path, buffer: &mut Vec<MetricRow>) {
+fn flush_vectors(path: &std::path::Path, buffer: &mut Vec<VectorRow>) {
     if buffer.is_empty() {
         return;
     }
-    if let Err(e) = storage::append_metrics(path, buffer) {
-        error!("Failed to flush metrics: {}", e);
+    if let Err(e) = storage::append_vectors(path, buffer) {
+        error!("Failed to flush vectors: {}", e);
     }
     buffer.clear();
 }

@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 //! expman: Core storage and logging engine for expman-rs.
 //!
-//! The central design principle: `log_metrics()` is a channel send (~100ns),
+//! The central design principle: `log_vector()` is a channel send (~100ns),
 //! never blocking the experiment process. A background tokio task handles
 //! all I/O asynchronously.
 //!
@@ -15,7 +15,7 @@ pub mod storage;
 
 pub use engine::{LogLevel, LoggingEngine};
 pub use error::ExpmanError;
-pub use models::{ExperimentConfig, MetricRow, MetricValue, RunStatus};
+pub use models::{ExperimentConfig, MetricValue, RunMetadata, RunStatus, VectorRow};
 
 /// 📚 **Guide**: Interactive Jupyter Notebooks in ExpMan
 #[doc = include_str!("../docs/jupyter_integration.md")]

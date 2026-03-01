@@ -1,4 +1,5 @@
 import os
+import time
 
 import yaml
 
@@ -12,13 +13,13 @@ def test_experiment_basic(tmp_path):
 
     with expman.Experiment(exp_name, base_dir=str(exp_dir)) as exp:
         exp.log_params({"lr": 0.01})
-        exp.log_metrics({"loss": 0.5}, step=0)
+        exp.log_vector({"loss": 0.5}, step=0)
         run_dir = exp.run_dir
 
     # Assertions outside 'with' to ensure background task has flushed
     assert os.path.exists(run_dir)
     assert os.path.exists(os.path.join(run_dir, "config.yaml"))
-    assert os.path.exists(os.path.join(run_dir, "metrics.parquet"))
+    assert os.path.exists(os.path.join(run_dir, "vectors.parquet"))
 
 
 def test_singleton_init(tmp_path):
@@ -27,7 +28,7 @@ def test_singleton_init(tmp_path):
 
     expman.init("singleton_exp", base_dir=str(exp_dir))
     expman.log_params({"batch_size": 32})
-    expman.log_metrics({"acc": 0.9}, step=1)
+    expman.log_vector({"acc": 0.9}, step=1)
     expman.close()
 
     # Check if files were created
@@ -88,3 +89,49 @@ def test_experiment_crash(tmp_path):
     with open(run_yaml_path) as f:
         meta = yaml.safe_load(f)
         assert meta["status"] == "FAILED"
+
+
+def test_vectors_vs_scalar(tmp_path):
+    """Verify log_vector (append) vs log_scalar (replace) behavior."""
+    exp_dir = tmp_path / "experiments"
+    exp_name = "test_vectors_scalar"
+
+    with expman.Experiment(exp_name, base_dir=str(exp_dir)) as exp:
+        run_dir = exp.run_dir
+        
+        # log_vector (append)
+        exp.log_vector({"acc": 0.8}, step=0)
+        exp.log_vector({"acc": 0.9}, step=1)
+        
+        # log_scalar (replace)
+        exp.log_scalar("status", "starting")
+        exp.log_scalar("status", "running")
+        exp.log_scalar("lr", 0.1)
+        exp.log_scalar("lr", 0.01)
+
+    # Allow some time for background flush
+    time.sleep(0.5)
+
+    # 1. Verify vectors.parquet exists
+    vectors_path = os.path.join(run_dir, "vectors.parquet")
+    assert os.path.exists(vectors_path)
+    assert os.path.getsize(vectors_path) > 0
+
+    # 2. Verify run.yaml (separate storage)
+    run_yaml_path = os.path.join(run_dir, "run.yaml")
+    assert os.path.exists(run_yaml_path)
+    with open(run_yaml_path) as f:
+        meta = yaml.safe_load(f)
+        
+        # scalars should be in its own section
+        scalars = meta["scalars"]
+        assert scalars["status"] == "running"
+        assert scalars["lr"] == 0.01
+        
+        # vectors should be in its own section (latest values)
+        vectors = meta["vectors"]
+        assert vectors["acc"] == 0.9
+        
+        # ensure no leakage
+        assert "acc" not in scalars
+        assert "status" not in vectors

@@ -202,17 +202,17 @@ pub fn cmd_inspect(run_dir: PathBuf) -> Result<()> {
         println!();
     }
 
-    // Last metrics
-    let metrics_path = run_dir.join("metrics.parquet");
-    if metrics_path.exists() {
-        let rows = storage::read_metrics(&metrics_path)?;
+    // Last vectors from parquet
+    let vectors_path = run_dir.join("vectors.parquet");
+    if vectors_path.exists() {
+        let rows = storage::read_vectors(&vectors_path)?;
         let total = rows.len();
-        println!("── Last Metrics ({} total rows) ─────────", total);
+        println!("── Last Vectors ({} total rows) ─────────", total);
 
         if let Some(last) = rows.last() {
             let mut table = Table::new();
             table.load_preset(UTF8_FULL);
-            table.set_header(["Metric", "Value"]);
+            table.set_header(["Vector", "Value"]);
             let mut entries: Vec<_> = last.iter().collect();
             entries.sort_by_key(|(k, _)| k.as_str());
             for (k, v) in entries {
@@ -220,6 +220,20 @@ pub fn cmd_inspect(run_dir: PathBuf) -> Result<()> {
             }
             println!("{}", table);
         }
+    }
+
+    // Scalars from metadata
+    if let Some(scalars) = meta.scalars {
+        println!("── Scalars ─────────────────────────────");
+        let mut table = Table::new();
+        table.load_preset(UTF8_FULL);
+        table.set_header(["Scalar", "Value"]);
+        let mut entries: Vec<_> = scalars.iter().collect();
+        entries.sort_by_key(|(k, _)| k.as_str());
+        for (k, v) in entries {
+            table.add_row([k.as_str(), &v.to_string()]);
+        }
+        println!("{}", table);
     }
 
     // Artifacts
@@ -277,12 +291,12 @@ pub fn cmd_clean(dir: PathBuf, experiment: String, keep: usize, force: bool) -> 
 }
 
 pub fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> Result<()> {
-    let metrics_path = run_dir.join("metrics.parquet");
-    if !metrics_path.exists() {
-        anyhow::bail!("No metrics.parquet found in {}", run_dir.display());
+    let vectors_path = run_dir.join("vectors.parquet");
+    if !vectors_path.exists() {
+        anyhow::bail!("No vectors.parquet found in {}", run_dir.display());
     }
 
-    let rows = storage::read_metrics(&metrics_path)?;
+    let rows = storage::read_vectors(&vectors_path)?;
 
     let content = match format.as_str() {
         "json" => serde_json::to_string_pretty(&rows)?,

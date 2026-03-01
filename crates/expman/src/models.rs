@@ -62,6 +62,17 @@ pub enum MetricValue {
     Text(String),
 }
 
+impl std::fmt::Display for MetricValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Float(v) => write!(f, "{}", v),
+            Self::Int(v) => write!(f, "{}", v),
+            Self::Bool(v) => write!(f, "{}", v),
+            Self::Text(v) => write!(f, "{}", v),
+        }
+    }
+}
+
 impl From<f64> for MetricValue {
     fn from(v: f64) -> Self {
         MetricValue::Float(v)
@@ -103,15 +114,15 @@ impl From<&str> for MetricValue {
     }
 }
 
-/// A row of metrics logged at a specific step/time.
+/// A single vector row logged at a specific step/time.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MetricRow {
+pub struct VectorRow {
     pub step: Option<u64>,
     pub timestamp: DateTime<Utc>,
     pub values: HashMap<String, MetricValue>,
 }
 
-impl MetricRow {
+impl VectorRow {
     pub fn new(values: HashMap<String, MetricValue>, step: Option<u64>) -> Self {
         Self {
             step,
@@ -152,9 +163,12 @@ pub struct RunMetadata {
     pub finished_at: Option<DateTime<Utc>>,
     pub duration_secs: Option<f64>,
     pub description: Option<String>,
-    /// Latest scalar metrics from the last logged row or log_scalar calls.
+    /// Latest scalar values (replaced on update).
     #[serde(default)]
-    pub metrics: Option<HashMap<String, MetricValue>>,
+    pub scalars: Option<HashMap<String, MetricValue>>,
+    /// Latest vector values (latest row summary).
+    #[serde(default)]
+    pub vectors: Option<HashMap<String, MetricValue>>,
     /// Language of the run
     #[serde(default)]
     pub language: Option<String>,
@@ -173,7 +187,8 @@ impl Default for RunMetadata {
             finished_at: None,
             duration_secs: None,
             description: None,
-            metrics: None,
+            scalars: None,
+            vectors: None,
             language: None,
             env_path: None,
         }

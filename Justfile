@@ -75,22 +75,22 @@ build-docs:
     @rm target/doc/readme_content.html
     @echo "Documentation built at target/doc/index.html"
 
-# Build the Python extension and copy the shared library to the package directory
+# Build the Python extension and place the shared library in the package directory
 build-py:
     @if [ ! -d ".venv" ]; then \
         uv venv --seed --python 3.12; \
     fi
-    uv build --out-dir target/python-wheels
-    # Copy the built library into the python package for local use without full install
-    cp target/debug/libexpman_py.so python/expman/expman.so 2>/dev/null || cp target/debug/libexpman_py.dylib python/expman/expman.so 2>/dev/null || true
+    uv pip install -e .
+    uv run maturin develop --release
 
-# Build and install the Python extension (auto-manages uv venv)
+# Build and install the Python extension for development
 dev-py:
     @if [ ! -d ".venv" ]; then \
         echo "Creating virtual environment with uv..."; \
         uv venv --seed --python 3.12; \
     fi
     @# Note: we use 'uv run' to ensure maturin uses the venv
+    uv run maturin develop
     uv pip install -e .
     uv pip install -e ".[dev]"
 
@@ -155,9 +155,9 @@ publish:
 stats:
     tokei crates/ python/ frontend/
 
-# Run a quick benchmark of log_metrics throughput
+# Run a quick benchmark of log_vector throughput
 bench:
-    cargo test test_log_metrics_is_fast --release -- --nocapture
+    cargo test test_log_vector_is_fast --release -- --nocapture
 
 
 # Bump version: just bump patch|minor|major

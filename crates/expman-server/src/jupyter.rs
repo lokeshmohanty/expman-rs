@@ -49,9 +49,9 @@ pub fn generate_notebook_content(is_python: bool) -> String {
     "import polars as pl\n",
     "import matplotlib.pyplot as plt\n",
     "\n",
-    "# Load run metrics\n",
-    "metrics_path = 'metrics.parquet'\n",
-    "df = pl.read_parquet(metrics_path)\n",
+    "# Load run vectors\n",
+    "vectors_path = 'vectors.parquet'\n",
+    "df = pl.read_parquet(vectors_path)\n",
     "\n",
     "# Display the latest metrics\n",
     "df.tail()"
@@ -59,7 +59,7 @@ pub fn generate_notebook_content(is_python: bool) -> String {
   }"##
         .to_string()
     } else {
-        let snippet = "use polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {\n    // Load run metrics\n    let mut file = std::fs::File::open(\"metrics.parquet\").unwrap();\n    let df = ParquetReader::new(&mut file).finish()?;\n\n    println!(\"{:?}\", df.tail(Some(5)));\n    Ok(())\n}";
+        let snippet = "use polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {\n    // Load run vectors\n    let mut file = std::fs::File::open(\"vectors.parquet\").unwrap();\n    let df = ParquetReader::new(&mut file).finish()?;\n\n    println!(\"{:?}\", df.tail(Some(5)));\n    Ok(())\n}";
         format!(
             r#"{{
    "cell_type": "code",
@@ -279,7 +279,8 @@ impl JupyterManager {
 
         for mut inst in all {
             let _ = inst.process.kill().await;
-            let _ = tokio::time::timeout(tokio::time::Duration::from_secs(5), inst.process.wait()).await;
+            let _ = tokio::time::timeout(tokio::time::Duration::from_secs(5), inst.process.wait())
+                .await;
         }
     }
 }

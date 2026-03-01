@@ -3,7 +3,7 @@
 #![allow(clippy::useless_conversion)]
 //!
 //! Exposes `Experiment` class to Python. All I/O is non-blocking:
-//! `log_metrics()` is a channel send on the background tokio runtime,
+//! `log_vector()` is a channel send on the background tokio runtime,
 //! never blocking the Python GIL or the experiment loop.
 
 use std::collections::HashMap;
@@ -79,17 +79,43 @@ impl Experiment {
         Ok(())
     }
 
-    /// Log a dictionary of metrics. Non-blocking (~100ns).
+    /// Log a dictionary of vector metrics. Non-blocking (~100ns).
     ///
     /// Args:
-    ///     metrics: Dict of metric name → numeric value
+    ///     values: Dict of metric name → numeric value
     ///     step: Optional step/epoch number
-    #[pyo3(signature = (metrics, step=None))]
-    fn log_metrics(&self, metrics: &Bound<'_, PyDict>, step: Option<u64>) -> PyResult<()> {
-        let converted = py_dict_to_metrics(metrics)?;
+    #[pyo3(signature = (values, step=None))]
+    fn log_vector(&self, values: &Bound<'_, PyDict>, step: Option<u64>) -> PyResult<()> {
+        let converted = py_dict_to_map(values)?;
         if let Ok(guard) = self.engine.lock() {
             if let Some(engine) = guard.as_ref() {
-                engine.log_metrics(converted, step);
+                engine.log_vector(converted, step);
+            }
+        }
+        Ok(())
+    }
+
+    /// Log a single scalar value. Non-blocking.
+    ///
+    /// Args:
+    ///    key: Metric name
+    ///    value: Metric value (float, int, bool, str)
+    fn log_scalar(&self, key: &str, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        let val = if let Ok(f) = value.extract::<f64>() {
+            MetricValue::Float(f)
+        } else if let Ok(i) = value.extract::<i64>() {
+            MetricValue::Int(i)
+        } else if let Ok(b) = value.extract::<bool>() {
+            MetricValue::Bool(b)
+        } else if let Ok(s) = value.extract::<String>() {
+            MetricValue::Text(s)
+        } else {
+            MetricValue::Text(value.str()?.to_string())
+        };
+
+        if let Ok(guard) = self.engine.lock() {
+            if let Some(engine) = guard.as_ref() {
+                engine.log_scalar(key.to_string(), val);
             }
         }
         Ok(())
@@ -221,7 +247,7 @@ impl Experiment {
 
 // ─── Type conversion helpers ──────────────────────────────────────────────────
 
-fn py_dict_to_metrics(dict: &Bound<'_, PyDict>) -> PyResult<HashMap<String, MetricValue>> {
+fn py_dict_to_map(dict: &Bound<'_, PyDict>) -> PyResult<HashMap<String, MetricValue>> {
     let mut map = HashMap::new();
     for (k, v) in dict.iter() {
         let key: String = k.extract()?;

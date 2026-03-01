@@ -15,7 +15,7 @@ use parquet::file::properties::WriterProperties;
 use serde_yaml;
 
 use crate::error::Result;
-use crate::models::{ExperimentMetadata, MetricRow, MetricValue, RunMetadata, RunStatus};
+use crate::models::{ExperimentMetadata, MetricValue, RunMetadata, RunStatus, VectorRow};
 
 // ─── Directory helpers ────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ pub fn list_artifacts(run_dir: &Path) -> Result<Vec<ArtifactInfo>> {
             if path.is_file() {
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 // Include specific default files
-                if name == "metrics.parquet"
+                if name == "vectors.parquet"
                     || name == "config.yaml"
                     || name == "run.yaml"
                     || name == "run.log"
@@ -219,22 +219,74 @@ pub fn load_experiment_metadata(exp_dir: &Path) -> Result<ExperimentMetadata> {
 
 // ─── Parquet metrics I/O ─────────────────────────────────────────────────────
 
-/// Append metric rows to a Parquet file.
+/// Append vector rows to a Parquet file.
 /// Strategy: read existing → concat → write back.
 /// This is called infrequently (batched), so O(n) is acceptable.
 /// For very large files, a future optimization is columnar append via IPC.
-pub fn append_metrics(path: &Path, rows: &[MetricRow]) -> Result<()> {
+pub fn append_vectors(path: &Path, rows: &[VectorRow]) -> Result<()> {
     if rows.is_empty() {
         return Ok(());
     }
 
-    // Build new batch from rows
-    let new_batch = rows_to_record_batch(rows)?;
+    // Deduplicate and merge rows by step (if any have the same step)
+    let mut merged_rows: Vec<VectorRow> = Vec::new();
+    let mut step_to_idx: HashMap<u64, usize> = HashMap::new();
+    for row in rows {
+        if let Some(s) = row.step {
+            if let Some(&idx) = step_to_idx.get(&s) {
+                for (k, v) in &row.values {
+                    merged_rows[idx].values.insert(k.clone(), v.clone());
+                }
+                merged_rows[idx].timestamp = row.timestamp;
+            } else {
+                step_to_idx.insert(s, merged_rows.len());
+                merged_rows.push(row.clone());
+            }
+        } else {
+            merged_rows.push(row.clone());
+        }
+    }
+
+    // Build new batch from merged rows
+    let new_batch = rows_to_record_batch(&merged_rows)?;
 
     // If file exists, read and concat
     let final_batch = if path.exists() {
         let existing = read_parquet(path)?;
-        concat_batches(&existing, &new_batch)?
+
+        let new_steps: std::collections::HashSet<i64> = merged_rows
+            .iter()
+            .filter_map(|r| r.step)
+            .map(|s| s as i64)
+            .collect();
+
+        if new_steps.is_empty() || existing.num_rows() == 0 {
+            concat_batches(&existing, &new_batch)?
+        } else {
+            let step_col = existing.column_by_name("step");
+            let existing_filtered = if let Some(col) = step_col {
+                if let Some(step_arr) = col.as_any().downcast_ref::<arrow::array::Int64Array>() {
+                    use arrow::array::Array;
+                    let mut keep_vec = Vec::with_capacity(existing.num_rows());
+                    for i in 0..existing.num_rows() {
+                        if step_arr.is_null(i) {
+                            keep_vec.push(Some(true));
+                        } else {
+                            let s = step_arr.value(i);
+                            keep_vec.push(Some(!new_steps.contains(&s)));
+                        }
+                    }
+                    use arrow::array::BooleanArray;
+                    let keep_array = BooleanArray::from(keep_vec);
+                    arrow::compute::filter_record_batch(&existing, &keep_array)?
+                } else {
+                    existing
+                }
+            } else {
+                existing
+            };
+            concat_batches(&existing_filtered, &new_batch)?
+        }
     } else {
         new_batch
     };
@@ -243,8 +295,8 @@ pub fn append_metrics(path: &Path, rows: &[MetricRow]) -> Result<()> {
     Ok(())
 }
 
-/// Read all metrics from a Parquet file as a list of row maps.
-pub fn read_metrics(path: &Path) -> Result<Vec<HashMap<String, serde_json::Value>>> {
+/// Read all vectors from a Parquet file as a list of row maps.
+pub fn read_vectors(path: &Path) -> Result<Vec<HashMap<String, serde_json::Value>>> {
     if !path.exists() {
         return Ok(vec![]);
     }
@@ -252,12 +304,12 @@ pub fn read_metrics(path: &Path) -> Result<Vec<HashMap<String, serde_json::Value
     record_batch_to_rows(&batch)
 }
 
-/// Read metrics since a given step (for live streaming).
-pub fn read_metrics_since(
+/// Read vectors since a given step (for live streaming).
+pub fn read_vectors_since(
     path: &Path,
     since_step: Option<u64>,
 ) -> Result<Vec<HashMap<String, serde_json::Value>>> {
-    let all = read_metrics(path)?;
+    let all = read_vectors(path)?;
     if let Some(since) = since_step {
         Ok(all
             .into_iter()
@@ -279,7 +331,7 @@ pub fn read_latest_scalar_metrics(path: &Path) -> Result<HashMap<String, f64>> {
     if !path.exists() {
         return Ok(HashMap::new());
     }
-    let rows = read_metrics(path)?;
+    let rows = read_vectors(path)?;
     let Some(last) = rows.into_iter().last() else {
         return Ok(HashMap::new());
     };
@@ -382,7 +434,7 @@ fn align_batch(batch: &RecordBatch, target_schema: &Schema) -> Result<RecordBatc
     )?)
 }
 
-fn rows_to_record_batch(rows: &[MetricRow]) -> Result<RecordBatch> {
+fn rows_to_record_batch(rows: &[VectorRow]) -> Result<RecordBatch> {
     if rows.is_empty() {
         let schema = Arc::new(Schema::new(vec![
             Field::new("step", DataType::Int64, true),
