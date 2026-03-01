@@ -15,7 +15,7 @@ name = "expman_server"
 path = "src/lib.rs"
 
 [dependencies]
-expman = { path = "../expman", version = "0.2.3" }
+expman = { path = "../expman", version = "0.2.4" }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }
 axum = { workspace = true }
