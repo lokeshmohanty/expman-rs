@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="📚 Guide: Interactive Jupyter Notebooks in ExpMan"><title>expman_core::jupyter_integration - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="expman_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.1 (01f6ddf75 2026-02-11)" data-channel="1.93.1" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module jupyter_integration</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../expman_core/index.html">expman_<wbr>core</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module jupyter_<wbr>integration</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#jupyter-notebook-integration" title="Jupyter Notebook Integration">Jupyter Notebook Integration</a><ul><li><a href="#overview" title="Overview">Overview</a></li><li><a href="#requirements" title="Requirements">Requirements</a></li><li><a href="#the-interactive-experience" title="The Interactive Experience">The Interactive Experience</a></li><li><a href="#troubleshooting" title="Troubleshooting">Troubleshooting</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate expman_<wbr>core</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">expman_core</a></div><h1>Module <span>jupyter_<wbr>integration</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/expman_core/lib.rs.html#22">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>📚 <strong>Guide</strong>: Interactive Jupyter Notebooks in ExpMan</p>
+<h2 id="jupyter-notebook-integration"><a class="doc-anchor" href="#jupyter-notebook-integration">§</a>Jupyter Notebook Integration</h2>
+<p>The <code>expman-rs</code> dashboard includes powerful, seamless integration with <strong>Jupyter Notebooks</strong>, allowing you to instantly analyze run data without leaving your browser.</p>
+<h3 id="overview"><a class="doc-anchor" href="#overview">§</a>Overview</h3>
+<p>When exploring the details of a specific Run in the dashboard, you can open the <strong>Interactive</strong> tab. This tab embeds a fully functional, live Jupyter Notebook interface directly in the UI.</p>
+<p>The dashboard intelligently spins up a background Jupyter instance strictly tied to that run’s execution folder, securely exposing an ephemeral port just for your dashboard session. Everything is automatically destroyed when you click “Stop Notebook”.</p>
+<h3 id="requirements"><a class="doc-anchor" href="#requirements">§</a>Requirements</h3>
+<p>To use this feature, <strong>Jupyter Notebook must be installed in the environment where you start the ExpMan Dashboard</strong>.</p>
+<p>Because <code>expman-rs</code> uses your local environment to spawn the background notebook, simply having Python installed isn’t enough; the <code>jupyter</code> command must be on your <code>PATH</code>.</p>
+<div class="example-wrap"><pre class="language-bash"><code># Example: Install Jupyter with uv directly into the dashboard&#39;s environment
+uv tool install notebook
+
+# Alternatively, using pip:
+pip install notebook</code></pre></div>
+<p>If Jupyter is not detected, the “Launch Live Analysis” button will be disabled, and the dashboard will provide a helpful warning with instructions to install it.</p>
+<h3 id="the-interactive-experience"><a class="doc-anchor" href="#the-interactive-experience">§</a>The Interactive Experience</h3>
+<ol>
+<li>
+<p><strong>Auto-Generated Boilerplate</strong>:
+When you select a run, the system automatically writes an <code>interactive.ipynb</code> file directly into that run’s folder on disk if it doesn’t already exist.</p>
+</li>
+<li>
+<p><strong>Polars for Analytics</strong>:
+By default, the provided notebook template utilizes <a href="https://pola.rs">Polars</a> (<code>pl.read_parquet</code>) to ensure ultra-fast load times for large metrics files, as opposed to pandas.</p>
+</li>
+<li>
+<p><strong>In-Notebook Requirements</strong>:
+The notebook’s first cell explicitly helps you safely install the required analytical tools (<code>polars</code>, <code>matplotlib</code>, <code>pyarrow</code>, <code>fastparquet</code>) directly into your current python environment from within the notebook without breaking the terminal running the dashboard. It uses the safe <code>!pip install ... --python {sys.executable}</code> approach.</p>
+</li>
+</ol>
+<h3 id="troubleshooting"><a class="doc-anchor" href="#troubleshooting">§</a>Troubleshooting</h3>
+<ul>
+<li><strong>Address Already in Use</strong>: If you previously crashed the dashboard abruptly while a notebook was running, the zombie <code>jupyter notebook</code> process might still occupy the allocated port.</li>
+<li><strong>Port Ranges</strong>: <code>expman-rs</code> searches for available ports starting from <code>8000</code> to <code>9000</code> to bind new Notebooks. Ensure this range isn’t strictly blocked by local firewalls.</li>
+</ul>
+</div></details></section></div></main></body></html>

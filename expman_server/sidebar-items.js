@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_router","serve"],"mod":["api","jupyter","state"]};

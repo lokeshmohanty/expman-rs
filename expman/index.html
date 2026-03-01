@@ -1,0 +1,147 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="expman-rs"><title>expman - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="expman" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.1 (01f6ddf75 2026-02-11)" data-channel="1.93.1" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate expman</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../expman/index.html">expman</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#expman-rs" title="expman-rs">expman-rs</a><ul><li><a href="#features" title="Features">Features</a></li><li><a href="#installation" title="Installation">Installation</a></li><li><a href="#quick-start" title="Quick Start">Quick Start</a></li><li><a href="#for-rust" title="For Rust">For Rust</a></li><li><a href="#development-nix" title="Development (Nix)">Development (Nix)</a></li><li><a href="#documentation" title="Documentation">Documentation</a></li><li><a href="#examples" title="Examples">Examples</a></li><li><a href="#architecture" title="Architecture">Architecture</a></li><li><a href="#storage-layout" title="Storage Layout">Storage Layout</a></li></ul></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>expman</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/expman/lib.rs.html#1-8">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="expman-rs"><a class="doc-anchor" href="#expman-rs">§</a>expman-rs</h2>
+<p><a href="https://crates.io/crates/expman"><img src="https://img.shields.io/crates/v/expman.svg" alt="Crates.io" /></a>
+<a href="https://pypi.org/project/expman-rs/"><img src="https://img.shields.io/pypi/v/expman-rs.svg" alt="PyPI" /></a>
+<a href="https://github.com/lokeshmohanty/expman-rs"><img src="https://img.shields.io/badge/github-repo-blue.svg?logo=github" alt="GitHub Repo" /></a>
+<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+<a href="https://lokeshmohanty.github.io/expman-rs"><img src="https://img.shields.io/badge/docs-deploy-blue" alt="Documentation" /></a></p>
+<p>High-performance experiment manager written in Rust, with a Python wrapper for non-blocking logging, a live web dashboard, and a friendly CLI.</p>
+<h3 id="features"><a class="doc-anchor" href="#features">§</a>Features</h3>
+<ul>
+<li><strong>Non-blocking Python logging</strong>: <code>log_metrics()</code> is a ~100ns channel send — never blocks your training loop</li>
+<li><strong>Live dashboard</strong>: SSE-powered real-time metric streaming, run comparison charts, artifact browser</li>
+<li><strong>Scalar metric filtering</strong>: Toggle which metric columns appear in the runs table with one click</li>
+<li><strong>Single binary</strong>: CLI + web server in one <code>expman</code> binary — no Python runtime needed for the server</li>
+<li><strong>Efficient storage</strong>: Batched Arrow/Parquet writes, not per-step read-concat-write</li>
+<li><strong>Nix dev environment</strong>: Reproducible with <code>nix develop</code></li>
+</ul>
+<h3 id="installation"><a class="doc-anchor" href="#installation">§</a>Installation</h3><h4 id="from-cargo"><a class="doc-anchor" href="#from-cargo">§</a>From Cargo</h4><div class="example-wrap"><pre class="language-bash"><code>cargo install expman</code></pre></div><h4 id="from-pypi"><a class="doc-anchor" href="#from-pypi">§</a>From PYPI</h4><div class="example-wrap"><pre class="language-bash"><code>pip install expman-rs</code></pre></div><h4 id="alternatively-download-or-install-from-github"><a class="doc-anchor" href="#alternatively-download-or-install-from-github">§</a>Alternatively: Download or Install from GitHub</h4>
+<ul>
+<li>
+<p><strong>Direct Download</strong>: Download the pre-built <code>expman</code> binary or Python wheels from <a href="https://github.com/lokeshmohanty/expman-rs/releases">GitHub Releases</a>.</p>
+</li>
+<li>
+<p><strong>Python (pip)</strong>:</p>
+<div class="example-wrap"><pre class="language-bash"><code>pip install git+https://github.com/lokeshmohanty/expman-rs.git</code></pre></div></li>
+<li>
+<p><strong>Rust (cargo)</strong>:</p>
+<div class="example-wrap"><pre class="language-bash"><code>cargo install --git https://github.com/lokeshmohanty/expman-rs.git expman</code></pre></div></li>
+</ul>
+<h3 id="quick-start"><a class="doc-anchor" href="#quick-start">§</a>Quick Start</h3><h4 id="python"><a class="doc-anchor" href="#python">§</a>Python</h4>
+<p><strong>Option A: Global Singleton (Easiest)</strong></p>
+<div class="example-wrap"><pre class="language-python"><code>import expman
+
+expman.init(&quot;resnet_cifar10&quot;)
+expman.log_params({&quot;lr&quot;: 0.001})
+expman.log_metrics({&quot;loss&quot;: 0.5}, step=0)
+# Auto-closes on script exit</code></pre></div>
+<p><strong>Option B: Context Manager (Recommended for scope control)</strong></p>
+<div class="example-wrap"><pre class="language-python"><code>from expman import Experiment
+
+with Experiment(&quot;resnet_cifar10&quot;) as exp:
+    exp.log_metrics({&quot;loss&quot;: 0.5}, step=0)</code></pre></div><h3 id="for-rust"><a class="doc-anchor" href="#for-rust">§</a>For Rust</h3>
+<p>Basic usage:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>expman::{ExperimentConfig, LoggingEngine, RunStatus};
+
+<span class="kw">fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
+   <span class="kw">let </span>config = ExperimentConfig::new(<span class="string">"my_rust_exp"</span>, <span class="string">"./experiments"</span>);
+   <span class="kw">let </span>engine = LoggingEngine::new(config)<span class="question-mark">?</span>;
+
+   engine.log_metrics([(<span class="string">"loss"</span>.to_string(), <span class="number">0.5</span>.into())].into(), <span class="prelude-val">Some</span>(<span class="number">0</span>));
+
+   engine.close(RunStatus::Finished);
+   <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h4 id="dashboard"><a class="doc-anchor" href="#dashboard">§</a>Dashboard</h4><div class="example-wrap"><pre class="language-bash"><code>expman serve ./experiments
+# Open http://localhost:8000</code></pre></div><h4 id="cli"><a class="doc-anchor" href="#cli">§</a>CLI</h4><div class="example-wrap"><pre class="language-bash"><code>expman list ./experiments              # list all experiments
+expman list ./experiments -e resnet    # list runs for an experiment
+expman inspect ./experiments/resnet/runs/20240101_120000
+expman clean resnet --keep 5 --force   # delete old runs
+expman export ./experiments/resnet/runs/20240101_120000 --format csv</code></pre></div><h3 id="development-nix"><a class="doc-anchor" href="#development-nix">§</a>Development (Nix)</h3><div class="example-wrap"><pre class="language-bash"><code>nix develop                    # enter dev shell
+just test                      # run all tests
+just dev-py                    # build Python extension (uv pip install -e .)
+just serve ./experiments       # start dashboard
+just watch                     # watch mode for tests
+just build-docs                # build and open documentation</code></pre></div><h3 id="documentation"><a class="doc-anchor" href="#documentation">§</a>Documentation</h3>
+<p>For detailed usage, refer to the standalone documentation files for each component:</p>
+<ul>
+<li><a href="docs/expman-cli.md"><code>expman-cli</code></a> - Command-line interface definitions and references.</li>
+<li><a href="docs/expman-core.md"><code>expman-core</code></a> - Core high-performance async Rust logging engine.</li>
+<li><a href="docs/expman-py.md"><code>expman-py</code></a> - Python extension for non-blocking logging.</li>
+<li><a href="docs/expman-server.md"><code>expman-server</code></a> - Axum web server and SSE live streaming API.</li>
+</ul>
+<h4 id="dashboard-features"><a class="doc-anchor" href="#dashboard-features">§</a>Dashboard Features</h4>
+<ul>
+<li><strong>Live Metrics</strong>: Real-time SSE streaming of experiment metrics and logs.</li>
+<li><strong>Live Jupyter Notebooks</strong>: Instantly spawn a live Jupyter instance natively bound to any run’s execution environment directly from the UI, with auto-generated analytics boilerplate (Polars).</li>
+<li><strong>Scalar Filter</strong>: Toggle individual metric columns in the Runs table via chip buttons — no page reload.</li>
+<li><strong>Deep Inspection</strong>: View detailed run configurations, metadata, and artifacts.</li>
+<li><strong>Artifact Browser</strong>: Preview <code>parquet</code>, <code>csv</code>, and other files directly in the browser.</li>
+<li><strong>Comparison View</strong>: Overlay multiple runs on a shared timeline for analysis.</li>
+<li><strong>Server-side filtering</strong>: Pass <code>?metrics=loss,acc</code> to <code>/api/experiments/:exp/runs</code> to limit which scalars are returned.</li>
+</ul>
+<h3 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h3>
+<p>Practical code samples are provided in the <a href="examples/">examples/</a> directory:</p>
+<ul>
+<li><strong>Python</strong>: <a href="examples/python/basic_training.py">examples/python/basic_training.py</a></li>
+<li><strong>Rust</strong>: <a href="examples/rust/logging.rs">examples/rust/logging.rs</a></li>
+</ul>
+<p>To run the Python examples, ensure you have built the extension first with <code>just dev-py</code>.</p>
+<p>To run the Rust example, use:</p>
+<div class="example-wrap"><pre class="language-bash"><code>cargo run --example logging -p expman</code></pre></div><h3 id="architecture"><a class="doc-anchor" href="#architecture">§</a>Architecture</h3><div class="example-wrap"><pre class="language-mermaid"><code>graph TD
+    subgraph &quot;Python Process&quot;
+        PY[&quot;Python Experiment Code&quot;]
+        WRAP[&quot;expman Python Wrapper&quot;]
+        PY --&gt; WRAP
+    end
+
+    subgraph &quot;expman-py (PyO3 Extension)&quot;
+        CORE_FFI[&quot;FFI / Rust Engine&quot;]
+        WRAP -- &quot;~100ns call&quot; --&gt; CORE_FFI
+    end
+
+    subgraph &quot;expman-core&quot;
+        BUF[&quot;Flush Buffer&quot;]
+        CHAN[&quot;mpsc Channel&quot;]
+        TASK[&quot;Tokio Background Task&quot;]
+
+        CORE_FFI -- &quot;send&quot; --&gt; CHAN
+        CHAN -- &quot;receive&quot; --&gt; TASK
+        TASK -- &quot;batch&quot; --&gt; BUF
+    end
+
+    subgraph &quot;Storage&quot;
+        PARQUET[(&quot;metrics.parquet&quot;)]
+        YAML[(&quot;config.yaml / run.yaml&quot;)]
+        LOG[(&quot;run.log&quot;)]
+
+        BUF -- &quot;every 50 rows / 500ms&quot; --&gt; PARQUET
+        TASK -- &quot;write&quot; --&gt; YAML
+        TASK -- &quot;append&quot; --&gt; LOG
+    end
+
+    subgraph &quot;expman-server (Axum)&quot;
+        API[&quot;REST API / SSE Server&quot;]
+        DASH[&quot;Embedded Dashboard&quot;]
+
+        PARQUET -.-&gt; API
+        YAML -.-&gt; API
+        API -- &quot;SSE Push&quot; --&gt; DASH
+    end
+
+    subgraph &quot;expman&quot;
+        CLI_CMD[&quot;CLI Commands&quot;]
+        CLI_CMD -- &quot;read metrics&quot; --&gt; PARQUET
+        CLI_CMD -- &quot;start&quot; --&gt; API
+    end</code></pre></div><h3 id="storage-layout"><a class="doc-anchor" href="#storage-layout">§</a>Storage Layout</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>experiments/
+  my_experiment/
+    experiment.yaml          # display name, description
+    <span class="number">20240101_120000</span>/         # run directory
+      metrics.parquet      # all logged metrics (Arrow/Parquet)
+      config.yaml          # logged params/hyperparameters
+      run.yaml             # run metadata (status, duration, timestamps)
+      run.log              # text log
+      artifacts/           # user-saved files</code></pre></div>
+<p>This crate provides both the command-line interface and the core library
+functionality for experiment management.</p>
+</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.server"><code>pub use <a class="mod" href="../expman_server/index.html" title="mod expman_server">expman_server</a> as server;</code></dt></dl><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="engine/index.html" title="mod expman::engine">engine</a></dt><dd>Async logging engine: the heart of expman-rs.</dd><dt><a class="mod" href="error/index.html" title="mod expman::error">error</a></dt><dd>Error types for expman-core.</dd><dt><a class="mod" href="jupyter_integration/index.html" title="mod expman::jupyter_integration">jupyter_<wbr>integration</a></dt><dd>📚 <strong>Guide</strong>: Interactive Jupyter Notebooks in ExpMan</dd><dt><a class="mod" href="models/index.html" title="mod expman::models">models</a></dt><dd>Data models for expman-rs.</dd><dt><a class="mod" href="storage/index.html" title="mod expman::storage">storage</a></dt><dd>Storage layer: Parquet/Arrow IPC metrics, YAML config, file system management.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.ExperimentConfig.html" title="struct expman::ExperimentConfig">Experiment<wbr>Config</a></dt><dd>Configuration for a single experiment run.</dd><dt><a class="struct" href="struct.LoggingEngine.html" title="struct expman::LoggingEngine">Logging<wbr>Engine</a></dt><dd>The non-blocking logging engine.</dd><dt><a class="struct" href="struct.MetricRow.html" title="struct expman::MetricRow">Metric<wbr>Row</a></dt><dd>A row of metrics logged at a specific step/time.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.ExpmanError.html" title="enum expman::ExpmanError">Expman<wbr>Error</a></dt><dt><a class="enum" href="enum.LogLevel.html" title="enum expman::LogLevel">LogLevel</a></dt><dt><a class="enum" href="enum.MetricValue.html" title="enum expman::MetricValue">Metric<wbr>Value</a></dt><dd>A single metric value — supports float, int, or string.</dd><dt><a class="enum" href="enum.RunStatus.html" title="enum expman::RunStatus">RunStatus</a></dt><dd>Status of a run.</dd></dl></section></div></main></body></html>

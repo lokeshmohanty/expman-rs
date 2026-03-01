@@ -1,0 +1,65 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Expman Core"><title>expman_core - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="expman_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.1 (01f6ddf75 2026-02-11)" data-channel="1.93.1" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate expman_core</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../expman_core/index.html">expman_<wbr>core</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#expman-core" title="Expman Core">Expman Core</a><ul><li><a href="#overview" title="Overview">Overview</a></li><li><a href="#key-features" title="Key Features">Key Features</a></li><li><a href="#usage-example" title="Usage Example">Usage Example</a></li><li><a href="#architecture-map" title="Architecture Map">Architecture Map</a></li><li><a href="#guides" title="Guides">Guides</a></li></ul></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>expman_<wbr>core</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/expman_core/lib.rs.html#1-22">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="expman-core"><a class="doc-anchor" href="#expman-core">§</a>Expman Core</h2>
+<p>Core storage and logging engine for <code>expman-rs</code>.</p>
+<h3 id="overview"><a class="doc-anchor" href="#overview">§</a>Overview</h3>
+<p>The <code>expman-core</code> module provides the foundational components for tracking, storing, and managing experiment data with high performance. Its central design principle ensures that logging operations (e.g., <code>log_metrics()</code>) are extremely fast (~100ns channel sends) and never block the main experiment process.
+All I/O operations are handled asynchronously via a background tokio task.</p>
+<h3 id="key-features"><a class="doc-anchor" href="#key-features">§</a>Key Features</h3>
+<ul>
+<li><strong>Asynchronous Logging:</strong> Uses a tokio background task and mpsc channels to offload I/O operations, ensuring the main application thread is never blocked.</li>
+<li><strong>Efficient Storage:</strong> Writes metrics using Apache Arrow and Parquet formats in batches, rather than inefficient per-step read-append-write cycles.</li>
+<li><strong>Strong Typing:</strong> Provides robust data models for experiment configurations, run states, and metric values.</li>
+</ul>
+<h3 id="usage-example"><a class="doc-anchor" href="#usage-example">§</a>Usage Example</h3>
+<p>Below is a basic example of how to use <code>expman-core</code> directly in a Rust application to track an experiment:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>expman_core::{ExperimentConfig, LoggingEngine, RunStatus};
+
+<span class="kw">fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
+    <span class="comment">// 1. Define the experiment configuration
+    // This sets up an experiment named "my_rust_exp" in the "./experiments" directory
+    </span><span class="kw">let </span>config = ExperimentConfig::new(<span class="string">"my_rust_exp"</span>, <span class="string">"./experiments"</span>);
+    
+    <span class="comment">// 2. Initialize the logging engine
+    // This spawns the background tokio task for handling I/O
+    </span><span class="kw">let </span>engine = LoggingEngine::new(config)<span class="question-mark">?</span>;
+    
+    <span class="comment">// 3. Log some parameters (hyperparameters, configuration, etc.)
+    </span>engine.log_params([
+        (<span class="string">"learning_rate"</span>.to_string(), <span class="number">0.001</span>.into()),
+        (<span class="string">"batch_size"</span>.to_string(), <span class="number">32</span>.into()),
+        (<span class="string">"optimizer"</span>.to_string(), <span class="string">"Adam"</span>.into())
+    ].into());
+
+    <span class="comment">// 4. Log metrics during your training or simulation loop
+    </span><span class="kw">for </span>step <span class="kw">in </span><span class="number">0</span>..<span class="number">100 </span>{
+        <span class="kw">let </span>loss = <span class="number">1.0 </span>/ (step <span class="kw">as </span>f64 + <span class="number">1.0</span>);
+        <span class="kw">let </span>accuracy = step <span class="kw">as </span>f64 / <span class="number">100.0</span>;
+        
+        <span class="comment">// log_metrics takes a HashMap of metrics and an optional step counter.
+        // This operation takes ~100ns and does not block!
+        </span>engine.log_metrics([
+            (<span class="string">"loss"</span>.to_string(), loss.into()),
+            (<span class="string">"accuracy"</span>.to_string(), accuracy.into())
+        ].into(), <span class="prelude-val">Some</span>(step));
+    }
+    
+    <span class="comment">// 5. Gracefully close the engine, ensuring all pending metrics are flushed to disk
+    </span>engine.close(RunStatus::Finished);
+    
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h3 id="architecture-map"><a class="doc-anchor" href="#architecture-map">§</a>Architecture Map</h3>
+<ul>
+<li><strong><code>ExperimentConfig</code></strong>: Configures the base directory, experiment name, flush intervals, and environment metadata.</li>
+<li><strong><code>LoggingEngine</code></strong>: The main entry point. It manages the background writer task and exposes non-blocking methods to send data.</li>
+<li><strong><code>models</code></strong>: Contains definitions for <code>RunStatus</code>, <code>MetricValue</code> (which supports Floats, Ints, Bools, and Strings), and <code>MetricRow</code>.</li>
+<li><strong><code>storage</code></strong>: Internal module that handles the actual file I/O, writing <code>config.yaml</code>, <code>run.yaml</code>, <code>run.log</code>, and <code>metrics.parquet</code>.
+expman-core: Core storage and logging engine for expman-rs.</li>
+</ul>
+<p>The central design principle: <code>log_metrics()</code> is a channel send (~100ns),
+never blocking the experiment process. A background tokio task handles
+all I/O asynchronously.</p>
+<h3 id="guides"><a class="doc-anchor" href="#guides">§</a>Guides</h3>
+<ul>
+<li><a href="jupyter_integration/index.html">Jupyter Integration</a></li>
+</ul>
+</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.LogLevel"><code>pub use engine::<a class="enum" href="engine/enum.LogLevel.html" title="enum expman_core::engine::LogLevel">LogLevel</a>;</code></dt><dt id="reexport.LoggingEngine"><code>pub use engine::<a class="struct" href="engine/struct.LoggingEngine.html" title="struct expman_core::engine::LoggingEngine">LoggingEngine</a>;</code></dt><dt id="reexport.ExpmanError"><code>pub use error::<a class="enum" href="error/enum.ExpmanError.html" title="enum expman_core::error::ExpmanError">ExpmanError</a>;</code></dt><dt id="reexport.ExperimentConfig"><code>pub use models::<a class="struct" href="models/struct.ExperimentConfig.html" title="struct expman_core::models::ExperimentConfig">ExperimentConfig</a>;</code></dt><dt id="reexport.MetricRow"><code>pub use models::<a class="struct" href="models/struct.MetricRow.html" title="struct expman_core::models::MetricRow">MetricRow</a>;</code></dt><dt id="reexport.MetricValue"><code>pub use models::<a class="enum" href="models/enum.MetricValue.html" title="enum expman_core::models::MetricValue">MetricValue</a>;</code></dt><dt id="reexport.RunStatus"><code>pub use models::<a class="enum" href="models/enum.RunStatus.html" title="enum expman_core::models::RunStatus">RunStatus</a>;</code></dt></dl><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="engine/index.html" title="mod expman_core::engine">engine</a></dt><dd>Async logging engine: the heart of expman-rs.</dd><dt><a class="mod" href="error/index.html" title="mod expman_core::error">error</a></dt><dd>Error types for expman-core.</dd><dt><a class="mod" href="jupyter_integration/index.html" title="mod expman_core::jupyter_integration">jupyter_<wbr>integration</a></dt><dd>📚 <strong>Guide</strong>: Interactive Jupyter Notebooks in ExpMan</dd><dt><a class="mod" href="models/index.html" title="mod expman_core::models">models</a></dt><dd>Data models for expman-rs.</dd><dt><a class="mod" href="storage/index.html" title="mod expman_core::storage">storage</a></dt><dd>Storage layer: Parquet/Arrow IPC metrics, YAML config, file system management.</dd></dl></section></div></main></body></html>
