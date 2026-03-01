@@ -159,16 +159,27 @@ stats:
 bench:
     cargo test test_log_metrics_is_fast --release -- --nocapture
 
-# Bump version and create release commit
-bump-version VERSION:
-    @echo "Bumping version to {{VERSION}}..."
-    @# Update Cargo.toml (workspace package version)
-    @sed -i 's/^version = "[0-9.]\+"/version = "{{VERSION}}"/' Cargo.toml
-    @# Update all internal dependency versions in crates
-    @find crates -name "Cargo.toml" -exec sed -i 's/version = "[0-9.]\+"/version = "{{VERSION}}"/g' {} +
-    @# Update pyproject.toml (project version)
-    @sed -i 's/^version = "[0-9.]\+"/version = "{{VERSION}}"/' pyproject.toml
-    @cargo check > /dev/null 2>&1 || true
-    @git add Cargo.toml pyproject.toml crates/*/Cargo.toml
-    @git commit -m "release: bump version to {{VERSION}}"
-    @echo "Bumped version to {{VERSION}}"
+
+# Bump version: just bump patch|minor|major
+bump PART:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CURRENT=$(grep '^version = ' Cargo.toml | head -1 | sd 'version = "(.*)"' '$1')
+    MAJOR=$(echo $CURRENT | cut -d. -f1)
+    MINOR=$(echo $CURRENT | cut -d. -f2)
+    PATCH=$(echo $CURRENT | cut -d. -f3)
+    case "{{PART}}" in
+        major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+        minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+        patch) PATCH=$((PATCH+1)) ;;
+        *) echo "Usage: just bump patch|minor|major"; exit 1 ;;
+    esac
+    VERSION="$MAJOR.$MINOR.$PATCH"
+    echo "Bumping version $CURRENT → $VERSION..."
+    sd '^version = ".*"' "version = \"$VERSION\"" Cargo.toml
+    fd Cargo.toml crates --type f --exec sd '^version = ".*"' "version = \"$VERSION\""
+    sd '^version = ".*"' "version = \"$VERSION\"" pyproject.toml
+    cargo check > /dev/null 2>&1 || true
+    git add Cargo.toml pyproject.toml crates/*/Cargo.toml
+    git commit -m "release: bump version to $VERSION"
+    echo "Bumped version to $VERSION"

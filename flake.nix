@@ -67,6 +67,8 @@
             pkgs.pre-commit       # pre-commit hooks
             pkgs.ruff             # Python linter
             pkgs.python312Packages.pytest # Python testing
+            pkgs.sd
+            pkgs.fd
           ];
 
           # Environment variables
