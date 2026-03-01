@@ -17,6 +17,7 @@ crate-type = ["cdylib"]
 [[bin]]
 name = "exp"
 path = "../expman-cli/src/main.rs"
+doc = false
 
 [dependencies]
 expman = { path = "../expman", version = "0.2.7" }
