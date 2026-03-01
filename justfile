@@ -63,8 +63,8 @@ build-docs:
     </head> \
     <body> \
         <div class="nav"> \
-            <a href="expman/index.html">CLI</a> \
-            <a href="expman_core/index.html">CORE</a> \
+            <a href="expman/index.html">CORE</a> \
+            <a href="expman_cli/index.html">CLI</a> \
             <a href="expman_py/index.html">PYTHON</a> \
             <a href="expman_server/index.html">SERVER</a> \
             <a href="frontend/index.html">FRONTEND</a> \
@@ -82,7 +82,7 @@ build-py:
     fi
     uv build --out-dir target/python-wheels
     # Copy the built library into the python package for local use without full install
-    cp target/debug/libexpman.so python/expman/expman.so 2>/dev/null || cp target/debug/libexpman.dylib python/expman/expman.so 2>/dev/null || true
+    cp target/debug/libexpman_py.so python/expman/expman.so 2>/dev/null || cp target/debug/libexpman_py.dylib python/expman/expman.so 2>/dev/null || true
 
 # Build and install the Python extension (auto-manages uv venv)
 dev-py:
@@ -96,15 +96,15 @@ dev-py:
 
 # Run the CLI
 run *ARGS:
-    cargo run -p expman -- {{ARGS}}
+    cargo run -p expman-cli -- {{ARGS}}
 
 # Start the dashboard server
 serve DIR="./experiments":
-    cargo run -p expman -- serve {{DIR}}
+    cargo run -p expman-cli -- serve {{DIR}}
 
 # List experiments
 list DIR="./experiments":
-    cargo run -p expman -- list {{DIR}}
+    cargo run -p expman-cli -- list {{DIR}}
 
 # Check formatting
 fmt-check:
@@ -132,7 +132,7 @@ test-py:
 
 # Run the Rust logging example
 example-rust:
-    cargo run --example logging -p expman
+    cargo run --example logging -p expman-cli
 
 # Run the Python basic training example
 example-py: dev-py

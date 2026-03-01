@@ -1,14 +1,16 @@
-#![doc = include_str!("../docs/expman-cli.md")]
-//! expman CLI: friendly command-line interface for experiment management.
+//! Library backing the [`exp`](../exp/index.html) binary.
+//!
+//! This crate provides the CLI argument types ([`Cli`], [`Commands`]) and the
+//! command implementations used by the `exp` executable.  See the
+//! [binary documentation](../exp/index.html) for usage examples.
 
 use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Table};
-use tracing_subscriber::EnvFilter;
 
-use expman_core::storage;
+use expman::storage;
 use expman_server::{serve, ServerConfig};
 
 #[derive(Parser)]
@@ -18,13 +20,13 @@ use expman_server::{serve, ServerConfig};
     version,
     author
 )]
-struct Cli {
+pub struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 
 #[derive(Subcommand)]
-enum Commands {
+pub enum Commands {
     /// Start the web dashboard server
     Serve {
         /// Path to experiments directory
@@ -81,57 +83,9 @@ enum Commands {
     },
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .with_target(false)
-        .compact()
-        .init();
-
-    let cli = Cli::parse();
-
-    match cli.command {
-        Commands::Serve {
-            dir,
-            host,
-            port,
-            no_live,
-        } => {
-            cmd_serve(dir, host, port, !no_live).await?;
-        }
-        Commands::List { dir, experiment } => {
-            cmd_list(dir, experiment)?;
-        }
-        Commands::Inspect { run_dir } => {
-            cmd_inspect(run_dir)?;
-        }
-        Commands::Clean {
-            experiment,
-            dir,
-            keep,
-            force,
-        } => {
-            cmd_clean(dir, experiment, keep, force)?;
-        }
-        Commands::Export {
-            run_dir,
-            format,
-            output,
-        } => {
-            cmd_export(run_dir, format, output)?;
-        }
-    }
-
-    Ok(())
-}
-
 // ─── Command implementations ──────────────────────────────────────────────────
 
-async fn cmd_serve(dir: PathBuf, host: String, port: u16, live: bool) -> Result<()> {
+pub async fn cmd_serve(dir: PathBuf, host: String, port: u16, live: bool) -> Result<()> {
     println!("⚗️  ExpMan Dashboard");
     println!("   Experiments: {}", dir.display());
     println!("   URL:         http://{}:{}", host, port);
@@ -150,7 +104,7 @@ async fn cmd_serve(dir: PathBuf, host: String, port: u16, live: bool) -> Result<
     Ok(())
 }
 
-fn cmd_list(dir: PathBuf, experiment: Option<String>) -> Result<()> {
+pub fn cmd_list(dir: PathBuf, experiment: Option<String>) -> Result<()> {
     if let Some(exp_name) = experiment {
         // List runs for a specific experiment
         let exp_dir = dir.join(&exp_name);
@@ -168,10 +122,10 @@ fn cmd_list(dir: PathBuf, experiment: Option<String>) -> Result<()> {
         for run_name in &runs {
             let run_dir = exp_dir.join(run_name);
             let meta = storage::load_run_metadata(&run_dir).unwrap_or_else(|_| {
-                expman_core::models::RunMetadata {
+                expman::models::RunMetadata {
                     name: run_name.clone(),
                     experiment: exp_name.clone(),
-                    status: expman_core::models::RunStatus::Crashed,
+                    status: expman::models::RunStatus::Crashed,
                     started_at: chrono::Utc::now(),
                     ..Default::default()
                 }
@@ -224,7 +178,7 @@ fn cmd_list(dir: PathBuf, experiment: Option<String>) -> Result<()> {
     Ok(())
 }
 
-fn cmd_inspect(run_dir: PathBuf) -> Result<()> {
+pub fn cmd_inspect(run_dir: PathBuf) -> Result<()> {
     if !run_dir.exists() {
         anyhow::bail!("Run directory not found: {}", run_dir.display());
     }
@@ -280,7 +234,7 @@ fn cmd_inspect(run_dir: PathBuf) -> Result<()> {
     Ok(())
 }
 
-fn cmd_clean(dir: PathBuf, experiment: String, keep: usize, force: bool) -> Result<()> {
+pub fn cmd_clean(dir: PathBuf, experiment: String, keep: usize, force: bool) -> Result<()> {
     let exp_dir = dir.join(&experiment);
     let mut runs = storage::list_runs(&exp_dir)?;
 
@@ -322,7 +276,7 @@ fn cmd_clean(dir: PathBuf, experiment: String, keep: usize, force: bool) -> Resu
     Ok(())
 }
 
-fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> Result<()> {
+pub fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> Result<()> {
     let metrics_path = run_dir.join("metrics.parquet");
     if !metrics_path.exists() {
         anyhow::bail!("No metrics.parquet found in {}", run_dir.display());
@@ -365,7 +319,7 @@ fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> Resu
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
-fn format_duration(secs: f64) -> String {
+pub fn format_duration(secs: f64) -> String {
     let secs = secs as u64;
     let h = secs / 3600;
     let m = (secs % 3600) / 60;

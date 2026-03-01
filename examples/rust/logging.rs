@@ -1,4 +1,4 @@
-//! Example of using expman-core directly from Rust.
+//! Example of using expman directly from Rust.
 
 use expman::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
 use std::collections::HashMap;

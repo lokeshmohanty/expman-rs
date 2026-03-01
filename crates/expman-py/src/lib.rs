@@ -1,4 +1,4 @@
-#![doc = include_str!("../docs/expman-py.md")]
+#![doc = include_str!("../README.md")]
 //! PyO3 Python extension module for expman-rs.
 #![allow(clippy::useless_conversion)]
 //!
@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use expman_core::{ExperimentConfig, LogLevel, LoggingEngine, MetricValue, RunStatus};
+use ::expman::{ExperimentConfig, LogLevel, LoggingEngine, MetricValue, RunStatus};
 
 /// Python-facing Experiment class.
 #[pyclass]
@@ -255,8 +255,8 @@ fn py_dict_to_yaml(dict: &Bound<'_, PyDict>) -> PyResult<HashMap<String, serde_y
 
 // ─── Module definition ────────────────────────────────────────────────────────
 
-#[pymodule]
-fn expman(m: &Bound<'_, PyModule>) -> PyResult<()> {
+#[pymodule(name = "expman")]
+fn expman_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Experiment>()?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

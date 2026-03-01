@@ -1,9 +1,9 @@
-//! Integration tests for expman-core.
+//! Integration tests for expman.
 
 use std::collections::HashMap;
 use std::time::Duration;
 
-use expman_core::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
+use expman::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
 use tempfile::TempDir;
 
 fn make_engine(tmp: &TempDir, name: &str) -> LoggingEngine {
@@ -52,7 +52,7 @@ fn test_log_metrics_writes_parquet() {
         "metrics.parquet should exist after close"
     );
 
-    let rows = expman_core::storage::read_metrics(&metrics_path).unwrap();
+    let rows = expman::storage::read_metrics(&metrics_path).unwrap();
     assert_eq!(rows.len(), 100, "Should have 100 metric rows");
 }
 
@@ -113,7 +113,7 @@ fn test_run_status_written_on_close() {
 
     engine.close(RunStatus::Finished);
 
-    let meta = expman_core::storage::load_run_metadata(&run_dir).unwrap();
+    let meta = expman::storage::load_run_metadata(&run_dir).unwrap();
     assert_eq!(meta.status, RunStatus::Finished);
     assert!(meta.finished_at.is_some());
     assert!(meta.duration_secs.is_some());
@@ -154,7 +154,7 @@ fn test_parquet_schema_merge() {
     engine.close(RunStatus::Finished);
 
     let metrics_path = engine.config().run_dir().join("metrics.parquet");
-    let rows = expman_core::storage::read_metrics(&metrics_path).unwrap();
+    let rows = expman::storage::read_metrics(&metrics_path).unwrap();
     assert_eq!(rows.len(), 2);
     // Row 0 should have null for "acc"
     assert!(rows[0].get("acc").map(|v| v.is_null()).unwrap_or(true));
@@ -176,7 +176,7 @@ fn test_read_latest_scalar_metrics() {
     engine.close(RunStatus::Finished);
 
     let metrics_path = engine.config().run_dir().join("metrics.parquet");
-    let scalars = expman_core::storage::read_latest_scalar_metrics(&metrics_path).unwrap();
+    let scalars = expman::storage::read_latest_scalar_metrics(&metrics_path).unwrap();
 
     // Last row (step=4): loss = 0.6, acc = 0.4
     let loss = scalars.get("loss").copied().unwrap();

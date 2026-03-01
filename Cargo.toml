@@ -1,10 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/expman-core",
-    "crates/expman-server",
     "crates/expman",
-    "crates/expman-py", "frontend",
+    "crates/expman-server",
+    "crates/expman-cli",
+    "crates/expman-py", 
+    "frontend",
 ]
 
 [workspace.package]
@@ -14,8 +15,8 @@ authors = ["Lokesh Mohanty <lokesh1197@gmail.com>"]
 license = "MIT"
 description = "High-performance experiment manager with Rust backend"
 repository = "https://github.com/lokeshmohanty/expman-rs"
-homepage = "https://github.com/lokeshmohanty/expman-rs"
-documentation = "https://docs.rs/expman"
+homepage = "https://lokeshmohanty.github.io/expman-rs/"
+documentation = "https://lokeshmohanty.github.io/expman-rs/"
 readme = "README.md"
 
 [workspace.dependencies]

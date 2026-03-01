@@ -1,24 +1,44 @@
-# ExpMan Server
+# Expman Server
+
+Axum web server with REST API and SSE live streaming for `expman-rs`.
 
 ## Overview
 
-The `expman-server` crate implements the backend server for the ExpMan web dashboard. It provides a RESTful API for interacting with experiment data and serves the frontend application.
+The `expman-server` module provides a lightweight, high-performance web backend built with Axum. It serves both the REST API for retrieving experiment metadata/metrics and the Server-Sent Events (SSE) endpoints for real-time live streaming of experiment updates directly to the web dashboard.
 
 ## Key Features
 
-- **REST API**: Exposes endpoints for creating, retrieving, and updating experiments.
-- **WebSocket Support**: Enables real-time updates for experiment monitoring.
-- **Static File Serving**: Serves the compiled frontend assets.
-- **Database Integration**: Connects to the experiment database (SQLite/Parquet).
+- **Live Data Streaming (SSE):** Clients receive real-time updates for logs and metrics via Server-Sent Events, removing the need for continuous polling.
+- **Embedded Frontend:** The compiled web dashboard UI is embedded directly into the binary, simplifying deployment.
+- **RESTful API:** Provides clean JSON endpoints for querying experiments, runs, artifacts, and historical Parquet metric data.
+- **Jupyter Integration:** Includes endpoints to automatically spawn pre-configured live Jupyter notebooks analyzing a specific run's data.
 
-## Usage
+## Server Usage
 
-To start the server, use the `expman-cli` tool:
+You typically do not need to use `expman-server` directly in your code, as the `expman-cli` binary wraps it perfectly.
 
+To run the server via the CLI wrapper:
 ```bash
-expman serve
+# Starts the server on http://localhost:8000
+expman serve ./experiments
 ```
 
-## API Documentation
+## API Endpoints Overview
 
-For detailed API documentation, run `cargo doc --open`.
+If you wish to interact programmatically with the dashboard's data, the server exposes the following routes under `/api`:
+
+### Experiments & Runs
+- `GET /api/experiments`: List all registered experiments.
+- `GET /api/experiments/:experiment/runs`: List all runs for a given experiment. Supports query parameter filtering like `?metrics=loss,accuracy` to selectively extract specific scalar tails.
+- `GET /api/experiments/:experiment/runs/:run`: Retrieve full details (metadata, full config) of a specific run.
+
+### Data & Files
+- `GET /api/experiments/:experiment/runs/:run/metrics`: Fetch historical metric data for a run (parsed from `metrics.parquet`).
+- `GET /api/experiments/:experiment/runs/:run/artifacts`: List all files saved in a run's `artifacts/` folder.
+- `GET /api/experiments/:experiment/runs/:run/artifacts/*path`: Download a specific artifact file.
+
+### Live SSE Streams
+- `GET /api/experiments/:experiment/runs/:run/live`: Connect to the Server-Sent Event stream for a specific run. Streams events like `LogMessage`, `MetricsUpdated`, and `StatusChanged` as they happen.
+
+### Integrations
+- `POST /api/jupyter/spawn`: Spawns a Jupyter notebook environment tied to a specific run for live analysis using polars.

@@ -16,7 +16,7 @@ use serde::Deserialize;
 use tokio_stream::wrappers::IntervalStream;
 use tokio_stream::StreamExt;
 
-use expman_core::storage;
+use expman::storage;
 
 use crate::state::AppState;
 
@@ -129,10 +129,10 @@ async fn list_runs(
             for name in run_names {
                 let dir = run_dir(&state.base_dir, &exp, &name);
                 let mut meta = storage::load_run_metadata(&dir).unwrap_or_else(|_| {
-                    expman_core::models::RunMetadata {
+                    expman::models::RunMetadata {
                         name: name.clone(),
                         experiment: exp.clone(),
-                        status: expman_core::models::RunStatus::Crashed,
+                        status: expman::models::RunStatus::Crashed,
                         started_at: chrono::Utc::now(),
                         ..Default::default()
                     }
@@ -436,10 +436,10 @@ async fn get_experiment_stats(
     for run_name in &runs {
         let dir = run_dir(&state.base_dir, &exp, run_name);
         let meta =
-            storage::load_run_metadata(&dir).unwrap_or_else(|_| expman_core::models::RunMetadata {
+            storage::load_run_metadata(&dir).unwrap_or_else(|_| expman::models::RunMetadata {
                 name: run_name.clone(),
                 experiment: exp.clone(),
-                status: expman_core::models::RunStatus::Crashed,
+                status: expman::models::RunStatus::Crashed,
                 started_at: chrono::Utc::now(),
                 ..Default::default()
             });
@@ -473,7 +473,7 @@ async fn get_global_stats(State(state): State<AppState>) -> impl IntoResponse {
         for run in runs {
             let dir = run_dir(&state.base_dir, exp, &run);
             if let Ok(meta) = storage::load_run_metadata(&dir) {
-                if meta.status == expman_core::models::RunStatus::Running {
+                if meta.status == expman::models::RunStatus::Running {
                     active_runs += 1;
                 }
             }

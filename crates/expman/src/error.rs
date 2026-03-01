@@ -1,4 +1,4 @@
-//! Error types for expman-core.
+//! Error types for expman.
 
 use thiserror::Error;
 

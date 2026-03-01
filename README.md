@@ -1,4 +1,4 @@
-# expman-rs
+# Experiment Manager built using Rust
 
 [![Crates.io](https://img.shields.io/crates/v/expman.svg)](https://crates.io/crates/expman)
 [![PyPI](https://img.shields.io/pypi/v/expman-rs.svg)](https://pypi.org/project/expman-rs/)
@@ -127,10 +127,10 @@ just build-docs                # build and open documentation
 ## Documentation
 
 For detailed usage, refer to the standalone documentation files for each component:
-- [`expman-cli`](crates/expman/docs/expman-cli.md) - Command-line interface definitions and references.
-- [`expman-core`](crates/expman-core/docs/expman-core.md) - Core high-performance async Rust logging engine.
-- [`expman-py`](crates/expman-py/docs/expman-py.md) - Python extension for non-blocking logging.
-- [`expman-server`](crates/expman-server/docs/expman-server.md) - Axum web server and SSE live streaming API.
+- [`expman-cli`](crates/expman/README.md) - Command-line interface definitions and references.
+- [`expman`](crates/expman/README.md) - Core high-performance async Rust logging engine.
+- [`expman-py`](crates/expman-py/README.md) - Python extension for non-blocking logging.
+- [`expman-server`](crates/expman-server/README.md) - Axum web server and SSE live streaming API.
 
 
 ### Dashboard Features

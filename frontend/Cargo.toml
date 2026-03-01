@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[lib]
+name = "frontend"
+path = "src/lib.rs"
+
 [dependencies]
 leptos = { version = "0.7", features = ["csr"] }
 leptos_router = { version = "0.7" }

@@ -4,30 +4,35 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "High-performance experiment manager with Rust backend (CLI and library)"
+description = "Core logic and storage engine for expman"
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 readme = "README.md"
 
-[[bin]]
+[lib]
 name = "expman"
-path = "src/main.rs"
+path = "src/lib.rs"
 
 [[example]]
 name = "logging"
 path = "../../examples/rust/logging.rs"
 
 [dependencies]
-expman-core = { path = "../expman-core", version = "0.2.2" }
-expman-server = { path = "../expman-server", version = "0.2.2" }
 tokio = { workspace = true }
-clap = { workspace = true }
-comfy-table = { workspace = true }
-indicatif = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-anyhow = { workspace = true }
+arrow = { workspace = true }
+parquet = { workspace = true }
 chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = "3"

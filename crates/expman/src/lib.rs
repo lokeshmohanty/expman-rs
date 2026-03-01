@@ -1,7 +1,22 @@
-//! expman: friendly command-line interface for experiment management.
+#![doc = include_str!("../README.md")]
+//! expman: Core storage and logging engine for expman-rs.
+//!
+//! The central design principle: `log_metrics()` is a channel send (~100ns),
+//! never blocking the experiment process. A background tokio task handles
+//! all I/O asynchronously.
+//!
+//! ## Guides
+//! - [Jupyter Integration](jupyter_integration/index.html)
 
-//! This crate provides both the command-line interface and the core library
-//! functionality for experiment management.
+pub mod engine;
+pub mod error;
+pub mod models;
+pub mod storage;
 
-pub use expman_core::*;
-pub use expman_server as server;
+pub use engine::{LogLevel, LoggingEngine};
+pub use error::ExpmanError;
+pub use models::{ExperimentConfig, MetricRow, MetricValue, RunStatus};
+
+/// 📚 **Guide**: Interactive Jupyter Notebooks in ExpMan
+#[doc = include_str!("../docs/jupyter_integration.md")]
+pub mod jupyter_integration {}
