@@ -15,7 +15,7 @@ The `expman-py` crate provides Python bindings for the ExpMan core functionality
 Install via pip:
 
 ```bash
-pip install expman
+pip install expman-rs
 ```
 
 ## Usage

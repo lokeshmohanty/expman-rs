@@ -1,4 +1,4 @@
-#![doc = include_str!("../../../docs/expman-core.md")]
+#![doc = include_str!("../docs/expman-core.md")]
 //! expman-core: Core storage and logging engine for expman-rs.
 //!
 //! The central design principle: `log_metrics()` is a channel send (~100ns),
@@ -18,5 +18,5 @@ pub use error::ExpmanError;
 pub use models::{ExperimentConfig, MetricRow, MetricValue, RunStatus};
 
 /// 📚 **Guide**: Interactive Jupyter Notebooks in ExpMan
-#[doc = include_str!("../../../docs/jupyter_integration.md")]
+#[doc = include_str!("../docs/jupyter_integration.md")]
 pub mod jupyter_integration {}

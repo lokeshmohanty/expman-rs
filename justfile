@@ -32,9 +32,48 @@ build-frontend:
     @echo "Building frontend with trunk..."
     cd frontend && trunk build --release
 
-# Build documentation
+# Build documentation with a custom landing page from README.md
 build-docs:
-    cargo doc --no-deps --workspace --open
+    @echo "Building Rust documentation..."
+    cargo doc --no-deps --workspace
+    @echo "Generating landing page from README.md..."
+    @mkdir -p target/doc
+    @cp -r assets target/doc/ 2>/dev/null || true
+    @npx -y marked -i README.md -o target/doc/readme_content.html
+    @echo '<!DOCTYPE html> \
+    <html lang="en"> \
+    <head> \
+        <meta charset="UTF-8"> \
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"> \
+        <title>ExpMan Documentation</title> \
+        <link rel="stylesheet" href="rustdoc.css" id="mainThemeStyle"> \
+        <style> \
+            body { max-width: 900px; margin: 0 auto; padding: 40px; background: #0f172a; color: #e2e8f0; font-family: sans-serif; line-height: 1.6; } \
+            .container { background: rgba(30, 41, 59, 0.5); padding: 40px; border-radius: 12px; border: 1px solid #334155; } \
+            a { color: #3b82f6; text-decoration: none; } \
+            a:hover { text-decoration: underline; } \
+            pre { background: #020617; padding: 16px; border-radius: 8px; overflow-x: auto; border: 1px solid #1e293b; } \
+            code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.9em; } \
+            img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0; } \
+            h1, h2, h3 { color: #f8fafc; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-top: 40px; } \
+            .nav { margin-bottom: 30px; display: flex; gap: 10px; border-bottom: 1px solid #334155; padding-bottom: 20px; } \
+            .nav a { background: #334155; color: #f8fafc; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85em; transition: all 0.2s; border: 1px solid transparent; } \
+            .nav a:hover { background: #3b82f6; border-color: #60a5fa; color: white; text-decoration: none; transform: translateY(-1px); } \
+        </style> \
+    </head> \
+    <body> \
+        <div class="nav"> \
+            <a href="expman/index.html">CLI</a> \
+            <a href="expman_core/index.html">CORE</a> \
+            <a href="expman_py/index.html">PYTHON</a> \
+            <a href="expman_server/index.html">SERVER</a> \
+            <a href="frontend/index.html">FRONTEND</a> \
+        </div> \
+        <div class="container">' > target/doc/index.html
+    @cat target/doc/readme_content.html >> target/doc/index.html
+    @echo '</div></body></html>' >> target/doc/index.html
+    @rm target/doc/readme_content.html
+    @echo "Documentation built at target/doc/index.html"
 
 # Build the Python extension and copy the shared library to the package directory
 build-py:

@@ -127,10 +127,10 @@ just build-docs                # build and open documentation
 ## Documentation
 
 For detailed usage, refer to the standalone documentation files for each component:
-- [`expman-cli`](docs/expman-cli.md) - Command-line interface definitions and references.
-- [`expman-core`](docs/expman-core.md) - Core high-performance async Rust logging engine.
-- [`expman-py`](docs/expman-py.md) - Python extension for non-blocking logging.
-- [`expman-server`](docs/expman-server.md) - Axum web server and SSE live streaming API.
+- [`expman-cli`](crates/expman/docs/expman-cli.md) - Command-line interface definitions and references.
+- [`expman-core`](crates/expman-core/docs/expman-core.md) - Core high-performance async Rust logging engine.
+- [`expman-py`](crates/expman-py/docs/expman-py.md) - Python extension for non-blocking logging.
+- [`expman-server`](crates/expman-server/docs/expman-server.md) - Axum web server and SSE live streaming API.
 
 
 ### Dashboard Features
