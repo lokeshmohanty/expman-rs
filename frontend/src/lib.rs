@@ -7,7 +7,7 @@ use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    ChevronRight, Cog as SettingsIcon, FlaskConical, LayoutDashboard, Package, TriangleAlert,
+    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, Package, TriangleAlert,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -186,13 +186,27 @@ pub fn App() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="mt-auto">
+                    <div class="mt-auto space-y-1">
                         <A href="/settings" attr:class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all duration-200 text-slate-400 hover:text-white group">
                             <div class="group-hover:text-blue-400 transition-colors">
                                 <SettingsIcon size=20 />
                             </div>
                             <span class="font-medium">"Settings"</span>
                         </A>
+
+                        <a href="https://lokeshmohanty.github.io/expman-rs" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all duration-200 text-slate-400 hover:text-white group">
+                            <div class="group-hover:text-blue-400 transition-colors">
+                                <Book size=20 />
+                            </div>
+                            <span class="font-medium">"Documentation"</span>
+                        </a>
+
+                        <a href="https://github.com/lokeshmohanty/expman-rs" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all duration-200 text-slate-400 hover:text-white group">
+                            <div class="group-hover:text-blue-400 transition-colors">
+                                <Github size=20 />
+                            </div>
+                            <span class="font-medium">"GitHub"</span>
+                        </a>
                     </div>
                 </nav>
 
@@ -1009,8 +1023,8 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
     let run_id = selected.iter().next().cloned().unwrap_or_default();
     let (selected_path, set_selected_path) = signal("run.log".to_string());
 
-    let exp_id_val = StoredValue::new(exp_id);
-    let run_id_val = StoredValue::new(run_id);
+    let exp_id_val = StoredValue::new(exp_id.clone());
+    let run_id_val = StoredValue::new(run_id.clone());
 
     let artifact_resource = LocalResource::new(move || {
         let eid = exp_id_val.with_value(|v| v.clone());
@@ -1031,6 +1045,15 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
             if rid.is_empty() {
                 return Ok("Select a run".to_string());
             }
+
+            let ext = path.split('.').last().unwrap_or("").to_lowercase();
+            if matches!(
+                ext.as_str(),
+                "mp4" | "webm" | "ogg" | "mp3" | "wav" | "flac"
+            ) {
+                return Ok(String::new());
+            }
+
             fetch_artifact_content(eid, rid, path).await
         }
     });
@@ -1079,15 +1102,49 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
             <div class="w-2/3 flex flex-col h-full bg-slate-950">
                 <div class="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
                     <span class="text-xs font-mono text-slate-400">"Preview: " {move || selected_path.get()}</span>
-                    <button class="text-[10px] text-blue-500 hover:underline">"Download Raw"</button>
+                    {
+                        let dl_exp_id = exp_id.clone();
+                        let dl_run_id = run_id.clone();
+                        view! { <a href=move || format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", dl_exp_id.clone(), dl_run_id.clone(), selected_path.get()) download class="text-[10px] text-blue-500 hover:underline">"Download Raw"</a> }
+                    }
                 </div>
-                <div class="flex-grow flex flex-col min-h-0 bg-slate-950 overflow-hidden text-slate-300">
-                    <Suspense fallback=|| view! { <div class="p-8 animate-pulse space-y-2"><div class="h-2 bg-slate-800 rounded w-3/4"></div><div class="h-2 bg-slate-800 rounded w-1/2"></div></div> }>
-                        {move || Suspend::new(async move {
-                            let content = content_resource.await.unwrap_or_else(|e| format!("Error loading preview: {}", e));
-                            view! { <TabularPreview content=content /> }
-                        })}
-                    </Suspense>
+                <div class="flex-grow flex flex-col min-h-0 bg-slate-950 overflow-hidden text-slate-300 relative justify-center">
+                    {
+                        let prev_exp_id = exp_id.clone();
+                        let prev_run_id = run_id.clone();
+                        move || {
+                            let path = selected_path.get();
+                            let ext = path.split('.').last().unwrap_or("").to_lowercase();
+                            let is_video = matches!(ext.as_str(), "mp4" | "webm" | "ogg");
+                            let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "flac");
+                            
+                            let media_url = format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", prev_exp_id.clone(), prev_run_id.clone(), path);
+
+                        if is_video {
+                           view! {
+                               <div class="flex items-center justify-center p-4 w-full h-full">
+                                   <video controls class="max-w-full max-h-full rounded-lg shadow-lg" src=media_url></video>
+                               </div>
+                           }.into_any()
+                        } else if is_audio {
+                           view! {
+                               <div class="flex items-center justify-center p-8 w-full h-full">
+                                   <audio controls class="w-full max-w-md shadow-lg" src=media_url></audio>
+                               </div>
+                           }.into_any()
+                        } else {
+                           view! {
+                               <div class="flex-grow flex flex-col h-full w-full">
+                                   <Suspense fallback=|| view! { <div class="p-8 animate-pulse space-y-2"><div class="h-2 bg-slate-800 rounded w-3/4"></div><div class="h-2 bg-slate-800 rounded w-1/2"></div></div> }>
+                                       {move || Suspend::new(async move {
+                                           let content = content_resource.await.unwrap_or_else(|e| format!("Error loading preview: {}", e));
+                                           view! { <TabularPreview content=content /> }
+                                       })}
+                                   </Suspense>
+                               </div>
+                           }.into_any()
+                        }
+                    }}
                 </div>
             </div>
         </div>
