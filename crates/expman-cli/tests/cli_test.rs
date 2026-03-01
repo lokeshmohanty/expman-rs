@@ -1,5 +1,5 @@
-use assert_cmd::Command;
-use predicates::prelude::*;
+// Imports cleaned up
+
 use tempfile::TempDir;
 
 fn setup_test_env() -> TempDir {
@@ -42,7 +42,7 @@ fn setup_test_env() -> TempDir {
 #[test]
 fn test_cli_list_experiments() {
     let tmp = setup_test_env();
-    let mut cmd = Command::cargo_bin("exp").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("exp");
 
     cmd.arg("list")
         .arg(tmp.path()) // Positional DIR
@@ -55,7 +55,7 @@ fn test_cli_list_experiments() {
 #[test]
 fn test_cli_list_runs() {
     let tmp = setup_test_env();
-    let mut cmd = Command::cargo_bin("exp").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("exp");
 
     cmd.arg("list")
         .arg(tmp.path()) // Positional DIR
@@ -71,7 +71,7 @@ fn test_cli_list_runs() {
 fn test_cli_inspect() {
     let tmp = setup_test_env();
     let run_dir = tmp.path().join("test_exp").join("20240101_120000");
-    let mut cmd = Command::cargo_bin("exp").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("exp");
 
     cmd.arg("inspect")
         .arg(run_dir)
@@ -84,7 +84,7 @@ fn test_cli_inspect() {
 #[test]
 fn test_cli_clean_dry_run() {
     let tmp = setup_test_env();
-    let mut cmd = Command::cargo_bin("exp").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("exp");
 
     // Create extra runs to trigger cleaning
     for i in 1..10 {
@@ -116,7 +116,7 @@ fn test_cli_export_json() {
     let run_dir = tmp.path().join("test_exp").join("20240101_120000");
 
     // Export should fail if no metrics.parquet
-    let mut cmd = Command::cargo_bin("exp").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("exp");
     cmd.arg("export")
         .arg(&run_dir)
         .arg("--format")

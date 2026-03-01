@@ -77,6 +77,6 @@ jobs:
       - name: Build Rust extension and run tests
         run: |
           uv sync --extra dev
-          uv build --wheel --out dist
+          uv build --wheel --out-dir dist
           uv pip install dist/*.whl
           uv run pytest python/tests

@@ -40,7 +40,10 @@ pub fn router() -> Router<AppState> {
             "/experiments/{exp}/runs/{run}/metadata",
             get(get_run_metadata).patch(update_run_metadata),
         )
-        .route("/experiments/{exp}/runs/{run}/artifacts", get(list_artifacts))
+        .route(
+            "/experiments/{exp}/runs/{run}/artifacts",
+            get(list_artifacts),
+        )
         .route(
             "/experiments/{exp}/runs/{run}/artifacts/content",
             get(get_artifact_content),
