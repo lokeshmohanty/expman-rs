@@ -11,10 +11,19 @@ pub struct JupyterInstance {
     pub process: Child,
 }
 
+/// The interactive backend detected in the user's environment.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InteractiveBackend {
+    Jupyter,
+    Python,
+    None,
+}
+
 /// Generate the full `.ipynb` JSON content for a default interactive notebook.
 ///
 /// For Python runs, produces 2 cells:
-///   1. Install dependencies (`pip install polars matplotlib pyarrow fastparquet`)
+///   1. Install dependencies (`pip install polars matplotlib`)
 ///   2. Load and display metrics
 ///
 /// For Rust runs, produces a single cell with a `polars` snippet.
@@ -96,10 +105,63 @@ pub async fn generate_notebook(run_dir: &Path, is_python: bool) -> Result<bool, 
     Ok(true)
 }
 
+/// Detect the best available interactive Python backend in the user's environment.
+///
+/// Checks (in order): `jupyter notebook`, `ipython`, `python3`.
+pub async fn detect_backend() -> InteractiveBackend {
+    // Check jupyter
+    match tokio::process::Command::new("jupyter")
+        .args(["notebook", "--version"])
+        .output()
+        .await
+    {
+        Ok(output) => {
+            info!(
+                "jupyter notebook --version: status={}, stdout={}, stderr={}",
+                output.status,
+                String::from_utf8_lossy(&output.stdout).trim(),
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+            if output.status.success() {
+                return InteractiveBackend::Jupyter;
+            }
+        }
+        Err(e) => {
+            info!("jupyter not found: {}", e);
+        }
+    }
+
+    // Check python3
+    match tokio::process::Command::new("python3")
+        .arg("--version")
+        .output()
+        .await
+    {
+        Ok(output) => {
+            info!(
+                "python3 --version: status={}, stdout={}",
+                output.status,
+                String::from_utf8_lossy(&output.stdout).trim()
+            );
+            if output.status.success() {
+                return InteractiveBackend::Python;
+            }
+        }
+        Err(e) => {
+            info!("python3 not found: {}", e);
+        }
+    }
+
+    InteractiveBackend::None
+}
+
 /// Thread-safe manager for spawning and stopping Jupyter Notebooks.
+///
+/// When `jupyter notebook` is available in the user's environment, this manager
+/// spawns per-run Jupyter instances. When only ipython/python is available,
+/// the frontend shows notebook content with copy-paste guidance instead.
 #[derive(Clone, Default)]
 pub struct JupyterManager {
-    // Maps a unique run identifier (e.g., "experiment:run") to a Jupyter instance.
     instances: Arc<Mutex<HashMap<String, JupyterInstance>>>,
 }
 
@@ -108,44 +170,24 @@ impl JupyterManager {
         Self::default()
     }
 
-    /// Checks if `jupyter notebook` is available in the current environment.
-    ///
-    /// This is used by the frontend to determine whether to enable the
-    /// "Launch Live Jupyter Notebook" button or show a warning.
-    pub async fn is_available() -> bool {
-        match tokio::process::Command::new("jupyter")
-            .arg("notebook")
-            .arg("--version")
-            .output()
-            .await
-        {
-            Ok(output) => output.status.success(),
-            Err(_) => false,
-        }
-    }
-
-    /// Finds an available TCP port starting from a base port.
-    ///
-    /// Scans ports from 8000 to 9000 to find the first one that can be bound to `127.0.0.1`.
+    /// Finds an available TCP port.
     fn get_available_port() -> Option<u16> {
-        (8000..9000).find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
+        (8888..9999).find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
     }
 
-    /// Spawns a new Jupyter Notebook process for a given run and environment.
+    /// Spawns a Jupyter Notebook for a given run directory.
     ///
-    /// If a process is already tracked for the given run, returns its port immediately.
-    /// Generates `interactive.ipynb` if it does not exist in the run directory.
+    /// Uses the `jupyter` binary from the user's PATH.
     pub async fn spawn(
         &self,
         exp: &str,
         run: &str,
-        _env_path: &str,
         run_dir: PathBuf,
         is_python: bool,
     ) -> Result<u16, String> {
         let key = format!("{}:{}", exp, run);
 
-        // Check if already running
+        // Already running?
         {
             let instances = self.instances.lock().unwrap();
             if let Some(instance) = instances.get(&key) {
@@ -156,12 +198,11 @@ impl JupyterManager {
         let port = Self::get_available_port()
             .ok_or_else(|| "No available ports for Jupyter".to_string())?;
 
-        // Generate notebook content if it doesn't exist.
+        // Generate notebook if it doesn't exist
         generate_notebook(&run_dir, is_python).await?;
 
         info!("Spawning Jupyter Notebook for {} on port {}", key, port);
 
-        // We run the global `jupyter notebook` command available in the dashboard's environment
         let mut child = tokio::process::Command::new("jupyter")
             .arg("notebook")
             .arg("--no-browser")
@@ -172,9 +213,9 @@ impl JupyterManager {
             .arg("--ServerApp.tornado_settings={\"headers\":{\"Content-Security-Policy\":\"frame-ancestors *\"}}")
             .current_dir(&run_dir)
             .spawn()
-            .map_err(|e| format!("Failed to spawn global jupyter child process: {}", e))?;
+            .map_err(|e| format!("Failed to spawn jupyter: {}", e))?;
 
-        // Small wait to ensure it hasn't instantly crashed (e.g. module not found)
+        // Small wait to ensure it hasn't instantly crashed
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         if let Ok(Some(status)) = child.try_wait() {
             return Err(format!(
@@ -184,35 +225,21 @@ impl JupyterManager {
         }
 
         let mut instances = self.instances.lock().unwrap();
-        instances.insert(
-            key,
-            JupyterInstance {
-                port,
-                process: child,
-            },
-        );
+        instances.insert(key, JupyterInstance { port, process: child });
 
         Ok(port)
     }
 
-    /// Returns the port if the notebook is running, or None.
+    /// Returns the port if the notebook is running.
     pub fn status(&self, exp: &str, run: &str) -> Option<u16> {
         let key = format!("{}:{}", exp, run);
         let mut instances = self.instances.lock().unwrap();
 
-        // Check if the process exited on its own, clean it up if it did:
         if let Some(instance) = instances.get_mut(&key) {
             match instance.process.try_wait() {
-                Ok(Some(_)) => {
-                    // Process exited
-                }
-                Ok(None) => {
-                    // Still running
-                    return Some(instance.port);
-                }
-                Err(_) => {
-                    // Error polling
-                }
+                Ok(Some(_)) => { /* exited */ }
+                Ok(None) => return Some(instance.port),
+                Err(_) => { /* error polling */ }
             }
         }
 
@@ -220,9 +247,7 @@ impl JupyterManager {
         None
     }
 
-    /// Stops a running Jupyter instance, if any.
-    ///
-    /// Kills the underlying child process and removes it from the internal tracking map.
+    /// Stops a running Jupyter instance.
     pub async fn stop(&self, exp: &str, run: &str) -> Result<(), String> {
         let key = format!("{}:{}", exp, run);
         let mut instance = {
@@ -240,15 +265,13 @@ impl JupyterManager {
     }
 
     /// Kill all notebooks (e.g., on server shutdown).
-    ///
-    /// Iterates through all tracked instances and sends a kill signal to their processes.
     pub async fn shutdown_all(&self) {
-        let instances_to_kill: Vec<_> = {
+        let all: Vec<_> = {
             let mut instances = self.instances.lock().unwrap();
             instances.drain().map(|(_, inst)| inst).collect()
         };
 
-        for mut inst in instances_to_kill {
+        for mut inst in all {
             let _ = inst.process.kill().await;
             let _ = inst.process.wait().await;
         }
@@ -266,17 +289,16 @@ mod tests {
     }
 
     #[test]
-    fn test_jupyter_manager_get_available_port() {
+    fn test_get_available_port() {
         let port = JupyterManager::get_available_port();
         assert!(port.is_some());
         let p = port.unwrap();
-        assert!((8000..9000).contains(&p));
+        assert!((8888..9999).contains(&p));
     }
 
     #[tokio::test]
-    async fn test_jupyter_manager_stop_non_existent() {
+    async fn test_stop_non_existent() {
         let manager = JupyterManager::new();
-        // Stopping a non-existent notebook shouldn't error
         let res = manager.stop("exp1", "run1").await;
         assert!(res.is_ok());
     }
@@ -306,8 +328,14 @@ mod tests {
         assert!(created);
         assert!(tmp.path().join("interactive.ipynb").exists());
 
-        // Calling again should return false (already exists)
         let created_again = generate_notebook(tmp.path(), true).await.unwrap();
         assert!(!created_again);
+    }
+
+    #[tokio::test]
+    async fn test_detect_backend_returns_something() {
+        let backend = detect_backend().await;
+        // In CI/test environments, at least python3 should be available
+        assert_ne!(backend, InteractiveBackend::None);
     }
 }

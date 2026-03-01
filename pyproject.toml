@@ -32,7 +32,10 @@ python-source = "python"
 # Module name (must match #[pymodule] fn name in Rust)
 module-name = "expman.expman"
 # Allow the extension to be imported from the python/expman directory
+# Features to enable
 features = ["pyo3/extension-module"]
+# Include documentation files
+include = ["docs/**/*", "README.md"]
 
 [tool.ruff]
 line-length = 100
