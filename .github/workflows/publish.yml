@@ -58,7 +58,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build and publish to PyPI
         run: |
-          uv build --manifest-path crates/expman-py/Cargo.toml
+          uv build
           uv publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

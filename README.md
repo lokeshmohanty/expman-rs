@@ -157,58 +157,7 @@ To run the Rust example, use:
 cargo run --example logging -p expman
 ```
 
-## Architecture
-
-```mermaid
-graph TD
-    subgraph "Python Process"
-        PY["Python Experiment Code"]
-        WRAP["expman Python Wrapper"]
-        PY --> WRAP
-    end
-
-    subgraph "expman-py (PyO3 Extension)"
-        CORE_FFI["FFI / Rust Engine"]
-        WRAP -- "~100ns call" --> CORE_FFI
-    end
-
-    subgraph "expman-core"
-        BUF["Flush Buffer"]
-        CHAN["mpsc Channel"]
-        TASK["Tokio Background Task"]
-
-        CORE_FFI -- "send" --> CHAN
-        CHAN -- "receive" --> TASK
-        TASK -- "batch" --> BUF
-    end
-
-    subgraph "Storage"
-        PARQUET[("metrics.parquet")]
-        YAML[("config.yaml / run.yaml")]
-        LOG[("run.log")]
-
-        BUF -- "every 50 rows / 500ms" --> PARQUET
-        TASK -- "write" --> YAML
-        TASK -- "append" --> LOG
-    end
-
-    subgraph "expman-server (Axum)"
-        API["REST API / SSE Server"]
-        DASH["Embedded Dashboard"]
-
-        PARQUET -.-> API
-        YAML -.-> API
-        API -- "SSE Push" --> DASH
-    end
-
-    subgraph "expman"
-        CLI_CMD["CLI Commands"]
-        CLI_CMD -- "read metrics" --> PARQUET
-        CLI_CMD -- "start" --> API
-    end
-```
-
-## Storage Layout
+## Experiments Layout
 
 ```
 experiments/
