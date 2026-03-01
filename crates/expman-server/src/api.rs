@@ -62,6 +62,10 @@ pub fn router() -> Router<AppState> {
             get(status_jupyter),
         )
         .route("/jupyter/available", get(available_jupyter))
+        .route(
+            "/experiments/:exp/runs/:run/jupyter/notebook",
+            get(get_jupyter_notebook).post(create_jupyter_notebook),
+        )
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -562,6 +566,60 @@ async fn status_jupyter(
 async fn available_jupyter() -> impl IntoResponse {
     let available = crate::jupyter::JupyterManager::is_available().await;
     Json(serde_json::json!({ "available": available })).into_response()
+}
+
+/// Endpoint to check if `interactive.ipynb` exists and return its content.
+///
+/// Returns `{"exists": true, "content": "..."}` or `{"exists": false, "content": null}`.
+async fn get_jupyter_notebook(
+    State(state): State<AppState>,
+    Path((exp, run)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let notebook_path = run_dir(&state.base_dir, &exp, &run).join("interactive.ipynb");
+    if notebook_path.exists() {
+        match tokio::fs::read_to_string(&notebook_path).await {
+            Ok(content) => {
+                Json(serde_json::json!({ "exists": true, "content": content })).into_response()
+            }
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        }
+    } else {
+        Json(serde_json::json!({ "exists": false, "content": null })).into_response()
+    }
+}
+
+/// Endpoint to create the default `interactive.ipynb` for a run.
+///
+/// Reads the run metadata to determine the language and generates the
+/// appropriate default notebook. Returns 409 Conflict if the notebook already exists.
+async fn create_jupyter_notebook(
+    State(state): State<AppState>,
+    Path((exp, run)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let dir = run_dir(&state.base_dir, &exp, &run);
+
+    let is_python = match storage::load_run_metadata(&dir) {
+        Ok(meta) => meta
+            .language
+            .unwrap_or_else(|| "python".to_string())
+            .to_lowercase()
+            != "rust",
+        Err(_) => true, // Default to Python
+    };
+
+    match crate::jupyter::generate_notebook(&dir, is_python).await {
+        Ok(true) => {
+            // Read back the created content
+            let content = tokio::fs::read_to_string(dir.join("interactive.ipynb"))
+                .await
+                .unwrap_or_default();
+            Json(serde_json::json!({ "created": true, "content": content })).into_response()
+        }
+        Ok(false) => {
+            (StatusCode::CONFLICT, "Notebook already exists").into_response()
+        }
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
 }
 
 // ─── Frontend (embedded) ─────────────────────────────────────────────────────

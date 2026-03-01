@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tokio::process::Child;
 use tracing::{error, info};
@@ -9,6 +9,91 @@ use tracing::{error, info};
 pub struct JupyterInstance {
     pub port: u16,
     pub process: Child,
+}
+
+/// Generate the full `.ipynb` JSON content for a default interactive notebook.
+///
+/// For Python runs, produces 2 cells:
+///   1. Install dependencies (`pip install polars matplotlib pyarrow fastparquet`)
+///   2. Load and display metrics
+///
+/// For Rust runs, produces a single cell with a `polars` snippet.
+pub fn generate_notebook_content(is_python: bool) -> String {
+    let cells = if is_python {
+        r##"{
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Install required dependencies into this environment\n",
+    "import sys\n",
+    "!pip --python {sys.executable} install polars matplotlib"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import polars as pl\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "# Load run metrics\n",
+    "metrics_path = 'metrics.parquet'\n",
+    "df = pl.read_parquet(metrics_path)\n",
+    "\n",
+    "# Display the latest metrics\n",
+    "df.tail()"
+   ]
+  }"##
+            .to_string()
+    } else {
+        let snippet = "use polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {\n    // Load run metrics\n    let mut file = std::fs::File::open(\"metrics.parquet\").unwrap();\n    let df = ParquetReader::new(&mut file).finish()?;\n\n    println!(\"{:?}\", df.tail(Some(5)));\n    Ok(())\n}";
+        format!(
+            r#"{{
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {{}},
+   "outputs": [],
+   "source": [
+    "{}"
+   ]
+  }}"#,
+            snippet.replace('\n', "\\n").replace('"', "\\\"")
+        )
+    };
+
+    format!(
+        r#"{{
+ "cells": [
+  {}
+ ],
+ "metadata": {{}},
+ "nbformat": 4,
+ "nbformat_minor": 5
+}}"#,
+        cells
+    )
+}
+
+/// Write the default `interactive.ipynb` into `run_dir` if it does not already exist.
+///
+/// Returns `Ok(true)` if the notebook was created, `Ok(false)` if it already existed.
+pub async fn generate_notebook(run_dir: &Path, is_python: bool) -> Result<bool, String> {
+    let notebook_path = run_dir.join("interactive.ipynb");
+    if notebook_path.exists() {
+        return Ok(false);
+    }
+
+    let content = generate_notebook_content(is_python);
+    if let Err(e) = tokio::fs::write(&notebook_path, content).await {
+        error!("Failed to generate interactive.ipynb: {}", e);
+        return Err(format!("Failed to generate interactive.ipynb: {}", e));
+    }
+
+    Ok(true)
 }
 
 /// Thread-safe manager for spawning and stopping Jupyter Notebooks.
@@ -71,72 +156,8 @@ impl JupyterManager {
         let port = Self::get_available_port()
             .ok_or_else(|| "No available ports for Jupyter".to_string())?;
 
-        // 1. Generate notebook content if it doesn't exist.
-        let notebook_path = run_dir.join("interactive.ipynb");
-        if !notebook_path.exists() {
-            let cells = if is_python {
-                r##"{
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# Install required dependencies into this environment\n",
-    "import sys\n",
-    "!pip install polars matplotlib pyarrow fastparquet --python {sys.executable}"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import polars as pl\n",
-    "import matplotlib.pyplot as plt\n",
-    "\n",
-    "# Load run metrics\n",
-    "metrics_path = 'metrics.parquet'\n",
-    "df = pl.read_parquet(metrics_path)\n",
-    "\n",
-    "# Display the latest metrics\n",
-    "df.tail()"
-   ]
-  }"##
-                .to_string()
-            } else {
-                let snippet = "use polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {\n    // Load run metrics\n    let mut file = std::fs::File::open(\"metrics.parquet\").unwrap();\n    let df = ParquetReader::new(&mut file).finish()?;\n\n    println!(\"{:?}\", df.tail(Some(5)));\n    Ok(())\n}";
-                format!(
-                    r#"{{
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {{}},
-   "outputs": [],
-   "source": [
-    "{}"
-   ]
-  }}"#,
-                    snippet.replace('\n', "\\n").replace('"', "\\\"")
-                )
-            };
-
-            let ipynb_content = format!(
-                r#"{{
- "cells": [
-  {}
- ],
- "metadata": {{}},
- "nbformat": 4,
- "nbformat_minor": 5
-}}"#,
-                cells
-            );
-
-            if let Err(e) = tokio::fs::write(&notebook_path, ipynb_content).await {
-                error!("Failed to generate interactive.ipynb: {}", e);
-                return Err(format!("Failed to generate interactive.ipynb: {}", e));
-            }
-        }
+        // Generate notebook content if it doesn't exist.
+        generate_notebook(&run_dir, is_python).await?;
 
         info!("Spawning Jupyter Notebook for {} on port {}", key, port);
 
@@ -258,5 +279,35 @@ mod tests {
         // Stopping a non-existent notebook shouldn't error
         let res = manager.stop("exp1", "run1").await;
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_generate_notebook_content_python_has_two_cells() {
+        let content = generate_notebook_content(true);
+        let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
+        let cells = parsed["cells"].as_array().unwrap();
+        assert_eq!(cells.len(), 2, "Python notebook should have exactly 2 cells");
+        assert_eq!(parsed["nbformat"], 4);
+    }
+
+    #[test]
+    fn test_generate_notebook_content_rust_has_one_cell() {
+        let content = generate_notebook_content(false);
+        let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
+        let cells = parsed["cells"].as_array().unwrap();
+        assert_eq!(cells.len(), 1, "Rust notebook should have exactly 1 cell");
+        assert_eq!(parsed["nbformat"], 4);
+    }
+
+    #[tokio::test]
+    async fn test_generate_notebook_creates_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let created = generate_notebook(tmp.path(), true).await.unwrap();
+        assert!(created);
+        assert!(tmp.path().join("interactive.ipynb").exists());
+
+        // Calling again should return false (already exists)
+        let created_again = generate_notebook(tmp.path(), true).await.unwrap();
+        assert!(!created_again);
     }
 }

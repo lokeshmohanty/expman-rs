@@ -1213,6 +1213,67 @@ async fn stop_jupyter(exp: String, run: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct NotebookInfo {
+    exists: bool,
+    content: Option<String>,
+}
+
+async fn fetch_notebook_content(exp: String, run: String) -> Result<NotebookInfo, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/jupyter/notebook",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+async fn create_default_notebook(exp: String, run: String) -> Result<String, String> {
+    let resp = gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/runs/{}/jupyter/notebook",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(parsed["content"].as_str().unwrap_or("").to_string())
+}
+
+/// Extract human-readable source code from ipynb JSON cells.
+fn extract_cell_sources(ipynb_content: &str) -> Vec<String> {
+    let parsed: serde_json::Value = match serde_json::from_str(ipynb_content) {
+        Ok(v) => v,
+        Err(_) => return vec![ipynb_content.to_string()],
+    };
+    let cells = match parsed["cells"].as_array() {
+        Some(c) => c,
+        None => return vec![],
+    };
+    cells
+        .iter()
+        .filter_map(|cell| {
+            let source = &cell["source"];
+            if let Some(arr) = source.as_array() {
+                Some(
+                    arr.iter()
+                        .filter_map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(""),
+                )
+            } else {
+                source.as_str().map(|s| s.to_string())
+            }
+        })
+        .collect()
+}
+
 #[component]
 fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
     if selected.is_empty() {
@@ -1251,6 +1312,7 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
 
     let (is_loading, set_is_loading) = signal(false);
     let (jupyter_port, set_jupyter_port) = signal(None::<u16>);
+    let (notebook_version, set_notebook_version) = signal(0u32);
 
     Effect::new(move |_| {
         if let Some(Ok(status)) = jupyter_status.get().as_deref() {
@@ -1271,6 +1333,16 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
 
     let jupyter_available =
         LocalResource::new(|| async move { check_jupyter_available().await.unwrap_or(false) });
+
+    // Fetch notebook content from server (reactive to notebook_version for refresh)
+    let nb_exp_id = exp_id_outer.clone();
+    let nb_run_id = run_id_outer.clone();
+    let notebook_resource = LocalResource::new(move || {
+        let eid = nb_exp_id.clone();
+        let rid = nb_run_id.clone();
+        let _version = notebook_version.get(); // trigger re-fetch on version change
+        async move { fetch_notebook_content(eid, rid).await }
+    });
 
     view! {
         <div class="flex-grow p-6 space-y-6 overflow-auto bg-[#e5e5e5] dark:bg-slate-950 flex flex-col h-full">
@@ -1309,23 +1381,10 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
 
                     Suspend::new(async move {
                         let run = run_data.get().as_deref().cloned().unwrap_or(Err("Failed to load".to_string()));
+                        let notebook_info = notebook_resource.await;
                         let view_result: leptos::prelude::AnyView = match run {
                             Ok(run_info) => {
-                                let lang = run_info.language.clone().unwrap_or_else(|| "python".to_string()).to_lowercase();
                                 let env_str = run_info.env_path.clone().unwrap_or_else(|| "unknown".to_string());
-                                let is_py = lang != "rust";
-                                let snippet = if is_py {
-                                    format!(
-                                        "# Environment: {}\n# Install required dependencies into this environment\nimport sys\n!uv pip install polars matplotlib pyarrow fastparquet --python {{sys.executable}}\n\nimport polars as pl\nimport matplotlib.pyplot as plt\n\n# Load run metrics\nmetrics_path = 'metrics.parquet'\ndf = pl.read_parquet(metrics_path)\n\n# Display the latest metrics\ndf.tail()",
-                                        env_str
-                                    )
-                                } else {
-                                    format!(
-                                        "// Environment: {}\nuse polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {{\n    // Load run metrics\n    let mut file = std::fs::File::open(\"metrics.parquet\").unwrap();\n    let df = ParquetReader::new(&mut file).finish()?;\n\n    println!(\"{{:?}}\", df.tail(Some(5)));\n    Ok(())\n}}",
-                                        env_str
-                                    )
-                                };
-
                                 let name_str = run_info.name.clone();
 
                                 if let Some(p) = port_opt {
@@ -1356,15 +1415,35 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                         </div>
                                     }.into_any()
                                 } else {
+                                    // Notebook is not running — show content or create button
+                                    let nb_exists = notebook_info.as_ref().map(|n| n.exists).unwrap_or(false);
+                                    let nb_sources: Vec<String> = notebook_info
+                                        .as_ref()
+                                        .ok()
+                                        .and_then(|n| n.content.as_deref())
+                                        .map(extract_cell_sources)
+                                        .unwrap_or_default();
+
                                     let env_disp = env_str.clone();
                                     let name_disp = name_str.clone();
-                                    let snippet_disp = snippet.clone();
-                                    let lang_disp = if is_py { "Python" } else { "Rust" };
 
                                     let available_res = jupyter_available.get();
                                     let is_available = match available_res.as_deref() {
                                         Some(&avail) => avail,
                                         None => false, // Loading or error
+                                    };
+
+                                    let create_exp_id = exp_id_outer.clone();
+                                    let create_run_id = run_id_outer.clone();
+                                    let create_notebook_click = move |_| {
+                                        let eid = create_exp_id.clone();
+                                        let rid = create_run_id.clone();
+                                        set_is_loading.set(true);
+                                        spawn_local(async move {
+                                            let _ = create_default_notebook(eid, rid).await;
+                                            set_notebook_version.update(|v| *v += 1);
+                                            set_is_loading.set(false);
+                                        });
                                     };
 
                                     view! {
@@ -1375,55 +1454,84 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                                 </div>
                                                 <h3 class="text-2xl font-bold text-slate-800 dark:text-white">"Launch Live Analysis"</h3>
                                                 <p class="text-slate-500 max-w-lg mx-auto leading-relaxed">
-                                                    "Spawn a fully functional Jupyter instance inside this run's folder {" 
-                                                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{name_disp}</span> 
+                                                    "Spawn a fully functional Jupyter instance inside this run's folder {"
+                                                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{name_disp}</span>
                                                     "}, globally tied to the dashboard execution environment:"
                                                     <br/><br/>
                                                     <code class="text-xs font-semibold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded inline-block shadow-inner">{env_disp}</code>
                                                 </p>
-                                                <div class="pt-6">
+                                                <div class="pt-6 flex items-center justify-center space-x-3">
                                                     <button
-                                                        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 focus:ring focus:ring-blue-500/50 text-white font-medium rounded-lg transition-all flex items-center justify-center mx-auto space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                                                        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 focus:ring focus:ring-blue-500/50 text-white font-medium rounded-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
                                                         on:click=start_notebook
-                                                        disabled=move || loading || !is_available || jupyter_available.get().is_none()
+                                                        disabled=move || loading || !is_available || jupyter_available.get().is_none() || !nb_exists
                                                     >
-                                                        <span>{if loading { "Launching Notebook..." } else if !is_available { "Jupyter Not Available" } else { "▶ Launch Live Jupyter Notebook" }}</span>
+                                                        <span>{
+                                                            if loading { "Launching Notebook..." }
+                                                            else if !is_available { "Jupyter Not Available" }
+                                                            else if !nb_exists { "Create Notebook First" }
+                                                            else { "▶ Launch Live Jupyter Notebook" }
+                                                        }</span>
                                                     </button>
-                                                    {
-                                                        if !is_available && jupyter_available.get().is_some() {
+                                                    {if !nb_exists {
+                                                        view! {
+                                                            <button
+                                                                class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 shadow-md hover:shadow-lg"
+                                                                on:click=create_notebook_click
+                                                                disabled=loading
+                                                            >
+                                                                {if loading { "Creating..." } else { "Create Interactive Notebook" }}
+                                                            </button>
+                                                        }.into_any()
+                                                    } else {
+                                                        view! { <span class="hidden"></span> }.into_any()
+                                                    }}
+                                                </div>
+                                                {
+                                                    if !is_available && jupyter_available.get().is_some() {
+                                                        view! {
+                                                            <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md max-w-lg mx-auto flex items-start space-x-3 text-left">
+                                                                <div class="text-yellow-600 dark:text-yellow-500 mt-0.5">
+                                                                   <TriangleAlert size=18 />
+                                                                </div>
+                                                                <div class="text-sm text-yellow-800 dark:text-yellow-200">
+                                                                    <p class="font-bold">"Jupyter Notebook is not installed"</p>
+                                                                    <p class="mt-1">"To enable this feature, install Jupyter in the environment where the ExpMan Dashboard is running (e.g., "<code class="text-xs bg-yellow-100 dark:bg-yellow-900 px-1 rounded">"pip install notebook"</code>")."</p>
+                                                                </div>
+                                                            </div>
+                                                        }.into_any()
+                                                    } else {
+                                                        view! { <span class="hidden"></span> }.into_any()
+                                                    }
+                                                }
+                                            </div>
+                                            // Show actual notebook cell content if it exists
+                                            {if !nb_sources.is_empty() {
+                                                view! {
+                                                    <div class="space-y-4">
+                                                        {nb_sources.into_iter().enumerate().map(|(i, src)| {
                                                             view! {
-                                                                <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md max-w-lg mx-auto flex items-start space-x-3 text-left">
-                                                                    <div class="text-yellow-600 dark:text-yellow-500 mt-0.5">
-                                                                       <TriangleAlert size=18 />
+                                                                <div class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
+                                                                    <div class="flex bg-slate-50 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 px-4 py-3 text-xs text-slate-500 items-center">
+                                                                        <span class="font-mono bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-2 py-0.5 rounded font-bold">
+                                                                            {format!("In [{}]:", i + 1)}
+                                                                        </span>
                                                                     </div>
-                                                                    <div class="text-sm text-yellow-800 dark:text-yellow-200">
-                                                                        <p class="font-bold">"Jupyter Notebook is not installed"</p>
-                                                                        <p class="mt-1">"To enable this feature, install Jupyter in the environment where the ExpMan Dashboard is running (e.g., "<code class="text-xs bg-yellow-100 dark:bg-yellow-900 px-1 rounded">"pip install notebook"</code>")."</p>
+                                                                    <div class="p-5 font-mono text-sm overflow-x-auto text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-950">
+                                                                        <pre><code class="leading-relaxed">{src}</code></pre>
                                                                     </div>
                                                                 </div>
-                                                            }.into_any()
-                                                        } else {
-                                                            view! { <span class="hidden"></span> }.into_any()
-                                                        }
-                                                    }
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center space-x-4 my-8 mx-12">
-                                                <div class="h-px bg-slate-300 dark:bg-slate-700 flex-grow"></div>
-                                                <span class="text-slate-400 text-xs font-bold uppercase tracking-widest whitespace-nowrap">"Or Use Snippet Manually"</span>
-                                                <div class="h-px bg-slate-300 dark:bg-slate-700 flex-grow"></div>
-                                            </div>
-                                            <div class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
-                                                <div class="flex bg-slate-50 dark:bg-slate-800 border-b border-slate-300 dark:border-slate-700 px-4 py-3 text-xs text-slate-500 items-center justify-between">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="font-mono bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-2 py-0.5 rounded font-bold">"In [1]:"</span>
-                                                        <span class="font-medium text-slate-700 dark:text-slate-300">{lang_disp}</span>
+                                                            }
+                                                        }).collect_view()}
                                                     </div>
-                                                </div>
-                                                <div class="p-5 font-mono text-sm overflow-x-auto text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-950">
-                                                    <pre><code class="leading-relaxed">{snippet_disp}</code></pre>
-                                                </div>
-                                            </div>
+                                                }.into_any()
+                                            } else if nb_exists {
+                                                view! {
+                                                    <div class="p-6 text-center text-slate-500">"Notebook exists but has no cells."</div>
+                                                }.into_any()
+                                            } else {
+                                                view! { <span class="hidden"></span> }.into_any()
+                                            }}
                                         </div>
                                     }.into_any()
                                 }
