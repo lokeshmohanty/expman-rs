@@ -30,7 +30,7 @@ watch:
 # Build the frontend dashboard
 build-frontend:
     @echo "Building frontend with trunk..."
-    cd frontend && trunk build --release
+    cd crates/expman-server && trunk build --release
 
 # Build documentation with a custom landing page from README.md
 build-docs:
@@ -116,11 +116,11 @@ fmt:
 
 # Run clippy (excludes frontend WASM crate — use lint-frontend for that)
 lint: lint-frontend lint-py
-    cargo clippy --workspace --exclude frontend --all-targets -- -D warnings
+    cargo clippy --workspace --all-targets -- -D warnings
 
 # Run clippy on the frontend (requires wasm32-unknown-unknown target)
 lint-frontend:
-    cargo clippy -p frontend --target wasm32-unknown-unknown -- -D warnings
+    cargo clippy -p expman-server --lib --target wasm32-unknown-unknown -- -D warnings
 
 # Run Python linter (ruff)
 lint-py:
@@ -153,7 +153,7 @@ publish:
 
 # Show code statistics
 stats:
-    tokei crates/ python/ frontend/
+    tokei crates/ python/
 
 # Run a quick benchmark of log_vector throughput
 bench:

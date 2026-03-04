@@ -4,8 +4,7 @@ members = [
     "crates/expman",
     "crates/expman-server",
     "crates/expman-cli",
-    "crates/expman-py", 
-    "frontend",
+    "crates/expman-py",
 ]
 
 [workspace.package]

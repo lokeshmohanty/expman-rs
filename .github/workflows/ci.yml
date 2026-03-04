@@ -22,9 +22,8 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
-      # Exclude the frontend WASM crate — it requires wasm32 target + trunk
       - name: Run tests
-        run: cargo nextest run --workspace --exclude frontend
+        run: cargo nextest run --workspace
 
   lint:
     runs-on: ubuntu-latest
@@ -40,11 +39,10 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      # Exclude the frontend WASM crate — it requires wasm32 target + trunk
       - name: Run clippy
-        run: cargo clippy --workspace --exclude frontend --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-  # Separate job: just check the frontend compiles for wasm32
+  # Separate job: check the frontend WASM module compiles for wasm32
   frontend-check:
     runs-on: ubuntu-latest
     steps:
@@ -57,7 +55,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check frontend compiles for wasm32
-        run: cargo check -p frontend --target wasm32-unknown-unknown
+        run: cargo check -p expman-server --lib --target wasm32-unknown-unknown
 
   python-lint:
     runs-on: ubuntu-latest

@@ -144,12 +144,12 @@ For detailed usage, refer to the standalone documentation files for each compone
 
 ## Examples
 
-Practical code samples are provided in the [examples/](examples/) directory:
+Practical code samples are provided in the [examples/](examples/) directory. The Python example demonstrates logging metrics, alongside generating and storing rich media artifacts (audio, video, plots) directly natively.
 
 - **Python**: [examples/python/basic_training.py](examples/python/basic_training.py)
 - **Rust**: [examples/rust/logging.rs](examples/rust/logging.rs)
 
-To run the Python examples, ensure you have built the extension first with `just dev-py`.
+To run the Python examples, ensure you have built the extension first with `just dev-py` and installed the dev dependencies (`uv pip install -e ".[dev]"`).
 
 To run the Rust example, use:
 

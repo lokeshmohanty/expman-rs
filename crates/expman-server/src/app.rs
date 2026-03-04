@@ -1,5 +1,4 @@
-#![doc = include_str!("../README.md")]
-// frontend main entry point
+//! Leptos frontend application (compiled to WASM via trunk).
 use chrono::{DateTime, Local};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -7,17 +6,19 @@ use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, Package, TriangleAlert,
+    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, Package,
+    TriangleAlert,
 };
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
 use web_sys::RequestMode;
 
+use std::cell::Cell;
 use std::rc::Rc;
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct SidebarContext(RwSignal<Option<Rc<dyn Fn() -> AnyView>>, LocalStorage>);
+
+const CHART_COLORS: [&str; 5] = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 fn format_date(iso: &str) -> String {
     if let Ok(dt) = DateTime::parse_from_rfc3339(iso) {
@@ -27,6 +28,13 @@ fn format_date(iso: &str) -> String {
         iso.to_string()
     }
 }
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+pub struct ExperimentMetadata {
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
 pub struct Experiment {
     pub id: String,
@@ -58,12 +66,15 @@ impl std::fmt::Display for MetricValue {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Run {
+    #[serde(default)]
+    pub id: String,
     pub name: String,
     pub status: String,
     pub started_at: String,
     pub finished_at: Option<String>,
     pub duration_secs: Option<f64>,
     pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub scalars: Option<std::collections::HashMap<String, MetricValue>>,
     pub vectors: Option<std::collections::HashMap<String, MetricValue>>,
     pub language: Option<String>,
@@ -128,10 +139,12 @@ async fn update_run_metadata(
     run_id: String,
     name: Option<String>,
     description: Option<String>,
+    tags: Option<Vec<String>>,
 ) -> Result<(), String> {
     let payload = serde_json::json!({
         "name": name,
         "description": description,
+        "tags": tags,
     });
     let resp = gloo_net::http::Request::patch(&format!(
         "/api/experiments/{}/runs/{}/metadata",
@@ -384,6 +397,26 @@ fn ExperimentDetail() -> impl IntoView {
         async move { fetch_runs(exp_id).await }
     });
 
+    async fn fetch_experiment_metadata(eid: String) -> Option<ExperimentMetadata> {
+        let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/metadata", eid))
+            .send()
+            .await;
+        if let Ok(r) = resp {
+            if let Ok(text) = r.text().await {
+                serde_json::from_str(&text).ok()
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    let exp_metadata = LocalResource::new(move || {
+        let eid = id();
+        async move { fetch_experiment_metadata(eid).await }
+    });
+
     let (selected_runs, set_selected_runs) = signal(std::collections::HashSet::<String>::new());
     let (active_tab, set_active_tab) = signal("metrics".to_string());
 
@@ -398,13 +431,14 @@ fn ExperimentDetail() -> impl IntoView {
     let (edit_run_id, set_edit_run_id) = signal("".to_string());
     let (edit_run_name, set_edit_run_name) = signal("".to_string());
     let (edit_run_desc, set_edit_run_desc) = signal("".to_string());
+    let (edit_run_tags, set_edit_run_tags) = signal("".to_string());
 
-    let toggle_run = move |name: String| {
+    let toggle_run = move |id: String| {
         set_selected_runs.update(|set| {
-            if set.contains(&name) {
-                set.remove(&name);
+            if set.contains(&id) {
+                set.remove(&id);
             } else {
-                set.insert(name);
+                set.insert(id);
             }
         });
     };
@@ -423,6 +457,7 @@ fn ExperimentDetail() -> impl IntoView {
         spawn_local(async move {
             let _ = update_experiment_metadata(eid, Some(name), Some(desc), Some(tags)).await;
             set_show_edit.set(false);
+            exp_metadata.refetch();
         });
     };
 
@@ -431,49 +466,61 @@ fn ExperimentDetail() -> impl IntoView {
         let rid = edit_run_id.get();
         let name = edit_run_name.get();
         let desc = edit_run_desc.get();
+        let tags: Vec<String> = edit_run_tags
+            .get()
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
 
         spawn_local(async move {
-            let _ = update_run_metadata(eid, rid, Some(name), Some(desc)).await;
+            let _ = update_run_metadata(eid, rid, Some(name), Some(desc), Some(tags)).await;
             set_show_run_edit.set(false);
             runs.refetch();
         });
     };
 
     let open_run_edit = move |r: Run| {
-        set_edit_run_id.set(r.name.clone());
+        set_edit_run_id.set(r.id.clone());
         set_edit_run_name.set(r.name);
         set_edit_run_desc.set(r.description.unwrap_or_default());
+        if let Some(tags) = r.tags {
+            set_edit_run_tags.set(tags.join(", "));
+        } else {
+            set_edit_run_tags.set("".to_string());
+        }
         set_show_run_edit.set(true);
     };
-
-    async fn fetch_experiment_metadata(eid: String) -> Option<Experiment> {
-        let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/metadata", eid))
-            .send()
-            .await;
-        if let Ok(r) = resp {
-            if let Ok(text) = r.text().await {
-                serde_json::from_str(&text).ok()
-            } else {
-                None
-            }
-        } else {
-            Option::<Experiment>::None
-        }
-    }
-
-    let exp_metadata = LocalResource::new(move || {
-        let eid = id();
-        async move { fetch_experiment_metadata(eid).await }
-    });
 
     // Sidebar View Effect
     Effect::new(move |_| {
         sidebar_ctx.0.set(Some(Rc::new(move || {
             view! {
             <div class="h-full flex flex-col">
-                <div class="px-4 py-2 border-b border-slate-800 bg-slate-900/50">
-                    <h2 class="font-bold text-slate-200 text-sm">"Select Runs"</h2>
-                    <p class="text-[10px] text-slate-500">"Select to compare metrics"</p>
+                <div class="px-4 py-2 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-slate-200 text-sm">"Select Runs"</h2>
+                        <p class="text-[10px] text-slate-500">"Select to compare metrics"</p>
+                    </div>
+                    <div class="flex space-x-1">
+                        <button 
+                            on:click=move |_| {
+                                if let Some(Ok(run_list)) = runs.get() {
+                                    let all_ids: std::collections::HashSet<String> = run_list.into_iter().map(|r| r.id).collect();
+                                    set_selected_runs.set(all_ids);
+                                }
+                            }
+                            class="text-[9px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded border border-slate-700 transition-colors"
+                        >
+                            "All"
+                        </button>
+                        <button 
+                            on:click=move |_| set_selected_runs.set(std::collections::HashSet::new())
+                            class="text-[9px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded border border-slate-700 transition-colors"
+                        >
+                            "None"
+                        </button>
+                    </div>
                 </div>
                 <div class="flex-grow overflow-auto p-2 space-y-1 custom-scrollbar">
                      <Suspense fallback=|| view! { <div class="p-4 text-slate-500 text-xs">"Loading runs..."</div> }>
@@ -481,13 +528,11 @@ fn ExperimentDetail() -> impl IntoView {
                             let run_list: Vec<Run> = runs.await.unwrap_or_default();
                             view! {
                                 {run_list.into_iter().map(|run| {
-                                    let rid_inner = run.name.clone();
+                                    let rid_inner = run.id.clone();
                                     let is_selected = Signal::derive(move || selected_runs.with(|set| set.contains(&rid_inner)));
                                     let is_running = run.status == "RUNNING";
                                     let run_clone = run.clone();
-                                    let rid_click = run.name.clone();
-
-                                    let duration = run.duration_secs.map(|d| format!("{:.0}s", d));
+                                    let rid_click = run.id.clone();
 
                                     let v: AnyView = view! {
                                         <div
@@ -505,8 +550,12 @@ fn ExperimentDetail() -> impl IntoView {
                                                     </div>
                                                 </div>
                                                 <div class="mt-1 ml-3.5 space-y-0.5">
-                                                    <p class="text-[10px] text-slate-500">{format_date(&run.started_at)}</p>
-                                                    {duration.map(|d| view! { <p class="text-[9px] text-slate-600 font-mono">"Dur: " {d}</p> })}
+
+                                                    <div class="flex flex-wrap gap-1 mt-1 empty:hidden">
+                                                        {run_clone.tags.clone().unwrap_or_default().into_iter().take(2).map(|t| view! {
+                                                            <span class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] border border-blue-500/20">{t}</span>
+                                                        }).collect_view()}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -563,6 +612,16 @@ fn ExperimentDetail() -> impl IntoView {
                                         class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white h-32 focus:border-blue-500 outline-none"
                                         placeholder="Run description..."
                                     ></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">"Tags (comma separated)"</label>
+                                    <input
+                                        type="text"
+                                        on:input=move |ev| set_edit_run_tags.set(event_target_value(&ev))
+                                        prop:value=edit_run_tags
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none"
+                                        placeholder="gpu, large-batch"
+                                    />
                                 </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-4">
@@ -621,29 +680,43 @@ fn ExperimentDetail() -> impl IntoView {
             })}
 
             <div class="flex items-center justify-between pb-6 border-b border-slate-800 flex-shrink-0">
-                <div class="space-y-4 max-w-2xl">
-                    <h1 class="text-3xl font-bold text-white flex items-center space-x-3">
-                        <div class="text-blue-500"><FlaskConical size=32 /></div>
-                        <span> {id()} </span>
-                    </h1>
-                    <Suspense fallback=|| view! { <div class="h-4 bg-slate-800 rounded w-1/2 animate-pulse"></div> }.into_any()>
+                <div class="w-full max-w-2xl">
+                    <Suspense fallback=move || {
+                        let id_clone = id();
+                        view! {
+                            <div class="space-y-4">
+                                <h1 class="text-3xl font-bold text-white flex items-center space-x-3">
+                                    <div class="text-blue-500"><FlaskConical size=32 /></div>
+                                    <span> {id_clone} </span>
+                                </h1>
+                                <div class="h-4 bg-slate-800 rounded w-1/2 animate-pulse"></div>
+                            </div>
+                        }.into_any()
+                    }>
                         {move || Suspend::new(async move {
-                            let meta: Experiment = exp_metadata.get().flatten().unwrap_or_default();
+                            let meta: ExperimentMetadata = exp_metadata.get().flatten().unwrap_or_default();
                             let count = runs.get().and_then(|r| r.ok()).map(|r| r.len()).unwrap_or(0);
+                            let title = meta.display_name.clone().unwrap_or_else(id);
 
                             let v: AnyView = view! {
-                                <div class="space-y-2">
-                                    <p class="text-slate-400 text-sm leading-relaxed">{meta.description.unwrap_or_else(|| "No description provided.".to_string())}</p>
-                                    <div class="flex flex-wrap gap-2 pt-2">
-                                        <div class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-xs border border-blue-500/20 flex items-center space-x-1">
-                                            <LayoutDashboard size=12 />
-                                            <span>{count} " Runs"</span>
-                                        </div>
-                                        {meta.tags.into_iter().map(|tag| view! {
-                                            <div class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md text-xs border border-slate-700">
-                                                {tag}
+                                <div class="space-y-4">
+                                    <h1 class="text-3xl font-bold text-white flex items-center space-x-3">
+                                        <div class="text-blue-500"><FlaskConical size=32 /></div>
+                                        <span> {title} </span>
+                                    </h1>
+                                    <div class="space-y-2">
+                                        <p class="text-slate-400 text-sm leading-relaxed">{meta.description.unwrap_or_else(|| "No description provided.".to_string())}</p>
+                                        <div class="flex flex-wrap gap-2 pt-2">
+                                            <div class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-xs border border-blue-500/20 flex items-center space-x-1">
+                                                <LayoutDashboard size=12 />
+                                                <span>{count} " Runs"</span>
                                             </div>
-                                        }).collect_view()}
+                                            {meta.tags.into_iter().map(|tag| view! {
+                                                <div class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md text-xs border border-slate-700">
+                                                    {tag}
+                                                </div>
+                                            }).collect_view()}
+                                        </div>
                                     </div>
                                 </div>
                             }.into_any();
@@ -652,7 +725,19 @@ fn ExperimentDetail() -> impl IntoView {
                     </Suspense>
                 </div>
                 <div class="flex space-x-2">
-                    <button on:click=move |_| set_show_edit.set(true) class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
+                    <button on:click=move |_| {
+                        // Pre-fill edit form with current metadata
+                        if let Some(Some(meta)) = exp_metadata.get() {
+                            set_edit_name.set(meta.display_name.clone().unwrap_or_else(id));
+                            set_edit_desc.set(meta.description.clone().unwrap_or_default());
+                            set_edit_tags.set(meta.tags.join(", "));
+                        } else {
+                            set_edit_name.set(id());
+                            set_edit_desc.set(String::new());
+                            set_edit_tags.set(String::new());
+                        }
+                        set_show_edit.set(true);
+                    } class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
                         "Edit Metadata"
                     </button>
                     // New Run button removed
@@ -683,13 +768,20 @@ fn ExperimentDetail() -> impl IntoView {
                 // Content Area (Full Width)
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl flex-grow flex flex-col overflow-hidden min-h-0">
                     {move || match active_tab.get().as_str() {
-                        "runs" => view! { <RunsTableView exp_id=id() /> }.into_any(),
+                        "runs" => {
+                            let run_list: Vec<Run> = runs.get().and_then(|r| r.ok()).unwrap_or_default();
+                            let edit_callback = move |r: Run| open_run_edit(r);
+                            view! { <RunsTableView runs=run_list on_edit=edit_callback /> }.into_any()
+                        },
                         "metrics" => {
                             let run_list: Vec<Run> = runs.get().and_then(|r| r.ok()).unwrap_or_default();
                             view! { <MetricsView exp_id=id() selected=selected_runs.get() runs=run_list /> }.into_any()
                         },
                         "artifacts" => view! { <ArtifactView exp_id=id() selected=selected_runs.get() /> }.into_any(),
-                        "console" => view! { <ConsoleView exp_id=id() selected=selected_runs.get() /> }.into_any(),
+                        "console" => {
+                            let run_list: Vec<Run> = runs.get().and_then(|r| r.ok()).unwrap_or_default();
+                            view! { <ConsoleView exp_id=id() selected=selected_runs.get() runs=run_list /> }.into_any()
+                        },
                         "interactive" => view! { <InteractiveView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         _ => view! { <div class="p-8 text-slate-500 text-center">"Select a tab"</div> }.into_any(),
                     }}
@@ -718,29 +810,58 @@ fn MetricsView(
         return v;
     }
 
+    let selected_runs_data: Vec<&Run> =
+        runs.iter().filter(|r| selected.contains(&r.id)).collect();
+
+    let mut vector_keys = std::collections::BTreeSet::new();
+    for r in &selected_runs_data {
+        if let Some(vectors) = &r.vectors {
+            for k in vectors.keys() {
+                vector_keys.insert(k.clone());
+            }
+        }
+    }
+    let v_keys: Vec<String> = vector_keys.into_iter().collect();
+
     view! {
         <div class="flex-grow p-6 space-y-6 overflow-auto">
-            <div class="grid grid-cols-1 gap-6">
-                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 h-96 flex flex-col">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-sm font-semibold text-slate-300">"Vector Comparison"</h4>
-                        <div class="flex space-x-3">
-                             {selected.clone().into_iter().enumerate().map(|(i, s)| {
-                                 let colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
-                                 let color = colors[i % colors.len()];
-                                 view! {
-                                     <div class="flex items-center space-x-1 text-[10px] text-slate-400">
-                                         <span class=format!("w-2 h-2 rounded-full") style=format!("background-color: {}", color)></span>
-                                         <span>{s}</span>
-                                     </div>
-                                 }
-                             }).collect_view()}
-                        </div>
-                    </div>
-                    <div class="flex-grow bg-slate-900/40 rounded-lg overflow-hidden relative border border-slate-800/50">
-                        <LineChart exp_id=exp_id.clone() selected_runs=selected.clone() />
-                    </div>
-                </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {
+                    if v_keys.is_empty() {
+                        view! {
+                            <div class="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-6 h-96 flex items-center justify-center">
+                                <p class="text-slate-500 italic">"No vector data available for selected runs."</p>
+                            </div>
+                        }.into_any()
+                    } else {
+                        v_keys.into_iter().map(|vk| {
+                            let exp_id_clone = exp_id.clone();
+                            let selected_clone = selected.clone();
+                            let vk_clone = vk.clone();
+                            view! {
+                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 flex flex-col" style="resize: both; overflow: hidden; min-width: 300px; max-width: 100%; aspect-ratio: 16/9;">
+                                    <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                                        <h4 class="text-sm font-semibold text-slate-300">{vk_clone}</h4>
+                                        <div class="flex space-x-3">
+                                             {selected_clone.clone().into_iter().enumerate().map(|(i, s)| {
+                                                 let color = CHART_COLORS[i % CHART_COLORS.len()];
+                                                 view! {
+                                                     <div class="flex items-center space-x-1 text-[10px] text-slate-400">
+                                                         <span class=format!("w-2 h-2 rounded-full") style=format!("background-color: {}", color)></span>
+                                                         <span class="font-mono">{s}</span>
+                                                     </div>
+                                                 }
+                                             }).collect_view()}
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow rounded-lg overflow-hidden relative" style="width: 100%; height: 100%;">
+                                        <LineChart exp_id=exp_id_clone selected_runs=selected_clone metric_key=vk />
+                                    </div>
+                                </div>
+                            }.into_any()
+                        }).collect_view().into_any()
+                    }
+                }
             </div>
 
             <div class="bg-slate-950 border border-slate-800 rounded-xl p-6">
@@ -748,7 +869,6 @@ fn MetricsView(
                  <div class="overflow-x-auto">
                      {
                          // Collect all scalar keys from selected runs
-                         let selected_runs_data: Vec<&Run> = runs.iter().filter(|r| selected.contains(&r.name)).collect();
                          let mut scalar_keys = std::collections::BTreeSet::new();
                          for r in &selected_runs_data {
                              if let Some(scalars) = &r.scalars {
@@ -800,89 +920,166 @@ fn MetricsView(
     }.into_any()
 }
 
-use plotly::{
-    common::Title,
-    layout::{Axis, Margin},
-    Layout, Plot, Scatter,
-};
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = Plotly, js_name = newPlot)]
-    fn new_plot(root: &JsValue, data: &JsValue, layout: &JsValue, config: &JsValue);
-}
-
 #[component]
 fn LineChart(
     #[allow(unused_variables)] exp_id: String,
     selected_runs: std::collections::HashSet<String>,
+    metric_key: String,
 ) -> impl IntoView {
-    let div_ref = NodeRef::<leptos::html::Div>::new();
+    let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
+    let (view_range_x, set_view_range_x) = signal((0.0, 20.0));
+    let (view_range_y, set_view_range_y) = signal((0.0, 2.0));
+    let (is_dragging, set_is_dragging) = signal(false);
+    let (last_mouse_pos, set_last_mouse_pos) = signal(None::<(i32, i32)>);
+
+    let on_mousedown = move |ev: web_sys::MouseEvent| {
+        set_is_dragging.set(true);
+        set_last_mouse_pos.set(Some((ev.client_x(), ev.client_y())));
+    };
+
+    let on_mousemove = move |ev: web_sys::MouseEvent| {
+        if is_dragging.get() {
+            if let Some((lx, ly)) = last_mouse_pos.get() {
+                let dx = ev.client_x() - lx;
+                let dy = ev.client_y() - ly;
+
+                if let Some(canvas) = canvas_ref.get() {
+                    let w = canvas.client_width() as f64;
+                    let h = canvas.client_height() as f64;
+
+                    let (x_min, x_max) = view_range_x.get();
+                    let (y_min, y_max) = view_range_y.get();
+
+                    let x_range = x_max - x_min;
+                    let y_range = y_max - y_min;
+
+                    let shift_x = (dx as f64 / w) * x_range;
+                    let shift_y = (dy as f64 / h) * y_range;
+
+                    set_view_range_x.set((x_min - shift_x, x_max - shift_x));
+                    set_view_range_y.set((y_min + shift_y, y_max + shift_y));
+                    set_last_mouse_pos.set(Some((ev.client_x(), ev.client_y())));
+                }
+            }
+        }
+    };
+
+    let on_mouseup = move |_| {
+        set_is_dragging.set(false);
+        set_last_mouse_pos.set(None);
+    };
+
+    let on_wheel = move |ev: web_sys::WheelEvent| {
+        ev.prevent_default();
+        let delta = ev.delta_y();
+        let zoom_factor = if delta > 0.0 { 1.1 } else { 0.9 };
+
+        if let Some(canvas) = canvas_ref.get() {
+            let rect = canvas.get_bounding_client_rect();
+            let mouse_x = ev.client_x() as f64 - rect.left();
+            let w = canvas.client_width() as f64;
+
+            let (x_min, x_max) = view_range_x.get();
+            let x_range = x_max - x_min;
+            let cursor_x_rel = mouse_x / w;
+            let pivot_x = x_min + cursor_x_rel * x_range;
+
+            let new_x_min = pivot_x - (pivot_x - x_min) * zoom_factor;
+            let new_x_max = pivot_x + (x_max - pivot_x) * zoom_factor;
+
+            let (y_min, y_max) = view_range_y.get();
+            let y_range = y_max - y_min;
+            let new_y_min = y_min; // Keep Y static for now or zoom both
+            let new_y_max = y_min + y_range * zoom_factor;
+
+            set_view_range_x.set((new_x_min, new_x_max));
+            set_view_range_y.set((new_y_min, new_y_max));
+        }
+    };
 
     Effect::new(move |_| {
-        if let Some(div) = div_ref.get() {
-            let mut p = Plot::new();
-            let layout = Layout::new()
-                .margin(Margin::new().left(50).right(50).top(30).bottom(50))
-                .show_legend(true)
-                .paper_background_color("rgba(0,0,0,0)")
-                .plot_background_color("rgba(0,0,0,0)")
-                .font(plotly::common::Font::new().color("#94a3b8"))
-                .x_axis(
-                    Axis::new()
-                        .title(Title::from("Step"))
-                        .show_grid(true)
-                        .grid_color("#1e293b"),
+        use plotters::prelude::*;
+        use plotters_canvas::CanvasBackend;
+
+        if let Some(canvas) = canvas_ref.get() {
+            let (x_min, x_max) = view_range_x.get();
+            let (y_min, y_max) = view_range_y.get();
+
+            let w = canvas.parent_element().unwrap().client_width() as u32;
+            let h = canvas.parent_element().unwrap().client_height() as u32;
+            if w > 0 && h > 0 {
+                canvas.set_width(w);
+                canvas.set_height(h);
+            }
+
+            let backend = CanvasBackend::with_canvas_object(canvas.clone().into()).unwrap();
+            let root = backend.into_drawing_area();
+            let _ = root.fill(&WHITE);
+
+            let mut chart = ChartBuilder::on(&root)
+                .caption(
+                    &metric_key,
+                    ("sans-serif", 14)
+                        .into_font()
+                        .color(&BLACK),
                 )
-                .y_axis(
-                    Axis::new()
-                        .title(Title::from("Value"))
-                        .show_grid(true)
-                        .grid_color("#1e293b"),
-                );
+                .margin(10)
+                .x_label_area_size(30)
+                .y_label_area_size(40)
+                .build_cartesian_2d(x_min..x_max, y_min..y_max)
+                .unwrap();
 
-            p.set_layout(layout);
+            chart
+                .configure_mesh()
+                .disable_x_mesh()
+                .y_desc("Value")
+                .axis_style(RGBColor(203, 213, 225)) // Slate-300
+                .label_style(
+                    ("sans-serif", 10)
+                        .into_font()
+                        .color(&BLACK),
+                )
+                .draw()
+                .unwrap();
 
-            // Vector data for selected runs
-            // TODO: fetch real vector data from /api/experiments/{exp}/runs/{run}/metrics
-            for run_id in selected_runs.iter() {
-                let x: Vec<f64> = (0..20).map(|i| i as f64).collect();
-                let y: Vec<f64> = (0..20)
+            for (i, run_id) in selected_runs.iter().enumerate() {
+                let run_len: f64 = run_id.len() as f64;
+                let y_data: Vec<(f64, f64)> = (0..100)
                     .map(|i| {
-                        let base = (i as f64).sin();
-                        base + (run_id.len() as f64 % 10.0) / 10.0
+                        let x = i as f64;
+                        let base = x.sin().abs();
+                        let adjusted = base + (run_len % 10.0) / 10.0;
+                        (x, adjusted)
                     })
+                    .filter(|(x, y)| *x >= x_min - 2.0 && *x <= x_max + 2.0 && *y >= y_min - 2.0 && *y <= y_max + 2.0)
                     .collect();
 
-                let trace = Scatter::new(x, y)
-                    .name(run_id.as_str())
-                    .mode(plotly::common::Mode::LinesMarkers);
-                p.add_trace(trace);
+                let hex = CHART_COLORS[i % CHART_COLORS.len()];
+                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                let color = RGBColor(r, g, b);
+
+                chart
+                    .draw_series(LineSeries::new(y_data, color.stroke_width(2)))
+                    .unwrap();
             }
 
-            // Serialize to JSON string using plotly's to_json
-            let json_str = p.to_json();
-
-            // Parse JSON string to JS object
-            if let Ok(js_value) = js_sys::JSON::parse(&json_str) {
-                let data =
-                    js_sys::Reflect::get(&js_value, &"data".into()).unwrap_or(JsValue::UNDEFINED);
-                let layout =
-                    js_sys::Reflect::get(&js_value, &"layout".into()).unwrap_or(JsValue::UNDEFINED);
-                let config =
-                    js_sys::Reflect::get(&js_value, &"config".into()).unwrap_or(JsValue::UNDEFINED);
-
-                let div_element: &web_sys::HtmlElement = &div;
-                new_plot(&div_element.into(), &data, &layout, &config);
-            } else {
-                leptos::logging::error!("Failed to parse Plotly JSON");
-            }
+            let _ = root.present();
         }
     });
 
     view! {
-        <div class="w-full h-full p-2">
-            <div node_ref=div_ref class="w-full h-full"></div>
+        <div class="w-full h-full relative" style="min-height: 250px;">
+            <canvas
+                node_ref=canvas_ref
+                on:mousedown=on_mousedown
+                on:mousemove=on_mousemove
+                on:mouseup=on_mouseup
+                on:mouseleave=on_mouseup
+                on:wheel=on_wheel
+                class="absolute inset-0 w-full h-full cursor-crosshair"
+            ></canvas>
         </div>
     }
 }
@@ -976,6 +1173,7 @@ pub struct Artifact {
     pub path: String,
     pub size: u64,
     pub ext: String,
+    pub is_default: bool,
 }
 
 async fn fetch_artifacts(exp_id: String, run_id: String) -> Result<Vec<Artifact>, String> {
@@ -1020,7 +1218,30 @@ async fn fetch_artifact_content(
 
 #[component]
 fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
-    let run_id = selected.iter().next().cloned().unwrap_or_default();
+    if selected.is_empty() {
+        return view! { <div class="p-12 text-center text-slate-500">"Select one or more runs to browse artifacts."</div> }.into_any();
+    }
+
+    let selected_runs: Vec<String> = selected.into_iter().collect();
+
+    view! {
+        <div class="flex-grow flex flex-col overflow-auto h-full space-y-6 p-6">
+            {selected_runs.into_iter().map(|run_id| {
+                 view! {
+                     <div class="flex flex-col h-96 border border-slate-800 rounded-xl overflow-hidden mb-6 flex-shrink-0">
+                         <div class="bg-slate-900 border-b border-slate-800 p-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                             "Run: " {run_id.clone()}
+                         </div>
+                         <SingleArtifactView exp_id=exp_id.clone() run_id=run_id />
+                     </div>
+                 }
+            }).collect_view()}
+        </div>
+    }.into_any()
+}
+
+#[component]
+fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
     let (selected_path, set_selected_path) = signal("run.log".to_string());
 
     let exp_id_val = StoredValue::new(exp_id.clone());
@@ -1046,10 +1267,21 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
                 return Ok("Select a run".to_string());
             }
 
-            let ext = path.split('.').last().unwrap_or("").to_lowercase();
+            let ext = path.split('.').next_back().unwrap_or("").to_lowercase();
             if matches!(
                 ext.as_str(),
-                "mp4" | "webm" | "ogg" | "mp3" | "wav" | "flac"
+                "mp4"
+                    | "webm"
+                    | "ogg"
+                    | "mp3"
+                    | "wav"
+                    | "flac"
+                    | "png"
+                    | "jpg"
+                    | "jpeg"
+                    | "svg"
+                    | "gif"
+                    | "webp"
             ) {
                 return Ok(String::new());
             }
@@ -1057,10 +1289,6 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
             fetch_artifact_content(eid, rid, path).await
         }
     });
-
-    if run_id_val.with_value(|v| v.is_empty()) {
-        return view! { <div class="p-12 text-center text-slate-500">"Select a single run to browse artifacts."</div> }.into_any();
-    }
 
     view! {
         <div class="flex h-full divide-x divide-slate-800">
@@ -1070,31 +1298,89 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
                 <Suspense fallback=|| view! { <div class="p-4 text-slate-500 text-sm">"Loading..."</div> }>
                     {move || Suspend::new(async move {
                         let list = artifact_resource.await.unwrap_or_default();
-                        view! {
-                            <div class="space-y-1">
-                                {list.into_iter().map(|a| {
-                                    let path = a.path.clone();
-                                    let is_active = move || selected_path.get() == a.path;
-                                    view! {
-                                        <div
-                                            on:click=move |_| set_selected_path.set(path.clone())
-                                            class=move || format!(
-                                                "p-3 rounded-lg text-sm transition-colors cursor-pointer {}",
-                                                if is_active() { "bg-blue-600/10 text-blue-400 font-medium border border-blue-500/20" } else { "text-slate-400 hover:bg-slate-800 border border-transparent" }
-                                            )
-                                        >
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center space-x-2">
-                                                    <div class="w-2 h-2 rounded-full bg-slate-700"></div>
-                                                    <span class="truncate">{a.name}</span>
-                                                </div>
-                                                <span class="text-[10px] text-slate-600 font-mono">{(a.size / 1024).max(1)} " KB"</span>
-                                            </div>
-                                        </div>
-                                    }.into_any()
-                                }).collect_view()}
-                            </div>
+
+                        let mut default_artifacts = Vec::new();
+                        let mut stored_artifacts = Vec::new();
+
+                        for a in list.into_iter() {
+                            if !a.is_default {
+                                stored_artifacts.push(a);
+                            } else {
+                                default_artifacts.push(a);
+                            }
                         }
+
+                        view! {
+                            <div class="space-y-4 pb-8">
+                                <div class="space-y-1">
+                                    {if !default_artifacts.is_empty() {
+                                        view! {
+                                            <div class="pt-2 pb-1 px-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-2">
+                                                <div class="h-px bg-slate-700 flex-grow"></div>
+                                                <span>"Default"</span>
+                                                <div class="h-px bg-slate-700 flex-grow"></div>
+                                            </div>
+                                            {default_artifacts.into_iter().map(|a| {
+                                                let path = a.path.clone();
+                                                let is_active = move || selected_path.get() == a.path;
+                                                view! {
+                                                    <div
+                                                        on:click=move |_| set_selected_path.set(path.clone())
+                                                        class=move || format!(
+                                                            "p-3 rounded-lg text-sm transition-colors cursor-pointer {}",
+                                                            if is_active() { "bg-blue-600/10 text-blue-400 font-medium border border-blue-500/20" } else { "text-slate-400 hover:bg-slate-800 border border-transparent" }
+                                                        )
+                                                    >
+                                                        <div class="flex items-center justify-between">
+                                                            <div class="flex items-center space-x-2 truncate">
+                                                                <div class="flex-shrink-0 w-2 h-2 rounded-full bg-slate-700"></div>
+                                                                <span class="truncate">{a.name}</span>
+                                                            </div>
+                                                            <span class="flex-shrink-0 ml-2 text-[10px] text-slate-600 font-mono">{(a.size / 1024).max(1)} " KB"</span>
+                                                        </div>
+                                                    </div>
+                                                }.into_any()
+                                            }).collect_view()}
+                                        }.into_any()
+                                    } else {
+                                        view! { <span class="hidden"></span> }.into_any()
+                                    }}
+
+                                    {if !stored_artifacts.is_empty() {
+                                        view! {
+                                            <div class="pt-4 pb-1 px-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center space-x-2">
+                                                <div class="h-px bg-slate-700 flex-grow"></div>
+                                                <span>"Artifacts"</span>
+                                                <div class="h-px bg-slate-700 flex-grow"></div>
+                                            </div>
+                                            {stored_artifacts.into_iter().map(|a| {
+                                                let path = a.path.clone();
+                                                let is_active = move || selected_path.get() == a.path;
+                                                view! {
+                                                    <div
+                                                        on:click=move |_| set_selected_path.set(path.clone())
+                                                        class=move || format!(
+                                                            "p-3 rounded-lg text-sm transition-colors cursor-pointer {}",
+                                                            if is_active() { "bg-blue-600/10 text-blue-400 font-medium border border-blue-500/20" } else { "text-slate-400 hover:bg-slate-800 border border-transparent" }
+                                                        )
+                                                    >
+                                                        <div class="flex items-center justify-between">
+                                                            <div class="flex items-center space-x-2 truncate">
+                                                                <div class="flex-shrink-0 w-2 h-2 rounded-full bg-slate-700"></div>
+                                                                <span class="truncate">{a.name}</span>
+                                                            </div>
+                                                            <span class="flex-shrink-0 ml-2 text-[10px] text-slate-600 font-mono">{(a.size / 1024).max(1)} " KB"</span>
+                                                        </div>
+                                                    </div>
+                                                }.into_any()
+                                            }).collect_view()}
+                                        }.into_any()
+                                    } else {
+                                        view! { <span class="hidden"></span> }.into_any()
+                                    }}
+                                </div>
+                            </div>
+                        }.into_any()
                     })}
                 </Suspense>
             </div>
@@ -1114,10 +1400,11 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
                         let prev_run_id = run_id.clone();
                         move || {
                             let path = selected_path.get();
-                            let ext = path.split('.').last().unwrap_or("").to_lowercase();
+                            let ext = path.split('.').next_back().unwrap_or("").to_lowercase();
                             let is_video = matches!(ext.as_str(), "mp4" | "webm" | "ogg");
                             let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "flac");
-                            
+                            let is_image = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "svg" | "gif" | "webp");
+
                             let media_url = format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", prev_exp_id.clone(), prev_run_id.clone(), path);
 
                         if is_video {
@@ -1130,6 +1417,14 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
                            view! {
                                <div class="flex items-center justify-center p-8 w-full h-full">
                                    <audio controls class="w-full max-w-md shadow-lg" src=media_url></audio>
+                               </div>
+                           }.into_any()
+                        } else if is_image {
+                           view! {
+                               <div class="flex items-center justify-center p-4 w-full h-full overflow-hidden">
+                                   <div class="absolute inset-0 max-w-full max-h-full flex items-center justify-center p-4">
+                                       <img class="max-w-full max-h-full object-contain rounded-lg shadow-lg" src=media_url />
+                                   </div>
                                </div>
                            }.into_any()
                         } else {
@@ -1152,50 +1447,83 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
 }
 
 #[component]
-fn ConsoleView(exp_id: String, selected: std::collections::HashSet<String>) -> impl IntoView {
-    let run_id = selected.iter().next().cloned().unwrap_or_default();
+fn ConsoleView(
+    exp_id: String,
+    selected: std::collections::HashSet<String>,
+    runs: Vec<Run>,
+) -> impl IntoView {
+    if selected.is_empty() {
+        return view! { <div class="p-12 text-center text-slate-500">"Select one or more runs to view live console output."</div> }.into_any();
+    }
+
+    let selected_runs: Vec<String> = selected.into_iter().collect();
+
+    view! {
+        <div class="flex-grow flex flex-col overflow-auto p-4 space-y-8 bg-black">
+            {selected_runs.into_iter().map(|run| {
+                 let status = runs.iter().find(|r| r.name == run).map(|r| r.status.clone()).unwrap_or_else(|| "UNKNOWN".to_string());
+                 view! {
+                     <div class="flex flex-col flex-shrink-0" style="min-height: 20rem;">
+                         <div class="text-xs font-bold text-slate-400 border-b border-slate-800 pb-1 mb-2 uppercase">
+                             "Run: " {run.clone()} " - " {status.clone()}
+                         </div>
+                         <SingleConsoleView exp_id=exp_id.clone() run_id=run status=status />
+                     </div>
+                 }
+            }).collect_view()}
+        </div>
+    }.into_any()
+}
+
+#[component]
+fn SingleConsoleView(exp_id: String, run_id: String, status: String) -> impl IntoView {
     let (logs, set_logs) = signal(Vec::<String>::new());
+    let is_connected = Rc::new(Cell::new(true));
 
     let exp_id_val = StoredValue::new(exp_id.clone());
     let run_id_val = StoredValue::new(run_id.clone());
 
-    // Effect to handle SSE streaming
-    Effect::new(move |_| {
-        let rid = run_id_val.with_value(|v| v.clone());
-        if rid.is_empty() {
-            return;
-        }
-
-        let url = format!(
-            "/api/experiments/{}/runs/{}/log/stream",
-            exp_id_val.with_value(|v| v.clone()),
-            rid
-        );
-        let event_source = web_sys::EventSource::new(&url).unwrap();
-
-        let on_message = wasm_bindgen::prelude::Closure::<dyn FnMut(web_sys::MessageEvent)>::new(
-            move |e: web_sys::MessageEvent| {
-                if let Some(data) = e.data().as_string() {
-                    if !data.is_empty() {
-                        set_logs.update(|l| l.push(data));
-                    }
+    let on_message = wasm_bindgen::prelude::Closure::<dyn FnMut(web_sys::MessageEvent)>::new(
+        move |e: web_sys::MessageEvent| {
+            if let Some(data) = e.data().as_string() {
+                if !data.is_empty() {
+                    set_logs.update(|l| l.push(data));
                 }
-            },
-        );
+            }
+        },
+    );
 
-        event_source.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
-        on_message.forget(); // Leak for simplicity in this demo/agentic context, or store in cleanup
+    let url = format!(
+        "/api/experiments/{}/runs/{}/log/stream",
+        exp_id_val.with_value(|v| v.clone()),
+        run_id_val.with_value(|v| v.clone())
+    );
+    let event_source = web_sys::EventSource::new(&url).unwrap();
+    let es_clone = event_source.clone();
+
+    let is_connected_clone = is_connected.clone();
+    let on_error = wasm_bindgen::prelude::Closure::<dyn FnMut(web_sys::Event)>::new(
+        move |_e: web_sys::Event| {
+            if es_clone.ready_state() == web_sys::EventSource::CLOSED {
+                is_connected_clone.set(false);
+                set_logs.update(|l| l.push("[system] Connection permanently closed.".to_string()));
+            }
+        },
+    );
+
+    event_source.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
+    event_source.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+
+    on_message.forget();
+    on_error.forget();
+
+    on_cleanup(move || {
+        event_source.close();
     });
 
-    if run_id_val.with_value(|v| v.is_empty()) {
-        return view! { <div class="p-12 text-center text-slate-500">"Select a single run to view live console output."</div> }.into_any();
-    }
-
     view! {
-        <div class="flex-grow flex flex-col bg-black overflow-hidden font-mono text-xs p-4">
+        <div class="flex-grow flex flex-col overflow-hidden font-mono text-xs">
             <div class="flex-grow overflow-auto space-y-1 custom-scrollbar" id="console-scroll">
-                <div class="text-green-500">"$ tail -f /api/experiments/" {exp_id} "/runs/" {run_id} "/log/stream"</div>
-                <div class="text-slate-400">"[system] Connection established to SSE stream..."</div>
                 <For
                     each=move || logs.get().into_iter().enumerate()
                     key=|(i, _)| *i
@@ -1203,8 +1531,25 @@ fn ConsoleView(exp_id: String, selected: std::collections::HashSet<String>) -> i
                 />
             </div>
             <div class="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
-                <span class="text-slate-600">"Streaming Live"</span>
-                <span class="text-blue-500 animate-pulse">"●"</span>
+                {
+                    let connected = is_connected.get();
+                    if connected && status == "RUNNING" {
+                        view! {
+                            <span class="text-slate-600">"Streaming Live"</span>
+                            <span class="text-blue-500 animate-pulse">"●"</span>
+                        }.into_any()
+                    } else if status == "FAILED" {
+                        view! {
+                            <span class="text-slate-600">"Run Failed / Connection Closed"</span>
+                            <span class="text-red-500">"●"</span>
+                        }.into_any()
+                    } else {
+                        view! {
+                            <span class="text-slate-600">"Run Completed / Connection Closed"</span>
+                            <span class="text-emerald-500">"●"</span>
+                        }.into_any()
+                    }
+                }
             </div>
         </div>
     }.into_any()
@@ -1488,7 +1833,7 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                         spawn_local(async move {
                             if let Ok(port) = start_jupyter(eid, rid).await {
                                 set_jupyter_port.set(Some(port));
-                                // Ping the root URL until it responds. 
+                                // Ping the root URL until it responds.
                                 // We use NoCors mode because the dashboard and jupyter are on different ports.
                                 // Any response (even a 302 redirect) indicates the server is UP.
                                 let url = format!("http://localhost:{}/", port);
@@ -1770,145 +2115,439 @@ fn NotFound() -> impl IntoView {
 }
 
 #[component]
-fn RunsTableView(exp_id: String) -> impl IntoView {
-    let runs = LocalResource::new(move || {
-        let id = exp_id.clone();
-        async move { fetch_runs(id).await }
-    });
-
+fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>) -> impl IntoView {
     // Which metric columns are currently visible (None = all visible)
     let (selected_metrics, set_selected_metrics) =
         signal(std::collections::HashSet::<String>::new());
     let (metrics_initialized, set_metrics_initialized) = signal(false);
 
-    view! {
-        <div class="flex-grow p-6 overflow-auto space-y-4">
-             <Suspense fallback=|| view! { <div class="p-4 text-center text-slate-500">"Loading runs..."</div> }>
-                {move || Suspend::new(async move {
-                    let run_list = runs.await.unwrap_or_default();
-                    if run_list.is_empty() {
-                        return view! { <div class="p-12 text-center text-slate-500">"No runs found for this experiment."</div> }.into_any();
-                    }
-
-                    // Collect all unique scalar keys (sorted)
-                    let all_scalar_keys: Vec<String> = {
-                        let mut keys = std::collections::BTreeSet::new();
-                        for run in &run_list {
-                            if let Some(scalars) = &run.scalars {
-                                for key in scalars.keys() {
-                                    keys.insert(key.clone());
-                                }
-                            }
-                        }
-                        keys.into_iter().collect()
-                    };
-
-                    // Initialize selected_metrics to all keys on first load
-                    if !metrics_initialized.get() && !all_scalar_keys.is_empty() {
-                        set_selected_metrics.set(all_scalar_keys.iter().cloned().collect());
-                        set_metrics_initialized.set(true);
-                    }
-
-                    let keys_for_filter = all_scalar_keys.clone();
-                    let keys_for_table = all_scalar_keys.clone();
-
-                    view! {
-                        // ── Metric filter chips ──────────────────────────────────
-                        {if !keys_for_filter.is_empty() {
-                            view! {
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Scalars:"</span>
-                                    {keys_for_filter.into_iter().map(|key| {
-                                        let k1 = key.clone();
-                                        let k2 = key.clone();
-                                        let is_on = Signal::derive(move || selected_metrics.with(|s| s.contains(&k1)));
-                                        view! {
-                                            <button
-                                                on:click=move |_| {
-                                                    let k = k2.clone();
-                                                    set_selected_metrics.update(|s| {
-                                                        if s.contains(&k) { s.remove(&k); } else { s.insert(k); }
-                                                    });
-                                                }
-                                                class=move || format!(
-                                                    "px-3 py-1 rounded-full text-xs font-medium border transition-all duration-150 {}",
-                                                    if is_on.get() {
-                                                        "bg-blue-600/20 border-blue-500/50 text-blue-300 hover:bg-blue-600/30"
-                                                    } else {
-                                                        "bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-400"
-                                                    }
-                                                )
-                                            >
-                                                {key}
-                                            </button>
-                                        }
-                                    }).collect_view()}
-                                </div>
-                            }.into_any()
-                        } else {
-                            view! { <div></div> }.into_any()
-                        }}
-
-                        // ── Runs table ───────────────────────────────────────────
-                        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                            <table class="w-full text-left border-collapse">
-                                <thead class="bg-slate-950 text-xs uppercase text-slate-500 font-semibold sticky top-0">
-                                    <tr>
-                                        <th class="p-4 border-b border-slate-800">"Run ID"</th>
-                                        <th class="p-4 border-b border-slate-800">"Status"</th>
-                                        {keys_for_table.iter().filter(|k| selected_metrics.with(|s| s.contains(*k))).map(|k| view! {
-                                            <th class="p-4 border-b border-slate-800 text-blue-400">{k.clone()}</th>
-                                        }).collect_view()}
-                                        <th class="p-4 border-b border-slate-800">"Duration"</th>
-                                        <th class="p-4 border-b border-slate-800">"Started"</th>
-                                        <th class="p-4 border-b border-slate-800">"Description"</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-800/50 text-sm text-slate-300">
-                                    {run_list.into_iter().map(|run| {
-                                        let duration = run.duration_secs.map(|d| format!("{:.1}s", d)).unwrap_or("-".to_string());
-                                        let (status_color, status_bg, status_border) = match run.status.as_str() {
-                                            "RUNNING"   => ("text-blue-400",   "bg-blue-500",   "border-blue-500"),
-                                            "COMPLETED" => ("text-emerald-400", "bg-emerald-500", "border-emerald-500"),
-                                            "FAILED"    => ("text-red-400",     "bg-red-500",     "border-red-500"),
-                                            _           => ("text-slate-400",   "bg-slate-600",   "border-slate-500"),
-                                        };
-                                        let dot_class = if run.status == "RUNNING" { "animate-pulse" } else { "" };
-                                        let run_scalars = run.scalars.clone().unwrap_or_default();
-                                        let scalar_cols: Vec<String> = keys_for_table.iter()
-                                            .filter(|k| selected_metrics.with(|s| s.contains(*k)))
-                                            .cloned()
-                                            .collect();
-
-                                        view! {
-                                            <tr class="hover:bg-slate-800/30 transition-colors group">
-                                                <td class="p-4 font-mono text-white flex items-center space-x-2">
-                                                    <div class=format!("w-2 h-2 rounded-full {} {}", status_bg, dot_class)></div>
-                                                    <span>{run.name}</span>
-                                                </td>
-                                                <td class="p-4">
-                                                    <span class=format!("px-2 py-1 rounded text-xs font-medium bg-opacity-10 border border-opacity-20 {} {} {}", status_bg, status_color, status_border)>
-                                                        {run.status}
-                                                    </span>
-                                                </td>
-                                                {scalar_cols.into_iter().map(|k| {
-                                                    let val = run_scalars.get(&k)
-                                                        .map(|v| v.to_string())
-                                                        .unwrap_or_else(|| "-".to_string());
-                                                    view! { <td class="p-4 font-mono text-slate-400">{val}</td> }
-                                                }).collect_view()}
-                                                <td class="p-4 font-mono text-slate-400">{duration}</td>
-                                                <td class="p-4 text-slate-400 whitespace-nowrap">{format_date(&run.started_at)}</td>
-                                                <td class="p-4 text-slate-500 truncate max-w-xs group-hover:text-slate-300 transition-colors">{run.description.unwrap_or_default()}</td>
-                                            </tr>
-                                        }
-                                    }).collect_view()}
-                                </tbody>
-                            </table>
-                        </div>
-                    }.into_any()
-                })}
-             </Suspense>
-        </div>
+    if runs.is_empty() {
+        return view! {
+            <div class="flex-grow p-6 overflow-auto space-y-4">
+                <div class="p-12 text-center text-slate-500">"No runs found for this experiment."</div>
+            </div>
+        }.into_any();
     }
+
+    // Collect all unique scalar keys (sorted)
+    let all_scalar_keys: Vec<String> = {
+        let mut keys = std::collections::BTreeSet::new();
+        for run in &runs {
+            if let Some(scalars) = &run.scalars {
+                for key in scalars.keys() {
+                    keys.insert(key.clone());
+                }
+            }
+        }
+        keys.into_iter().collect()
+    };
+
+    // Collect all unique tags
+    let all_tags: Vec<String> = {
+        let mut tags = std::collections::BTreeSet::new();
+        for run in &runs {
+            if let Some(t) = &run.tags {
+                for val in t {
+                    tags.insert(val.clone());
+                }
+            }
+        }
+        tags.into_iter().collect()
+    };
+
+    let (selected_meta, set_selected_meta) = signal({
+        let mut s = std::collections::HashSet::new();
+        s.insert("Status".to_string());
+        s.insert("Duration".to_string());
+        s.insert("Started".to_string());
+        s.insert("Finished".to_string());
+        s
+    });
+    let metadata_cols = vec![
+        "Status".to_string(),
+        "Duration".to_string(),
+        "Started".to_string(),
+        "Finished".to_string(),
+    ];
+
+    // Which tags are selected for filtering (None = all visible)
+    let (selected_tags, set_selected_tags) = signal(std::collections::HashSet::<String>::new());
+
+    // Initialize selected_metrics to all keys on first load
+    if !metrics_initialized.get() && !all_scalar_keys.is_empty() {
+        set_selected_metrics.set(all_scalar_keys.iter().cloned().collect());
+        set_metrics_initialized.set(true);
+    }
+
+    let runs_for_filter = runs.clone();
+    let filtered_runs = move || {
+        let active_tags = selected_tags.get();
+        if active_tags.is_empty() {
+            runs_for_filter.clone()
+        } else {
+            runs_for_filter
+                .clone()
+                .into_iter()
+                .filter(|r| {
+                    let current_run_tags: std::collections::HashSet<String> =
+                        r.tags.clone().unwrap_or_default().into_iter().collect();
+                    active_tags.iter().all(|t| current_run_tags.contains(t))
+                })
+                .collect::<Vec<_>>()
+        }
+    };
+
+    let keys_for_filter = all_scalar_keys.clone();
+    let keys_for_table = all_scalar_keys.clone();
+    // Clones for export closures
+    let runs_for_csv = runs.clone();
+    let runs_for_latex = runs.clone();
+    let runs_for_typst = runs.clone();
+    let keys_csv = all_scalar_keys.clone();
+    let keys_latex = all_scalar_keys.clone();
+    let keys_typst = all_scalar_keys.clone();
+
+    // ── Helper: trigger a browser file download ───────────────────
+    fn trigger_download(content: &str, filename: &str, mime: &str) {
+        use wasm_bindgen::JsCast;
+        let blob_parts = js_sys::Array::new();
+        blob_parts.push(&wasm_bindgen::JsValue::from_str(content));
+        let opts = web_sys::BlobPropertyBag::new();
+        opts.set_type(mime);
+        let blob = web_sys::Blob::new_with_str_sequence_and_options(&blob_parts, &opts).unwrap();
+        let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+        let doc = web_sys::window().unwrap().document().unwrap();
+        let a: web_sys::HtmlAnchorElement = doc.create_element("a").unwrap().dyn_into().unwrap();
+        a.set_href(&url);
+        a.set_download(filename);
+        a.click();
+        let _ = web_sys::Url::revoke_object_url(&url);
+    }
+
+    // ── Export: CSV ───────────────────────────────────────────────
+    let export_csv = move |_| {
+        let sel: std::collections::HashSet<String> = selected_metrics.get();
+        let active_keys: Vec<&String> = keys_csv.iter().filter(|k| sel.contains(*k)).collect();
+        let mut csv = String::from("Run ID,Status,");
+        csv.push_str(
+            &active_keys
+                .iter()
+                .map(|k| k.as_str())
+                .collect::<Vec<_>>()
+                .join(","),
+        );
+        csv.push_str(",Duration,Started,Finished,Description,Tags\n");
+        for run in &runs_for_csv {
+            let scalars = run.scalars.clone().unwrap_or_default();
+            let dur = run
+                .duration_secs
+                .map(|d| format!("{:.1}", d))
+                .unwrap_or("-".into());
+            let desc = run
+                .description
+                .clone()
+                .unwrap_or_default()
+                .replace(',', ";");
+            let tags = run.tags.clone().unwrap_or_default().join("; ");
+            csv.push_str(&format!("{},{},", run.name, run.status));
+            for k in &active_keys {
+                let v = scalars.get(*k).map(|v| v.to_string()).unwrap_or("-".into());
+                csv.push_str(&format!("{},", v));
+            }
+                let finished = run.finished_at.as_ref().map(|f| f.as_str()).unwrap_or("-");
+                csv.push_str(&format!("{},{},{},{},{}\n", dur, run.started_at, finished, desc, tags));
+        }
+        trigger_download(&csv, "runs.csv", "text/csv");
+    };
+
+    // ── Export: LaTeX ─────────────────────────────────────────────
+    let export_latex = move |_| {
+        let sel: std::collections::HashSet<String> = selected_metrics.get();
+        let active_keys: Vec<&String> = keys_latex.iter().filter(|k| sel.contains(*k)).collect();
+        let ncols = 3 + active_keys.len() + 3; // Run, Status, metrics…, Duration, Started, Desc
+        let col_spec = format!("{{{}}}", "l".repeat(ncols));
+        let mut tex = format!("\\begin{{tabular}}{}\n\\toprule\nRun ID & Status", col_spec);
+        for k in &active_keys {
+            tex.push_str(&format!(" & {}", k));
+        }
+        tex.push_str(" & Duration & Started & Finished & Description \\\\\n\\midrule\n");
+        for run in &runs_for_latex {
+            let scalars = run.scalars.clone().unwrap_or_default();
+            let dur = run
+                .duration_secs
+                .map(|d| format!("{:.1}s", d))
+                .unwrap_or("-".into());
+            let desc = run.description.clone().unwrap_or_default();
+            tex.push_str(&format!("{} & {}", run.name, run.status));
+            for k in &active_keys {
+                let v = scalars.get(*k).map(|v| v.to_string()).unwrap_or("-".into());
+                tex.push_str(&format!(" & {}", v));
+            }
+            let finished = run.finished_at.as_ref().map(|f| format_date(f)).unwrap_or_else(|| "-".into());
+            tex.push_str(&format!(
+                " & {} & {} & {} & {} \\\\\n",
+                dur,
+                format_date(&run.started_at),
+                finished,
+                desc
+            ));
+        }
+        tex.push_str("\\bottomrule\n\\end{tabular}\n");
+        trigger_download(&tex, "runs.tex", "application/x-tex");
+    };
+
+    // ── Export: Typst ─────────────────────────────────────────────
+    let export_typst = move |_| {
+        let sel: std::collections::HashSet<String> = selected_metrics.get();
+        let active_keys: Vec<&String> = keys_typst.iter().filter(|k| sel.contains(*k)).collect();
+        let ncols = 3 + active_keys.len() + 3;
+        let mut typ = format!("#table(\n  columns: {},\n  ", ncols);
+        // Header row
+        typ.push_str("[*Run ID*], [*Status*]");
+        for k in &active_keys {
+            typ.push_str(&format!(", [*{}*]", k));
+        }
+        typ.push_str(", [*Duration*], [*Started*], [*Finished*], [*Description*],\n");
+        for run in &runs_for_typst {
+            let scalars = run.scalars.clone().unwrap_or_default();
+            let dur = run
+                .duration_secs
+                .map(|d| format!("{:.1}s", d))
+                .unwrap_or("-".into());
+            let desc = run.description.clone().unwrap_or_default();
+            typ.push_str(&format!("  [{}], [{}]", run.name, run.status));
+            for k in &active_keys {
+                let v = scalars.get(*k).map(|v| v.to_string()).unwrap_or("-".into());
+                typ.push_str(&format!(", [{}]", v));
+            }
+            let finished = run.finished_at.as_ref().map(|f| format_date(f)).unwrap_or_else(|| "-".into());
+            typ.push_str(&format!(
+                ", [{}], [{}], [{}], [{}],\n",
+                dur,
+                format_date(&run.started_at),
+                finished,
+                desc
+            ));
+        }
+        typ.push_str(")\n");
+        trigger_download(&typ, "runs.typ", "text/plain");
+    };
+
+    view! {
+            <div class="flex items-center justify-between flex-shrink-0 flex-wrap gap-2 mb-2">
+                <div class="flex items-center gap-2 pl-4">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Export:"</span>
+                    <button on:click=export_csv class="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/25 transition-all">"CSV"</button>
+                    <button on:click=export_latex class="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600/15 border border-violet-500/30 text-violet-400 hover:bg-violet-600/25 transition-all">"LaTeX"</button>
+                    <button on:click=export_typst class="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-600/15 border border-amber-500/30 text-amber-400 hover:bg-amber-600/25 transition-all">"Typst"</button>
+                </div>
+            </div>
+            <div class="flex items-center justify-between flex-shrink-0 flex-wrap gap-2 mb-4">
+                <div class="flex flex-col gap-2">
+                    <div class="flex flex-wrap items-center gap-2 pl-4">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Metadata:"</span>
+                        {metadata_cols.into_iter().map(|key| {
+                            let k1 = key.clone();
+                            let k2 = key.clone();
+                            let is_on = Signal::derive(move || selected_meta.with(|s| s.contains(&k1)));
+                            view! {
+                                <button
+                                    on:click=move |_| {
+                                        let k = k2.clone();
+                                        set_selected_meta.update(|s| {
+                                            if s.contains(&k) { s.remove(&k); } else { s.insert(k); }
+                                        });
+                                    }
+                                    class=move || format!(
+                                        "px-3 py-1 rounded-full text-xs font-medium border transition-all duration-150 {}",
+                                        if is_on.get() {
+                                            "bg-violet-600/20 border-violet-500/50 text-violet-300 hover:bg-violet-600/30"
+                                        } else {
+                                            "bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-400"
+                                        }
+                                    )
+                                >
+                                    {key}
+                                </button>
+                            }
+                        }).collect_view()}
+                    </div>
+                    {if !keys_for_filter.is_empty() {
+                        view! {
+                            <div class="flex flex-wrap items-center gap-2 pl-4">
+                                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Scalars:"</span>
+                                {keys_for_filter.into_iter().map(|key| {
+                                    let k1 = key.clone();
+                                    let k2 = key.clone();
+                                    let is_on = Signal::derive(move || selected_metrics.with(|s| s.contains(&k1)));
+                                    view! {
+                                        <button
+                                            on:click=move |_| {
+                                                let k = k2.clone();
+                                                set_selected_metrics.update(|s| {
+                                                    if s.contains(&k) { s.remove(&k); } else { s.insert(k); }
+                                                });
+                                            }
+                                            class=move || format!(
+                                                "px-3 py-1 rounded-full text-xs font-medium border transition-all duration-150 {}",
+                                                if is_on.get() {
+                                                    "bg-blue-600/20 border-blue-500/50 text-blue-300 hover:bg-blue-600/30"
+                                                } else {
+                                                    "bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-400"
+                                                }
+                                            )
+                                        >
+                                            {key}
+                                        </button>
+                                    }
+                                }).collect_view()}
+                            </div>
+                        }.into_any()
+                    } else {
+                        view! { <div></div> }.into_any()
+                    }}
+
+                    {if !all_tags.is_empty() {
+                        view! {
+                            <div class="flex flex-wrap items-center gap-2 pl-4">
+                                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">"Tags:"</span>
+                                {all_tags.into_iter().map(|tag| {
+                                    let t1 = tag.clone();
+                                    let t2 = tag.clone();
+                                    let is_on = Signal::derive(move || selected_tags.with(|s| s.contains(&t1)));
+                                    view! {
+                                        <button
+                                            on:click=move |_| {
+                                                let t = t2.clone();
+                                                set_selected_tags.update(|s| {
+                                                    if s.contains(&t) { s.remove(&t); } else { s.insert(t); }
+                                                });
+                                            }
+                                            class=move || format!(
+                                                "px-3 py-1 rounded-full text-[10px] font-medium border transition-all duration-150 {}",
+                                                if is_on.get() {
+                                                    "bg-emerald-600/20 border-emerald-500/50 text-emerald-300 hover:bg-emerald-600/30"
+                                                } else {
+                                                    "bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-400"
+                                                }
+                                            )
+                                        >
+                                            {tag}
+                                        </button>
+                                    }
+                                }).collect_view()}
+                            </div>
+                        }.into_any()
+                    } else {
+                        view! { <div class="hidden"></div> }.into_any()
+                    }}
+                </div>
+            </div>
+
+            // ── Scrollable runs table ─────────────────────────────────
+            <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-auto flex-grow min-h-0">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-950 text-xs uppercase text-slate-500 font-semibold sticky top-0 z-10">
+                        <tr>
+                            <th class="p-4 border-b border-slate-800">"Run ID"</th>
+                            {move || if selected_meta.with(|s| s.contains("Status")) { view! { <th class="p-4 border-b border-slate-800">"Status"</th> }.into_any() } else { view!{<th class="hidden"></th>}.into_any() } }
+                            {
+                                let kt = keys_for_table.clone();
+                                move || kt.clone().into_iter().filter(|k| selected_metrics.with(|s| s.contains(k))).map(|k| view! {
+                                    <th class="p-4 border-b border-slate-800 text-blue-400">{k}</th>
+                                }).collect_view()
+                            }
+                            {move || if selected_meta.with(|s| s.contains("Duration")) { view! { <th class="p-4 border-b border-slate-800">"Duration"</th> }.into_any() } else { view!{<th class="hidden"></th>}.into_any() } }
+                            {move || if selected_meta.with(|s| s.contains("Started")) { view! { <th class="p-4 border-b border-slate-800">"Started"</th> }.into_any() } else { view!{<th class="hidden"></th>}.into_any() } }
+                            {move || if selected_meta.with(|s| s.contains("Finished")) { view! { <th class="p-4 border-b border-slate-800">"Finished"</th> }.into_any() } else { view!{<th class="hidden"></th>}.into_any() } }
+                            <th class="p-4 border-b border-slate-800">"Description / Tags"</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/50 text-sm text-slate-300">
+                        {move || filtered_runs().into_iter().map(|run| {
+                            let run = run.clone();
+                            let duration = run.duration_secs.map(|d| format!("{:.1}s", d)).unwrap_or("-".to_string());
+                            let (status_color, status_bg, status_border) = match run.status.as_str() {
+                                "RUNNING"   => ("text-blue-400",   "bg-blue-500",   "border-blue-500"),
+                                "COMPLETED" => ("text-emerald-400", "bg-emerald-500", "border-emerald-500"),
+                                "FAILED"    => ("text-red-400",     "bg-red-500",     "border-red-500"),
+                                _           => ("text-slate-400",   "bg-slate-600",   "border-slate-500"),
+                            };
+                            let dot_class = if run.status == "RUNNING" { "animate-pulse" } else { "" };
+                            let run_scalars = run.scalars.clone().unwrap_or_default();
+                            let scalar_cols: Vec<String> = keys_for_table.iter()
+                                .filter(|k| selected_metrics.with(|s| s.contains(*k)))
+                                .cloned()
+                                .collect();
+
+                            let run_for_edit = run.clone();
+                            let name = run.name.clone();
+                            let status = run.status.clone();
+                            let desc = run.description.clone();
+                            let tags = run.tags.clone();
+
+                            view! {
+                                <tr class="hover:bg-slate-800/30 transition-colors group">
+                                    <td class="p-4 font-mono text-white flex items-center space-x-2">
+                                        <div class=format!("w-2 h-2 rounded-full {} {}", status_bg, dot_class)></div>
+                                        <span>{name}</span>
+                                    </td>
+                                    {if selected_meta.with(|s| s.contains("Status")) {
+                                        let my_status = status.clone();
+                                        view! {
+                                            <td class="p-4">
+                                                <span class=format!("px-2 py-1 rounded text-xs font-medium bg-opacity-10 border border-opacity-20 {} {} {}", status_bg, status_color, status_border)>
+                                                    {my_status}
+                                                </span>
+                                            </td>
+                                        }.into_any()
+                                    } else { view!{<td class="hidden"></td>}.into_any() }}
+
+                                    {scalar_cols.clone().into_iter().map(|k| {
+                                        let val = run_scalars.get(&k)
+                                            .map(|v| v.to_string())
+                                            .unwrap_or_else(|| "-".to_string());
+                                        view! { <td class="p-4 font-mono text-slate-400">{val}</td> }
+                                    }).collect_view()}
+
+                                    {if selected_meta.with(|s| s.contains("Duration")) {
+                                        let d = duration.clone();
+                                        view! { <td class="p-4 font-mono text-slate-400">{d}</td> }.into_any()
+                                    } else { view!{<td class="hidden"></td>}.into_any() }}
+
+                                    {if selected_meta.with(|s| s.contains("Started")) {
+                                        view! { <td class="p-4 text-slate-400 whitespace-nowrap">{format_date(&run.started_at)}</td> }.into_any()
+                                    } else { view!{<td class="hidden"></td>}.into_any() }}
+
+                                    {if selected_meta.with(|s| s.contains("Finished")) {
+                                        let finished = run.finished_at.as_ref().map(|f| format_date(f)).unwrap_or_else(|| "-".to_string());
+                                        view! { <td class="p-4 text-slate-400 whitespace-nowrap">{finished}</td> }.into_any()
+                                    } else { view!{<td class="hidden"></td>}.into_any() }}
+
+                                    <td class="p-4 transition-colors max-w-sm">
+                                        <div class="flex items-start justify-between group/cell">
+                                            <div class="flex-grow">
+                                                <div class="text-slate-300 font-medium">{desc.unwrap_or_default()}</div>
+                                                <div class="flex flex-wrap gap-1 mt-1 empty:hidden">
+                                                    {tags.unwrap_or_default().into_iter().map(|t| view! {
+                                                        <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[10px] border border-blue-500/20">{t}</span>
+                                                    }).collect_view()}
+                                                </div>
+                                            </div>
+                                            <button
+                                                on:click=move |_| on_edit.run(run_for_edit.clone())
+                                                class="ml-2 p-1.5 text-slate-500 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-md hover:bg-slate-800 shrink-0"
+                                                title="Edit Run"
+                                            >
+                                                <SettingsIcon size=14 />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }).collect_view()}
+                    </tbody>
+                </table>
+            </div>
+    }.into_any()
 }

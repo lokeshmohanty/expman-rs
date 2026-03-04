@@ -7,10 +7,10 @@
 use std::path::Path;
 
 fn main() {
-    let dist = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/dist");
+    let dist = Path::new(env!("CARGO_MANIFEST_DIR")).join("dist");
 
     if !dist.exists() {
-        std::fs::create_dir_all(&dist).expect("failed to create placeholder frontend/dist");
+        std::fs::create_dir_all(&dist).expect("failed to create placeholder dist");
         // Write a minimal index.html so rust_embed has at least one file
         std::fs::write(
             dist.join("index.html"),
@@ -20,5 +20,5 @@ fn main() {
     }
 
     // Re-run this script only if the dist directory changes
-    println!("cargo:rerun-if-changed=../../frontend/dist");
+    println!("cargo:rerun-if-changed=dist");
 }

@@ -163,6 +163,7 @@ pub struct RunMetadata {
     pub finished_at: Option<DateTime<Utc>>,
     pub duration_secs: Option<f64>,
     pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
     /// Latest scalar values (replaced on update).
     #[serde(default)]
     pub scalars: Option<HashMap<String, MetricValue>>,
@@ -187,6 +188,7 @@ impl Default for RunMetadata {
             finished_at: None,
             duration_secs: None,
             description: None,
+            tags: None,
             scalars: None,
             vectors: None,
             language: None,

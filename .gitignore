@@ -17,7 +17,7 @@ uv.lock
 result
 
 # Experiments & Data
-/experiments/
+**/experiments/
 *.parquet
 *.pt
 model.pt

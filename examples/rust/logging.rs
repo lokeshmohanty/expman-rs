@@ -2,6 +2,7 @@
 
 use expman::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
 use std::collections::HashMap;
+use std::io::Write;
 use std::thread;
 use std::time::Duration;
 
@@ -41,7 +42,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread::sleep(Duration::from_millis(50));
     }
 
-    // 5. Graceful shutdown
+    // 5. Generate a dummy image artifact (PPM format — no external deps)
+    let (w, h) = (128u32, 128u32);
+    let mut ppm = format!("P6\n{} {}\n255\n", w, h).into_bytes();
+    for y in 0..h {
+        for x in 0..w {
+            let r = (255 * x / w) as u8;
+            let g = (255 * y / h) as u8;
+            let b = 128u8;
+            ppm.extend_from_slice(&[r, g, b]);
+        }
+    }
+    let img_path = std::path::PathBuf::from("gradient.ppm");
+    {
+        let mut f = std::fs::File::create(&img_path)?;
+        f.write_all(&ppm)?;
+    }
+    engine.save_artifact(img_path);
+    println!("Saved image artifact (gradient.ppm)");
+
+    // 6. Graceful shutdown
     println!("Finishing experiment...");
     engine.close(RunStatus::Finished);
 
