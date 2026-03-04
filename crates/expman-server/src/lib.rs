@@ -50,7 +50,7 @@ mod server {
             )
             .route("/experiments/{exp}/runs/{run}/metrics", get(get_metrics))
             .route("/run/{exp}/{run}/stream/vectors", get(stream_vectors))
-            .route("/run/{exp}/{run}/stream/log", get(stream_log))
+            .route("/experiments/{exp}/runs/{run}/log/stream", get(stream_log))
             .route("/experiments/{exp}/runs/{run}/config", get(get_config))
             .route(
                 "/experiments/{exp}/runs/{run}/metadata",
@@ -309,12 +309,19 @@ mod server {
         )
     }
 
-    /// SSE endpoint: streams new lines from run.log every 500ms.
+    #[derive(Deserialize)]
+    struct LogQuery {
+        file: Option<String>,
+    }
+
+    /// SSE endpoint: streams new lines from a log file (default: run.log) every 500ms.
     async fn stream_log(
         State(state): State<AppState>,
         Path((exp, run)): Path<(String, String)>,
+        Query(q): Query<LogQuery>,
     ) -> Sse<impl tokio_stream::Stream<Item = Result<axum::response::sse::Event, Infallible>>> {
-        let path = run_dir(&state.base_dir, &exp, &run).join("run.log");
+        let filename = q.file.unwrap_or_else(|| "run.log".to_string());
+        let path = run_dir(&state.base_dir, &exp, &run).join(filename);
         let mut last_pos: u64 = 0;
 
         let interval = tokio::time::interval(Duration::from_millis(500));

@@ -6,8 +6,8 @@ use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, Package,
-    TriangleAlert,
+    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, Minus, Package,
+    Plus, RotateCcw, TriangleAlert,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsCast;
@@ -1243,6 +1243,13 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
 #[component]
 fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
     let (selected_path, set_selected_path) = signal("run.log".to_string());
+    let (zoom_scale, set_zoom_scale) = signal(1.0);
+
+    // Reset zoom when path changes
+    Effect::new(move |_| {
+        selected_path.track();
+        set_zoom_scale.set(1.0);
+    });
 
     let exp_id_val = StoredValue::new(exp_id.clone());
     let run_id_val = StoredValue::new(run_id.clone());
@@ -1388,58 +1395,89 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
             <div class="w-2/3 flex flex-col h-full bg-slate-950">
                 <div class="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
                     <span class="text-xs font-mono text-slate-400">"Preview: " {move || selected_path.get()}</span>
-                    {
-                        let dl_exp_id = exp_id.clone();
-                        let dl_run_id = run_id.clone();
-                        view! { <a href=move || format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", dl_exp_id.clone(), dl_run_id.clone(), selected_path.get()) download class="text-[10px] text-blue-500 hover:underline">"Download Raw"</a> }
-                    }
-                </div>
-                <div class="flex-grow flex flex-col min-h-0 bg-slate-950 overflow-hidden text-slate-300 relative justify-center">
-                    {
-                        let prev_exp_id = exp_id.clone();
-                        let prev_run_id = run_id.clone();
-                        move || {
-                            let path = selected_path.get();
-                            let ext = path.split('.').next_back().unwrap_or("").to_lowercase();
-                            let is_video = matches!(ext.as_str(), "mp4" | "webm" | "ogg");
-                            let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "flac");
-                            let is_image = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "svg" | "gif" | "webp");
-
-                            let media_url = format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", prev_exp_id.clone(), prev_run_id.clone(), path);
-
-                        if is_video {
-                           view! {
-                               <div class="flex items-center justify-center p-4 w-full h-full">
-                                   <video controls class="max-w-full max-h-full rounded-lg shadow-lg" src=media_url></video>
-                               </div>
-                           }.into_any()
-                        } else if is_audio {
-                           view! {
-                               <div class="flex items-center justify-center p-8 w-full h-full">
-                                   <audio controls class="w-full max-w-md shadow-lg" src=media_url></audio>
-                               </div>
-                           }.into_any()
-                        } else if is_image {
-                           view! {
-                               <div class="flex items-center justify-center p-4 w-full h-full overflow-hidden">
-                                   <div class="absolute inset-0 max-w-full max-h-full flex items-center justify-center p-4">
-                                       <img class="max-w-full max-h-full object-contain rounded-lg shadow-lg" src=media_url />
-                                   </div>
-                               </div>
-                           }.into_any()
-                        } else {
-                           view! {
-                               <div class="flex-grow flex flex-col h-full w-full">
-                                   <Suspense fallback=|| view! { <div class="p-8 animate-pulse space-y-2"><div class="h-2 bg-slate-800 rounded w-3/4"></div><div class="h-2 bg-slate-800 rounded w-1/2"></div></div> }>
-                                       {move || Suspend::new(async move {
-                                           let content = content_resource.await.unwrap_or_else(|e| format!("Error loading preview: {}", e));
-                                           view! { <TabularPreview content=content /> }
-                                       })}
-                                   </Suspense>
-                               </div>
-                           }.into_any()
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+                            <button 
+                                on:click=move |_| set_zoom_scale.update(|z: &mut f64| *z = (*z - 0.1).max(0.1))
+                                class="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
+                                title="Zoom Out"
+                            >
+                                <Minus size=14 />
+                            </button>
+                            <span class="px-2 text-[10px] font-mono text-slate-300 min-w-[45px] text-center">
+                                {move || format!("{:.0}%", zoom_scale.get() * 100.0)}
+                            </span>
+                            <button 
+                                on:click=move |_| set_zoom_scale.update(|z: &mut f64| *z = (*z + 0.1).min(5.0))
+                                class="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
+                                title="Zoom In"
+                            >
+                                <Plus size=14 />
+                            </button>
+                            <button 
+                                on:click=move |_| set_zoom_scale.set(1.0)
+                                class="ml-1 p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors border-l border-slate-700"
+                                title="Reset Zoom"
+                            >
+                                <RotateCcw size=14 />
+                            </button>
+                        </div>
+                        {
+                            let dl_exp_id = exp_id.clone();
+                            let dl_run_id = run_id.clone();
+                            view! { <a href=move || format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", dl_exp_id.clone(), dl_run_id.clone(), selected_path.get()) download class="text-[10px] text-blue-500 hover:underline">"Download Raw"</a> }
                         }
-                    }}
+                    </div>
+                </div>
+                <div class="flex-grow flex flex-col min-h-0 bg-slate-950 overflow-auto text-slate-300 relative">
+                    <div 
+                        class="flex-grow flex flex-col items-center justify-center min-h-full min-w-full origin-center"
+                        style=move || format!("transform: scale({});", zoom_scale.get())
+                    >
+                        {
+                            let prev_exp_id = exp_id.clone();
+                            let prev_run_id = run_id.clone();
+                            move || {
+                                let path = selected_path.get();
+                                let ext = path.split('.').next_back().unwrap_or("").to_lowercase();
+                                let is_video = matches!(ext.as_str(), "mp4" | "webm" | "ogg");
+                                let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "flac");
+                                let is_image = matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "svg" | "gif" | "webp");
+
+                                let media_url = format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", prev_exp_id.clone(), prev_run_id.clone(), path);
+
+                            if is_video {
+                               view! {
+                                   <div class="flex items-center justify-center p-4">
+                                       <video controls class="max-w-full rounded-lg shadow-lg" src=media_url></video>
+                                   </div>
+                               }.into_any()
+                            } else if is_audio {
+                               view! {
+                                   <div class="flex items-center justify-center p-8">
+                                       <audio controls class="w-full max-w-md shadow-lg" src=media_url></audio>
+                                   </div>
+                               }.into_any()
+                            } else if is_image {
+                               view! {
+                                   <div class="flex items-center justify-center p-4">
+                                       <img class="max-w-full rounded-lg shadow-lg" src=media_url />
+                                   </div>
+                               }.into_any()
+                            } else {
+                               view! {
+                                   <div class="flex-grow flex flex-col h-full w-full">
+                                       <Suspense fallback=|| view! { <div class="p-8 animate-pulse space-y-2"><div class="h-2 bg-slate-800 rounded w-3/4"></div><div class="h-2 bg-slate-800 rounded w-1/2"></div></div> }>
+                                           {move || Suspend::new(async move {
+                                               let content = content_resource.await.unwrap_or_else(|e| format!("Error loading preview: {}", e));
+                                               view! { <TabularPreview content=content /> }
+                                           })}
+                                       </Suspense>
+                                   </div>
+                               }.into_any()
+                            }
+                        }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -1447,36 +1485,47 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
 }
 
 #[component]
-fn ConsoleView(
-    exp_id: String,
-    selected: std::collections::HashSet<String>,
-    runs: Vec<Run>,
-) -> impl IntoView {
+fn ConsoleView(exp_id: String, selected: std::collections::HashSet<String>, runs: Vec<Run>) -> impl IntoView {
     if selected.is_empty() {
         return view! { <div class="p-12 text-center text-slate-500">"Select one or more runs to view live console output."</div> }.into_any();
     }
 
-    let selected_runs: Vec<String> = selected.into_iter().collect();
-
     view! {
-        <div class="flex-grow flex flex-col overflow-auto p-4 space-y-8 bg-black">
-            {selected_runs.into_iter().map(|run| {
-                 let status = runs.iter().find(|r| r.name == run).map(|r| r.status.clone()).unwrap_or_else(|| "UNKNOWN".to_string());
-                 view! {
-                     <div class="flex flex-col flex-shrink-0" style="min-height: 20rem;">
-                         <div class="text-xs font-bold text-slate-400 border-b border-slate-800 pb-1 mb-2 uppercase">
-                             "Run: " {run.clone()} " - " {status.clone()}
-                         </div>
-                         <SingleConsoleView exp_id=exp_id.clone() run_id=run status=status />
-                     </div>
-                 }
-            }).collect_view()}
+        <div class="h-full flex flex-col p-6 space-y-6 overflow-auto custom-scrollbar">
+            <div class="flex items-center space-x-2 text-xs text-slate-500 mb-2">
+                <span class="px-2 py-0.5 bg-slate-800 rounded">"run.log"</span>
+                <span>"&"</span>
+                <span class="px-2 py-0.5 bg-slate-800 rounded">"console.log"</span>
+            </div>
+            
+            <div class="flex-grow grid grid-cols-1 gap-8 min-h-0">
+                {selected.clone().into_iter().map(|run_id| {
+                    let run_id_inner = run_id.clone();
+                    let status = runs.iter().find(|r| r.id == run_id_inner).map(|r| r.status.clone()).unwrap_or_default();
+                    view! {
+                        <div class="grid grid-cols-2 gap-4 h-[500px] flex-shrink-0">
+                            <div class="flex flex-col h-full bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+                                <div class="px-3 py-2 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+                                    <span class="text-[10px] font-mono text-slate-400">"ID: " {run_id.clone()} " (" "run.log" ")"</span>
+                                </div>
+                                <SingleConsoleView exp_id=exp_id.clone() run_id=run_id.clone() filename="run.log".to_string() status=status.clone() />
+                            </div>
+                            <div class="flex flex-col h-full bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+                                <div class="px-3 py-2 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
+                                    <span class="text-[10px] font-mono text-slate-400">"ID: " {run_id.clone()} " (" "console.log" ")"</span>
+                                </div>
+                                <SingleConsoleView exp_id=exp_id.clone() run_id=run_id.clone() filename="console.log".to_string() status=status.clone() />
+                            </div>
+                        </div>
+                    }
+                }).collect_view()}
+            </div>
         </div>
     }.into_any()
 }
 
 #[component]
-fn SingleConsoleView(exp_id: String, run_id: String, status: String) -> impl IntoView {
+fn SingleConsoleView(exp_id: String, run_id: String, filename: String, status: String) -> impl IntoView {
     let (logs, set_logs) = signal(Vec::<String>::new());
     let is_connected = Rc::new(Cell::new(true));
 
@@ -1494,9 +1543,10 @@ fn SingleConsoleView(exp_id: String, run_id: String, status: String) -> impl Int
     );
 
     let url = format!(
-        "/api/experiments/{}/runs/{}/log/stream",
+        "/api/experiments/{}/runs/{}/log/stream?file={}",
         exp_id_val.with_value(|v| v.clone()),
-        run_id_val.with_value(|v| v.clone())
+        run_id_val.with_value(|v| v.clone()),
+        filename
     );
     let event_source = web_sys::EventSource::new(&url).unwrap();
     let es_clone = event_source.clone();
@@ -1522,15 +1572,15 @@ fn SingleConsoleView(exp_id: String, run_id: String, status: String) -> impl Int
     });
 
     view! {
-        <div class="flex-grow flex flex-col overflow-hidden font-mono text-xs">
-            <div class="flex-grow overflow-auto space-y-1 custom-scrollbar" id="console-scroll">
+        <div class="flex-grow flex flex-col overflow-hidden font-mono text-[11px] leading-relaxed">
+            <div class="flex-grow overflow-auto p-4 space-y-1 custom-scrollbar" id="console-scroll">
                 <For
                     each=move || logs.get().into_iter().enumerate()
                     key=|(i, _)| *i
                     children=|(_, line)| view! { <div class="text-white whitespace-pre-wrap">{line}</div> }
                 />
             </div>
-            <div class="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
+            <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between bg-slate-900/30">
                 {
                     let connected = is_connected.get();
                     if connected && status == "RUNNING" {
