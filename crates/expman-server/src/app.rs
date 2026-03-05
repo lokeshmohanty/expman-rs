@@ -6,8 +6,8 @@ use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, LayoutGrid,
-    Minus, Package, Plus, RefreshCw, RotateCcw, StretchVertical, TriangleAlert,
+    Book, ChevronRight, Cog as SettingsIcon, Download, FlaskConical, Github, LayoutDashboard,
+    LayoutGrid, Minus, Package, Plus, RefreshCw, RotateCcw, StretchVertical, TriangleAlert,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsCast;
@@ -19,6 +19,84 @@ use std::rc::Rc;
 struct SidebarContext(RwSignal<Option<Rc<dyn Fn() -> AnyView>>, LocalStorage>);
 
 const CHART_COLORS: [&str; 5] = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+
+/// Clip a polyline to the axis-aligned viewport [x_min, x_max] × [y_min, y_max].
+///
+/// Returns zero or more connected sub-polylines, each fully inside the viewport.
+/// Line segments that cross the boundary are trimmed to the exact intersection
+/// point, so lines never "stick" to the edge during pan/zoom.
+fn clip_polyline_to_viewport(
+    points: &[(f64, f64)],
+    x_min: f64,
+    x_max: f64,
+    y_min: f64,
+    y_max: f64,
+) -> Vec<Vec<(f64, f64)>> {
+    if points.len() < 2 {
+        return vec![];
+    }
+    let mut segments: Vec<Vec<(f64, f64)>> = vec![];
+    let mut current: Vec<(f64, f64)> = vec![];
+    for window in points.windows(2) {
+        let (x0, y0) = window[0];
+        let (x1, y1) = window[1];
+        if let Some((cx0, cy0, cx1, cy1)) =
+            liang_barsky(x0, y0, x1, y1, x_min, x_max, y_min, y_max)
+        {
+            let start_matches = current
+                .last()
+                .map(|&(px, py)| (px - cx0).abs() < 1e-10 && (py - cy0).abs() < 1e-10)
+                .unwrap_or(false);
+            if !start_matches {
+                if !current.is_empty() {
+                    segments.push(current.clone());
+                }
+                current = vec![(cx0, cy0)];
+            }
+            current.push((cx1, cy1));
+        } else {
+            if !current.is_empty() {
+                segments.push(current.clone());
+                current = vec![];
+            }
+        }
+    }
+    if !current.is_empty() {
+        segments.push(current);
+    }
+    segments
+}
+
+/// Liang-Barsky parametric line clipping.
+/// Returns `Some((x0, y0, x1, y1))` of the clipped segment, or `None` if entirely outside.
+fn liang_barsky(
+    x0: f64, y0: f64,
+    x1: f64, y1: f64,
+    x_min: f64, x_max: f64,
+    y_min: f64, y_max: f64,
+) -> Option<(f64, f64, f64, f64)> {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let p = [-dx, dx, -dy, dy];
+    let q = [x0 - x_min, x_max - x0, y0 - y_min, y_max - y0];
+    let mut t0: f64 = 0.0;
+    let mut t1: f64 = 1.0;
+    for i in 0..4 {
+        if p[i] == 0.0 {
+            if q[i] < 0.0 { return None; }
+        } else {
+            let t = q[i] / p[i];
+            if p[i] < 0.0 {
+                if t > t1 { return None; }
+                if t > t0 { t0 = t; }
+            } else {
+                if t < t0 { return None; }
+                if t < t1 { t1 = t; }
+            }
+        }
+    }
+    Some((x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy))
+}
 
 fn format_date(iso: &str) -> String {
     if let Ok(dt) = DateTime::parse_from_rfc3339(iso) {
@@ -1052,6 +1130,90 @@ fn LineChart(
         }
     };
 
+    let download_chart = {
+        let metric_key = metric_key.clone();
+        let selected_runs = selected_runs.clone();
+        move |_| {
+            use plotters::prelude::*;
+            use plotters_canvas::CanvasBackend;
+            use wasm_bindgen::JsCast;
+
+            let (x_min, x_max) = view_range_x.get();
+            let (y_min, y_max) = view_range_y.get();
+            if x_min >= x_max || y_min >= y_max { return; }
+
+            // 1600x900 offscreen canvas, appended off-screen so CanvasBackend can get a 2D context
+            let doc = web_sys::window().unwrap().document().unwrap();
+            let offscreen: web_sys::HtmlCanvasElement = doc
+                .create_element("canvas").unwrap().dyn_into().unwrap();
+            offscreen.set_width(1600);
+            offscreen.set_height(900);
+            offscreen.set_attribute("style",
+                "position:absolute;left:-9999px;top:-9999px;").unwrap();
+            doc.body().unwrap().append_child(&offscreen).unwrap();
+
+            let backend = CanvasBackend::with_canvas_object(offscreen.clone()).unwrap();
+            let root = backend.into_drawing_area();
+            let _ = root.fill(&WHITE);
+
+            let mut chart = ChartBuilder::on(&root)
+                .caption(&metric_key,
+                    ("sans-serif", 28).into_font().color(&BLACK))
+                .margin(40)
+                .x_label_area_size(70)
+                .y_label_area_size(90)
+                .build_cartesian_2d(x_min..x_max, y_min..y_max)
+                .unwrap();
+
+            chart.configure_mesh()
+                .x_desc("Step")
+                .y_desc("Value")
+                .axis_desc_style(("sans-serif", 22).into_font().color(&RGBColor(17, 24, 39)))
+                .axis_style(RGBColor(55, 65, 81))
+                .label_style(("sans-serif", 18).into_font().color(&RGBColor(17, 24, 39)))
+                .light_line_style(RGBColor(229, 231, 235))
+                .bold_line_style(RGBColor(209, 213, 219))
+                .draw().unwrap();
+
+            if let Some(runs_data) = metrics_resource.get() {
+                for (i, run_id) in selected_runs.iter().enumerate() {
+                    if let Some(rows) = runs_data.get(run_id) {
+                        let raw_points: Vec<(f64, f64)> = rows.iter()
+                            .filter_map(|row| {
+                                let x = row.get("step").and_then(|v| v.as_f64())?;
+                                let y = row.get(&metric_key).and_then(|v| v.as_f64())?;
+                                Some((x, y))
+                            })
+                            .collect();
+                        if raw_points.is_empty() { continue; }
+
+                        let hex = CHART_COLORS[i % CHART_COLORS.len()];
+                        let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                        let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                        let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+
+                        // Use same clipping as the live chart
+                        let clipped =
+                            clip_polyline_to_viewport(&raw_points, x_min, x_max, y_min, y_max);
+                        for segment in clipped {
+                            if segment.len() >= 2 {
+                                chart.draw_series(LineSeries::new(
+                                    segment.into_iter(),
+                                    RGBColor(r, g, b).stroke_width(3),
+                                )).unwrap();
+                            }
+                        }
+                    }
+                }
+            }
+
+            let _ = root.present();
+            let fname = format!("{}.png", metric_key.replace('/', "_"));
+            download_canvas_as_png(&offscreen, &fname);
+            let _ = doc.body().unwrap().remove_child(&offscreen);
+        }
+    };
+
     Effect::new({
         let metric_key = metric_key.clone();
         let selected_runs = selected_runs.clone();
@@ -1107,56 +1269,48 @@ fn LineChart(
 
                 mesh.draw().unwrap();
 
-                // Manual clipping for CanvasBackend
-                let (x_range, y_range) = chart.plotting_area().get_pixel_range();
-                let ctx = canvas.get_context("2d").ok().flatten()
-                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok());
-                
-                if let Some(ctx) = ctx {
-                    ctx.save();
-                    ctx.begin_path();
-                    let x = x_range.start as f64;
-                    let y = y_range.start as f64;
-                    let w = (x_range.end - x_range.start) as f64;
-                    let h = (y_range.end - y_range.start) as f64;
-                    ctx.rect(x, y, w, h);
-                    ctx.clip();
-                }
-
-                // Draw series from real data
+                // Draw series with Liang-Barsky clipped data so lines are trimmed
+                // exactly at the viewport boundary instead of sticking to the edge.
                 if let Some(runs_data) = metrics_resource.get() {
                     for (i, run_id) in selected_runs.iter().enumerate() {
                         if let Some(rows) = runs_data.get(run_id) {
-                            let y_data: Vec<(f64, f64)> = rows.iter()
+                            let raw_points: Vec<(f64, f64)> = rows
+                                .iter()
                                 .filter_map(|row| {
-                                    let x = row.get("step").and_then(|v| v.as_f64());
-                                    let y = row.get(&metric_key).and_then(|v| v.as_f64());
-                                    if let (Some(x), Some(y)) = (x, y) {
-                                        Some((x, y))
-                                    } else {
-                                        None
-                                    }
+                                    let x = row.get("step").and_then(|v| v.as_f64())?;
+                                    let y = row.get(&metric_key).and_then(|v| v.as_f64())?;
+                                    Some((x, y))
                                 })
                                 .collect();
 
-                            if !y_data.is_empty() {
-                                let hex = CHART_COLORS[i % CHART_COLORS.len()];
-                                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
-                                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
-                                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                                let color = RGBColor(r, g, b);
+                            if raw_points.is_empty() {
+                                continue;
+                            }
 
-                                chart
-                                    .draw_series(LineSeries::new(y_data, color.stroke_width(2)))
-                                    .unwrap();
+                            let hex = CHART_COLORS[i % CHART_COLORS.len()];
+                            let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                            let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                            let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                            let color = RGBColor(r, g, b);
+
+                            // Clip each sub-polyline to the current viewport in data space.
+                            // This produces geometrically correct entry/exit points so no
+                            // line ever "hugs" the border when panning or zooming.
+                            let clipped_segments =
+                                clip_polyline_to_viewport(&raw_points, x_min, x_max, y_min, y_max);
+
+                            for segment in clipped_segments {
+                                if segment.len() >= 2 {
+                                    chart
+                                        .draw_series(LineSeries::new(
+                                            segment.into_iter(),
+                                            color.stroke_width(2),
+                                        ))
+                                        .unwrap();
+                                }
                             }
                         }
                     }
-                }
-
-                if let Some(ctx) = canvas.get_context("2d").ok().flatten()
-                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok()) {
-                    ctx.restore();
                 }
 
                 let _ = root.present();
@@ -1324,6 +1478,94 @@ fn ScalarChart(
         }
     };
 
+    let download_chart = {
+        let scalar_key = scalar_key.clone();
+        let runs = runs.clone();
+        move |_| {
+            use plotters::prelude::*;
+            use plotters_canvas::CanvasBackend;
+            use wasm_bindgen::JsCast;
+
+            let (x_min, x_max) = view_range_x.get();
+            let (y_min, y_max) = view_range_y.get();
+            if x_min >= x_max || y_min >= y_max { return; }
+
+            let doc = web_sys::window().unwrap().document().unwrap();
+            let offscreen: web_sys::HtmlCanvasElement = doc
+                .create_element("canvas").unwrap().dyn_into().unwrap();
+            offscreen.set_width(1600);
+            offscreen.set_height(900);
+            offscreen.set_attribute("style",
+                "position:absolute;left:-9999px;top:-9999px;").unwrap();
+            doc.body().unwrap().append_child(&offscreen).unwrap();
+
+            let backend = CanvasBackend::with_canvas_object(offscreen.clone()).unwrap();
+            let root = backend.into_drawing_area();
+            let _ = root.fill(&WHITE);
+
+            // Collect the same data as the live render
+            let mut plot_data: Vec<(f64, f64, usize)> = Vec::new();
+            for (idx, run) in runs.iter().enumerate() {
+                if let Some(scalars) = &run.scalars {
+                    if let Some(val) = scalars.get(&scalar_key) {
+                        let numeric_val = match val {
+                            MetricValue::Float(f) => Some(*f),
+                            MetricValue::Int(i)   => Some(*i as f64),
+                            MetricValue::Bool(b)  => Some(if *b { 1.0 } else { 0.0 }),
+                            MetricValue::Text(_)  => None,
+                        };
+                        if let Some(v) = numeric_val {
+                            plot_data.push((run.duration_secs.unwrap_or(0.0), v, idx));
+                        }
+                    }
+                }
+            }
+
+            if plot_data.is_empty() {
+                let _ = doc.body().unwrap().remove_child(&offscreen);
+                return;
+            }
+
+            let mut chart = ChartBuilder::on(&root)
+                .caption(&scalar_key,
+                    ("sans-serif", 28).into_font().color(&BLACK))
+                .margin(40)
+                .x_label_area_size(70)
+                .y_label_area_size(90)
+                .build_cartesian_2d(x_min..x_max, y_min..y_max)
+                .unwrap();
+
+            chart.configure_mesh()
+                .x_desc("Duration (s)")
+                .y_desc(scalar_key.clone())
+                .axis_desc_style(("sans-serif", 22).into_font().color(&RGBColor(17, 24, 39)))
+                .axis_style(RGBColor(55, 65, 81))
+                .label_style(("sans-serif", 18).into_font().color(&RGBColor(17, 24, 39)))
+                .light_line_style(RGBColor(229, 231, 235))
+                .bold_line_style(RGBColor(209, 213, 219))
+                .draw().unwrap();
+
+            chart.draw_series(
+                plot_data.into_iter()
+                    .filter(|(x, y, _)| {
+                        *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max
+                    })
+                    .map(|(x, y, color_idx)| {
+                        let hex = CHART_COLORS[color_idx % CHART_COLORS.len()];
+                        let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                        let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                        let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                        Circle::new((x, y), 8, RGBColor(r, g, b).filled())
+                    }),
+            ).unwrap();
+
+            let _ = root.present();
+            let fname = format!("{}.png", scalar_key.replace('/', "_"));
+            download_canvas_as_png(&offscreen, &fname);
+            let _ = doc.body().unwrap().remove_child(&offscreen);
+        }
+    };
+
     Effect::new({
         let scalar_key = scalar_key.clone();
         let runs = runs.clone();
@@ -1419,15 +1661,21 @@ fn ScalarChart(
                 }
 
                 chart.draw_series(
-                    plot_data.into_iter().map(|(x, y, color_idx)| {
-                        let hex = CHART_COLORS[color_idx % CHART_COLORS.len()];
-                        let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
-                        let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
-                        let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                        let color = RGBColor(r, g, b);
-
-                        Circle::new((x, y), 5, color.filled())
-                    })
+                    plot_data
+                        .into_iter()
+                        // Filter out-of-viewport points so plotters doesn't
+                        // try to render circles with extreme pixel coordinates.
+                        .filter(|(x, y, _)| {
+                            *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max
+                        })
+                        .map(|(x, y, color_idx)| {
+                            let hex = CHART_COLORS[color_idx % CHART_COLORS.len()];
+                            let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                            let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                            let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                            let color = RGBColor(r, g, b);
+                            Circle::new((x, y), 5, color.filled())
+                        }),
                 ).unwrap();
 
                 if let Some(ctx) = canvas.get_context("2d").ok().flatten()
@@ -1490,6 +1738,13 @@ fn ScalarChart(
                     title="Reset Zoom"
                 >
                     <RefreshCw size=14 />
+                </button>
+                <button
+                    on:click=download_chart
+                    class="p-1.5 bg-slate-800/80 hover:bg-blue-600/80 text-slate-300 hover:text-white rounded-md backdrop-blur-sm transition-all border border-slate-700"
+                    title="Download PNG"
+                >
+                    <Download size=14 />
                 </button>
             </div>
             <canvas
@@ -1682,11 +1937,17 @@ fn ArtifactView(exp_id: String, selected: std::collections::HashSet<String>) -> 
 fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
     let (selected_path, set_selected_path) = signal("run.log".to_string());
     let (zoom_scale, set_zoom_scale) = signal(1.0);
+    let (pan_x, set_pan_x) = signal(0.0_f64);
+    let (pan_y, set_pan_y) = signal(0.0_f64);
+    let (is_panning, set_is_panning) = signal(false);
+    let (last_pan_pos, set_last_pan_pos) = signal(None::<(i32, i32)>);
 
-    // Reset zoom when path changes
+    // Reset zoom AND pan when path changes
     Effect::new(move |_| {
         selected_path.track();
         set_zoom_scale.set(1.0);
+        set_pan_x.set(0.0);
+        set_pan_y.set(0.0);
     });
 
     let exp_id_val = StoredValue::new(exp_id.clone());
@@ -1860,9 +2121,8 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
                         }
                     }
                 >
-                    <div 
-                        class="flex-grow flex flex-col items-center justify-center min-h-full min-w-full origin-center"
-                        style=move || format!("transform: scale({});", zoom_scale.get())
+                    <div
+                        class="flex-grow flex flex-col items-center justify-center min-h-full min-w-full"
                     >
                         {
                             let prev_exp_id = exp_id.clone();
@@ -1890,8 +2150,70 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
                                }.into_any()
                             } else if is_image {
                                view! {
-                                   <div class="flex items-center justify-center p-4">
-                                       <img class="max-w-full rounded-lg shadow-lg" src=media_url />
+                                   <div
+                                       class="w-full h-full overflow-hidden relative select-none"
+                                       style="cursor: grab;"
+                                       on:wheel=move |ev: web_sys::WheelEvent| {
+                                           ev.prevent_default();
+                                           let delta = ev.delta_y();
+                                           let zoom_factor = if delta < 0.0 { 1.1_f64 } else { 1.0 / 1.1 };
+                                           set_zoom_scale.update(|z| {
+                                               *z = (*z * zoom_factor).clamp(0.1, 20.0);
+                                           });
+                                       }
+                                       on:mousedown=move |ev: web_sys::MouseEvent| {
+                                           ev.prevent_default();
+                                           set_is_panning.set(true);
+                                           set_last_pan_pos.set(Some((ev.client_x(), ev.client_y())));
+                                       }
+                                       on:mousemove=move |ev: web_sys::MouseEvent| {
+                                           if is_panning.get() {
+                                               if let Some((lx, ly)) = last_pan_pos.get() {
+                                                   let dx = (ev.client_x() - lx) as f64;
+                                                   let dy = (ev.client_y() - ly) as f64;
+                                                   set_pan_x.update(|x| *x += dx);
+                                                   set_pan_y.update(|y| *y += dy);
+                                                   set_last_pan_pos.set(Some((ev.client_x(), ev.client_y())));
+                                               }
+                                           }
+                                       }
+                                       on:mouseup=move |_| {
+                                           set_is_panning.set(false);
+                                           set_last_pan_pos.set(None);
+                                       }
+                                       on:mouseleave=move |_| {
+                                           set_is_panning.set(false);
+                                           set_last_pan_pos.set(None);
+                                       }
+                                   >
+                                       <div
+                                           class="absolute inset-0 flex items-center justify-center"
+                                           style=move || format!(
+                                               "transform: translate({}px, {}px) scale({}); transform-origin: center center;",
+                                               pan_x.get(), pan_y.get(), zoom_scale.get()
+                                           )
+                                       >
+                                           <img
+                                               class="max-w-none rounded-lg shadow-lg pointer-events-none"
+                                               src=media_url
+                                               draggable="false"
+                                           />
+                                       </div>
+                                       // Zoom hint overlay
+                                       <div class="absolute bottom-2 right-2 text-[10px] font-mono text-slate-500 bg-slate-900/70 px-2 py-1 rounded pointer-events-none">
+                                           {move || format!("{:.0}%", zoom_scale.get() * 100.0)}
+                                       </div>
+                                       // Reset button
+                                       <button
+                                           class="absolute top-2 right-2 p-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white rounded-md border border-slate-700 text-[10px] font-medium transition-colors"
+                                           on:click=move |_| {
+                                               set_zoom_scale.set(1.0);
+                                               set_pan_x.set(0.0);
+                                               set_pan_y.set(0.0);
+                                           }
+                                       >
+                                           "Reset"
+                                       </button>
                                    </div>
                                }.into_any()
                             } else {
@@ -2774,6 +3096,18 @@ fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>) -> impl I
         a.click();
         let _ = web_sys::Url::revoke_object_url(&url);
     }
+
+    fn download_canvas_as_png(canvas: &web_sys::HtmlCanvasElement, filename: &str) {
+        use wasm_bindgen::JsCast;
+        let data_url = canvas.to_data_url_with_type("image/png").unwrap_or_default();
+        let doc = web_sys::window().unwrap().document().unwrap();
+        let a: web_sys::HtmlAnchorElement = doc
+            .create_element("a").unwrap()
+            .dyn_into().unwrap();
+        a.set_href(&data_url);
+        a.set_download(filename);
+        a.click();
+}
 
     // ── Export: CSV ───────────────────────────────────────────────
     let export_csv = move |_| {
