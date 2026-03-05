@@ -38,4 +38,4 @@ If Jupyter is not detected, the "Launch Live Analysis" button will be disabled, 
 ## Troubleshooting
 
 - **Address Already in Use**: If you previously crashed the dashboard abruptly while a notebook was running, the zombie `jupyter notebook` process might still occupy the allocated port.
-- **Port Ranges**: `expman-rs` searches for available ports starting from `8000` to `9000` to bind new Notebooks. Ensure this range isn't strictly blocked by local firewalls.
+- **Port Ranges**: `expman-rs` searches for available ports starting from `8888` to `9999` to bind new Notebooks. Ensure this range isn't strictly blocked by local firewalls.

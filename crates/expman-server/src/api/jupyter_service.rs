@@ -1,3 +1,4 @@
+//! Jupyter notebook service logic (process management and content generation).
 use std::collections::HashMap;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};

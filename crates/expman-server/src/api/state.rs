@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 #[derive(Clone)]
 pub struct AppState {
     pub base_dir: Arc<PathBuf>,
-    pub jupyter: crate::jupyter::JupyterManager,
+    pub jupyter: super::jupyter_service::JupyterManager,
     pub shutdown_token: CancellationToken,
 }
 
@@ -15,7 +15,7 @@ impl AppState {
     pub fn new(base_dir: PathBuf) -> Self {
         Self {
             base_dir: Arc::new(base_dir),
-            jupyter: crate::jupyter::JupyterManager::new(),
+            jupyter: super::jupyter_service::JupyterManager::new(),
             shutdown_token: CancellationToken::new(),
         }
     }
