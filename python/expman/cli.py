@@ -17,7 +17,7 @@ def main():
     # 1. expman/bin/exp (maturin default bundle location)
     # 2. expman/exp (fallback if not in bin/)
     # 3. .env/bin/exp (if installed via pip)
-    
+
     potential_binaries = [
         expman_dir / "bin" / ("exp.exe" if sys.platform == "win32" else "exp"),
         expman_dir / ("exp.exe" if sys.platform == "win32" else "exp"),

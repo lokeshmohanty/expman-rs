@@ -26,9 +26,9 @@ If Jupyter is not detected, the "Launch Live Analysis" button will be disabled, 
 
 ## The Interactive Experience
 
-1. **Auto-Generated Boilerplate**: 
+1. **Auto-Generated Boilerplate**:
    When you select a run, the system automatically writes an `interactive.ipynb` file directly into that run's folder on disk if it doesn't already exist.
-   
+
 2. **Polars for Analytics**:
    By default, the provided notebook template utilizes [Polars](https://pola.rs) (`pl.read_parquet`) to ensure ultra-fast load times for large metrics files, as opposed to pandas.
 

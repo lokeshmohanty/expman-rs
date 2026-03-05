@@ -28,21 +28,21 @@ import random
 # name: "mnist_classifier"
 # base_dir: "./experiments" (default)
 with Experiment("mnist_classifier") as exp:
-    
+
     # 1. Log configuration parameters
     exp.log_params({
         "learning_rate": 0.005,
         "batch_size": 64,
         "model": "CNN"
     })
-    
+
     exp.info("Starting training loop...")
 
     # 2. Main training loop
     for epoch in range(10):
         # Simulate training time
         time.sleep(0.1)
-        
+
         loss = 1.0 / (epoch + 1) + random.uniform(0, 0.1)
         acc = epoch * 10 + random.uniform(0, 5)
 
@@ -51,9 +51,9 @@ with Experiment("mnist_classifier") as exp:
             "train_loss": loss,
             "train_acc": acc
         }, step=epoch)
-        
+
     exp.info("Training complete!")
-    
+
     # Optional: You can access the specific run directory generated
     print(f"Run data saved to: {exp.run_dir}")
 ```
@@ -88,7 +88,7 @@ from expman import Experiment
 
 with Experiment("artifact_demo") as exp:
     # ... training code ...
-    
+
     # Save a model weights file
     # This copies the file locally to the run's artifacts/ folder
     exp.save_artifact("model_weights.pt")

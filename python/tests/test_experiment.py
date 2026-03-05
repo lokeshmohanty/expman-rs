@@ -54,15 +54,11 @@ def test_artifact_save(tmp_path):
 def test_complex_types(tmp_path):
     """Test logging complex types (converted to strings or handled)."""
     exp_dir = tmp_path / "experiments"
-    
+
     with expman.Experiment("complex_exp", base_dir=str(exp_dir)) as exp:
-        exp.log_params({
-            "list": [1, 2, 3],
-            "dict": {"a": 1},
-            "tuple": (1, 2)
-        })
+        exp.log_params({"list": [1, 2, 3], "dict": {"a": 1}, "tuple": (1, 2)})
         run_dir = exp.run_dir
-        
+
     config_path = os.path.join(run_dir, "config.yaml")
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
@@ -74,7 +70,7 @@ def test_complex_types(tmp_path):
 def test_experiment_crash(tmp_path):
     """Test that crash (exception) sets status to FAILED."""
     exp_dir = tmp_path / "experiments"
-    
+
     run_dir = None
     try:
         with expman.Experiment("crash_exp", base_dir=str(exp_dir)) as exp:
@@ -82,7 +78,7 @@ def test_experiment_crash(tmp_path):
             raise RuntimeError("Intentional crash")
     except RuntimeError:
         pass
-        
+
     assert run_dir is not None
     run_yaml_path = os.path.join(run_dir, "run.yaml")
     assert os.path.exists(run_yaml_path)
@@ -98,11 +94,11 @@ def test_vectors_vs_scalar(tmp_path):
 
     with expman.Experiment(exp_name, base_dir=str(exp_dir)) as exp:
         run_dir = exp.run_dir
-        
+
         # log_vector (append)
         exp.log_vector({"acc": 0.8}, step=0)
         exp.log_vector({"acc": 0.9}, step=1)
-        
+
         # log_scalar (replace)
         exp.log_scalar("status", "starting")
         exp.log_scalar("status", "running")
@@ -122,16 +118,16 @@ def test_vectors_vs_scalar(tmp_path):
     assert os.path.exists(run_yaml_path)
     with open(run_yaml_path) as f:
         meta = yaml.safe_load(f)
-        
+
         # scalars should be in its own section
         scalars = meta["scalars"]
         assert scalars["status"] == "running"
         assert scalars["lr"] == 0.01
-        
+
         # vectors should be in its own section (latest values)
         vectors = meta["vectors"]
         assert vectors["acc"] == 0.9
-        
+
         # ensure no leakage
         assert "acc" not in scalars
         assert "status" not in vectors

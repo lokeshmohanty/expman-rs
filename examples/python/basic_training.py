@@ -92,6 +92,7 @@ def main():
 
         # 7. Generate and save a dummy audio artifact
         from scipy.io import wavfile
+
         sample_rate = 44100
         t_audio = np.linspace(0, 2, sample_rate * 2)
         audio_data = np.sin(2 * np.pi * 440 * t_audio) * 0.5  # 440 Hz A note
@@ -101,6 +102,7 @@ def main():
 
         # 8. Generate and save a dummy video artifact
         import imageio
+
         fps = 10
         num_frames = 20
         video_writer = imageio.get_writer("video.mp4", fps=fps)

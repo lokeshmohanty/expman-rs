@@ -2,9 +2,9 @@
 
 Core storage and logging engine for `expman-rs`.
 
-## Overview 
+## Overview
 
-The `expman` module provides the foundational components for tracking, storing, and managing experiment data with high performance. Its central design principle ensures that logging operations (e.g., `log_vector()`) are extremely fast (~100ns channel sends) and never block the main experiment process. 
+The `expman` module provides the foundational components for tracking, storing, and managing experiment data with high performance. Its central design principle ensures that logging operations (e.g., `log_vector()`) are extremely fast (~100ns channel sends) and never block the main experiment process.
 All I/O operations are handled asynchronously via a background tokio task.
 
 ## Key Features
@@ -24,11 +24,11 @@ fn main() -> anyhow::Result<()> {
     // 1. Define the experiment configuration
     // This sets up an experiment named "my_rust_exp" in the "./experiments" directory
     let config = ExperimentConfig::new("my_rust_exp", "./experiments");
-    
+
     // 2. Initialize the logging engine
     // This spawns the background tokio task for handling I/O
     let engine = LoggingEngine::new(config)?;
-    
+
     // 3. Log some parameters (hyperparameters, configuration, etc.)
     engine.log_params([
         ("learning_rate".to_string(), 0.001.into()),
@@ -40,7 +40,7 @@ fn main() -> anyhow::Result<()> {
     for step in 0..100 {
         let loss = 1.0 / (step as f64 + 1.0);
         let accuracy = step as f64 / 100.0;
-        
+
         // log_vector takes a HashMap of metrics and an optional step counter.
         // This operation takes ~100ns and does not block!
         engine.log_vector([
@@ -48,10 +48,10 @@ fn main() -> anyhow::Result<()> {
             ("accuracy".to_string(), accuracy.into())
         ].into(), Some(step));
     }
-    
+
     // 5. Gracefully close the engine, ensuring all pending metrics are flushed to disk
     engine.close(RunStatus::Finished);
-    
+
     Ok(())
 }
 ```
