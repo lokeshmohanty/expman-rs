@@ -98,6 +98,18 @@ fn liang_barsky(
     Some((x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy))
 }
 
+fn download_canvas_as_png(canvas: &web_sys::HtmlCanvasElement, filename: &str) {
+    use wasm_bindgen::JsCast;
+    let data_url = canvas.to_data_url_with_type("image/png").unwrap_or_default();
+    let doc = web_sys::window().unwrap().document().unwrap();
+    let a: web_sys::HtmlAnchorElement = doc
+        .create_element("a").unwrap()
+        .dyn_into().unwrap();
+    a.set_href(&data_url);
+    a.set_download(filename);
+    a.click();
+}
+
 fn format_date(iso: &str) -> String {
     if let Ok(dt) = DateTime::parse_from_rfc3339(iso) {
         let local = dt.with_timezone(&Local);
@@ -915,28 +927,29 @@ fn MetricsView(
                             let exp_id_clone = exp_id.clone();
                             let selected_clone = selected.clone();
                             let vk_clone = vk.clone();
-                            view! {
-                                <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 flex flex-col" style="resize: both; overflow: hidden; min-width: 300px; max-width: 100%; aspect-ratio: 16/9;">
-                                    <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                                        <h4 class="text-sm font-semibold text-slate-300">{vk_clone}</h4>
-                                        <div class="flex space-x-3">
-                                             {selected_clone.clone().into_iter().enumerate().map(|(i, s)| {
-                                                 let color = CHART_COLORS[i % CHART_COLORS.len()];
-                                                 let run_name = runs.iter().find(|r| r.id == s).map(|r| r.name.clone()).unwrap_or(s.clone());
-                                                 view! {
-                                                     <div class="flex items-center space-x-1 text-[10px] text-slate-400">
-                                                         <span class=format!("w-2 h-2 rounded-full") style=format!("background-color: {}", color)></span>
-                                                         <span class="font-mono">{run_name}</span>
-                                                     </div>
-                                                 }
-                                             }).collect_view()}
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow rounded-lg overflow-hidden relative" style="width: 100%; height: 100%;">
-                                        <LineChart exp_id=exp_id_clone selected_runs=selected_clone metric_key=vk />
-                                    </div>
-                                </div>
-                            }.into_any()
+                            let runs_clone = runs.clone();
+                             view! {
+                                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-6 flex flex-col" style="resize: both; overflow: hidden; min-width: 300px; max-width: 100%; aspect-ratio: 16/9;">
+                                     <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                                         <h4 class="text-sm font-semibold text-slate-300">{vk_clone}</h4>
+                                         <div class="flex space-x-3">
+                                              {selected_clone.clone().into_iter().enumerate().map(|(i, s)| {
+                                                  let color = CHART_COLORS[i % CHART_COLORS.len()];
+                                                  let run_name = runs.iter().find(|r| r.id == s).map(|r| r.name.clone()).unwrap_or(s.clone());
+                                                  view! {
+                                                      <div class="flex items-center space-x-1 text-[10px] text-slate-400">
+                                                          <span class=format!("w-2 h-2 rounded-full") style=format!("background-color: {}", color)></span>
+                                                          <span class="font-mono">{run_name}</span>
+                                                      </div>
+                                                  }
+                                              }).collect_view()}
+                                         </div>
+                                     </div>
+                                     <div class="flex-grow rounded-lg overflow-hidden relative" style="width: 100%; height: 100%;">
+                                         <LineChart exp_id=exp_id_clone selected_runs=selected_clone metric_key=vk runs=runs_clone />
+                                     </div>
+                                 </div>
+                             }.into_any()
                         }).collect_view().into_any()
                     }
                 }
@@ -1001,12 +1014,13 @@ fn LineChart(
     exp_id: String,
     selected_runs: std::collections::HashSet<String>,
     metric_key: String,
+    runs: Vec<Run>,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let (view_range_x, set_view_range_x) = signal((0.0, 100.0));
     let (view_range_y, set_view_range_y) = signal((0.0, 1.0));
     let (is_dragging, set_is_dragging) = signal(false);
-    let (last_mouse_pos, set_last_mouse_pos) = signal(None::<(i32, i32)>);
+    let (last_mouse_pos, set_last_mouse_pos) = signal(None::< (i32, i32) >);
     let (grid_dense, set_grid_dense) = signal(true);
 
     let metrics_resource = LocalResource::new({
@@ -1133,7 +1147,8 @@ fn LineChart(
     let download_chart = {
         let metric_key = metric_key.clone();
         let selected_runs = selected_runs.clone();
-        move |_| {
+        let runs_meta = runs.clone();
+        move |_: leptos::ev::MouseEvent| {
             use plotters::prelude::*;
             use plotters_canvas::CanvasBackend;
             use wasm_bindgen::JsCast;
@@ -1192,20 +1207,36 @@ fn LineChart(
                         let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
                         let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
 
-                        // Use same clipping as the live chart
-                        let clipped =
-                            clip_polyline_to_viewport(&raw_points, x_min, x_max, y_min, y_max);
-                        for segment in clipped {
-                            if segment.len() >= 2 {
-                                chart.draw_series(LineSeries::new(
-                                    segment.into_iter(),
-                                    RGBColor(r, g, b).stroke_width(3),
-                                )).unwrap();
-                            }
-                        }
-                    }
-                }
-            }
+                        let run_name = runs_meta.iter().find(|r| r.id == *run_id).map(|r| r.name.clone()).unwrap_or_else(|| run_id.clone());
+ 
+                         // Use same clipping as the live chart
+                         let clipped =
+                             clip_polyline_to_viewport(&raw_points, x_min, x_max, y_min, y_max);
+                         let mut first = true;
+                         for segment in clipped {
+                             if segment.len() >= 2 {
+                                 let series = chart.draw_series(LineSeries::new(
+                                     segment.into_iter(),
+                                     RGBColor(r, g, b).stroke_width(3),
+                                 )).unwrap();
+                                 if first {
+                                     let color_clone = RGBColor(r, g, b);
+                                     series.label(run_name.clone())
+                                         .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color_clone.stroke_width(2)));
+                                     first = false;
+                                 }
+                             }
+                         }
+                     }
+                 }
+                 
+                 chart.configure_series_labels()
+                     .background_style(&WHITE.mix(0.8))
+                     .border_style(&BLACK)
+                     .position(SeriesLabelPosition::UpperRight)
+                     .draw()
+                     .unwrap();
+             }
 
             let _ = root.present();
             let fname = format!("{}.png", metric_key.replace('/', "_"));
@@ -1345,6 +1376,13 @@ fn LineChart(
                 >
                     <RefreshCw size=14 />
                 </button>
+                <button
+                    on:click=download_chart
+                    class="p-1.5 bg-slate-800/80 hover:bg-blue-600/80 text-slate-300 hover:text-white rounded-md backdrop-blur-sm transition-all border border-slate-700"
+                    title="Download PNG"
+                >
+                    <Download size=14 />
+                </button>
             </div>
             <canvas
                 node_ref=canvas_ref
@@ -1481,7 +1519,7 @@ fn ScalarChart(
     let download_chart = {
         let scalar_key = scalar_key.clone();
         let runs = runs.clone();
-        move |_| {
+        move |_: leptos::ev::MouseEvent| {
             use plotters::prelude::*;
             use plotters_canvas::CanvasBackend;
             use wasm_bindgen::JsCast;
@@ -1545,19 +1583,34 @@ fn ScalarChart(
                 .bold_line_style(RGBColor(209, 213, 219))
                 .draw().unwrap();
 
-            chart.draw_series(
-                plot_data.into_iter()
-                    .filter(|(x, y, _)| {
-                        *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max
-                    })
-                    .map(|(x, y, color_idx)| {
-                        let hex = CHART_COLORS[color_idx % CHART_COLORS.len()];
-                        let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
-                        let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
-                        let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                        Circle::new((x, y), 8, RGBColor(r, g, b).filled())
-                    }),
-            ).unwrap();
+            for (idx, run) in runs.iter().enumerate() {
+                 let hex = CHART_COLORS[idx % CHART_COLORS.len()];
+                 let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                 let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                 let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                 let color = RGBColor(r, g, b);
+ 
+                 let run_points: Vec<(f64, f64)> = plot_data.iter()
+                     .filter(|(_, _, c_idx)| *c_idx == idx)
+                     .filter(|(x, y, _)| *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max)
+                     .map(|(x, y, _)| (*x, *y))
+                     .collect();
+ 
+                 if !run_points.is_empty() {
+                     chart.draw_series(
+                         run_points.into_iter().map(|(x, y)| Circle::new((x, y), 8, color.filled()))
+                     ).unwrap()
+                         .label(run.name.clone())
+                         .legend(move |(x, y)| Circle::new((x + 10, y), 5, color.filled()));
+                 }
+             }
+ 
+             chart.configure_series_labels()
+                 .background_style(&WHITE.mix(0.8))
+                 .border_style(&BLACK)
+                 .position(SeriesLabelPosition::UpperRight)
+                 .draw()
+                 .unwrap();
 
             let _ = root.present();
             let fname = format!("{}.png", scalar_key.replace('/', "_"));
@@ -2586,6 +2639,75 @@ async fn create_default_notebook(exp: String, run: String) -> Result<String, Str
     Ok(parsed["content"].as_str().unwrap_or("").to_string())
 }
 
+async fn fetch_multi_jupyter_status(exp: String) -> Result<JupyterStatus, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/jupyter/status",
+        exp
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+async fn start_multi_jupyter(exp: String, runs: Vec<String>) -> Result<u16, String> {
+    let resp = gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/jupyter/start",
+        exp
+    ))
+    .json(&serde_json::json!({ "runs": runs }))
+    .map_err(|e| e.to_string())?
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    let res: JupyterStartResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(res.port)
+}
+
+async fn stop_multi_jupyter(exp: String) -> Result<(), String> {
+    gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/jupyter/stop",
+        exp
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+async fn fetch_multi_notebook_content(exp: String) -> Result<NotebookInfo, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/jupyter/notebook",
+        exp
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+async fn create_multi_notebook(exp: String, runs: Vec<String>) -> Result<String, String> {
+    let resp = gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/jupyter/notebook",
+        exp
+    ))
+    .json(&serde_json::json!({ "runs": runs }))
+    .map_err(|e| e.to_string())?
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(parsed["content"].as_str().unwrap_or("").to_string())
+}
+
 /// Extract human-readable source code from ipynb JSON cells.
 fn extract_cell_sources(ipynb_content: &str) -> Vec<String> {
     let parsed: serde_json::Value = match serde_json::from_str(ipynb_content) {
@@ -2623,33 +2745,28 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                     <FlaskConical size=28 />
                 </div>
                 <h3 class="text-xl font-bold text-white">"No Runs Selected"</h3>
-                <p class="text-slate-400 max-w-sm">"Please select a single run from the left sidebar to launch an interactive session."</p>
+                <p class="text-slate-400 max-w-sm">"Please select one or more runs from the left sidebar to launch an interactive session."</p>
             </div>
         }.into_any();
         return v;
     }
 
-    if selected.len() > 1 {
-        let v: AnyView = view! {
-            <div class="flex-grow flex flex-col items-center justify-center p-12 text-center space-y-4">
-                <div class="p-4 bg-slate-800 rounded-full text-blue-500">
-                    <FlaskConical size=28 />
-                </div>
-                <h3 class="text-xl font-bold text-white">"Too Many Runs Selected"</h3>
-                <p class="text-slate-400 max-w-sm">"Please select only one run for an interactive session."</p>
-            </div>
-        }.into_any();
-        return v;
-    }
-
-    let run_id = selected.into_iter().next().unwrap();
+    let runs_list: Vec<String> = selected.clone().into_iter().collect();
+    let is_multi = runs_list.len() > 1;
 
     let exp_id_clone_status = exp_id.clone();
-    let run_id_clone_status = run_id.clone();
+    let runs_list_status = runs_list.clone();
     let jupyter_status = LocalResource::new(move || {
         let eid = exp_id_clone_status.clone();
-        let rid = run_id_clone_status.clone();
-        async move { fetch_jupyter_status(eid, rid).await }
+        let rlist = runs_list_status.clone();
+        let multi = is_multi;
+        async move {
+            if multi {
+                fetch_multi_jupyter_status(eid).await
+            } else {
+                fetch_jupyter_status(eid, rlist[0].clone()).await
+            }
+        }
     });
 
     let (is_loading, set_is_loading) = signal(false);
@@ -2666,25 +2783,33 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
         }
     });
 
-    let run_id_outer = run_id.clone();
+    let runs_list_outer = runs_list.clone();
     let exp_id_outer = exp_id.clone();
 
+    let runs_list_meta = runs_list.clone();
     let run_data = LocalResource::new(move || {
         let eid = exp_id.clone();
-        let rid = run_id.clone();
-        async move { fetch_run_metadata(eid, rid).await }
+        let rlist = runs_list_meta.clone();
+        async move { fetch_run_metadata(eid, rlist[0].clone()).await }
     });
 
     let backend_info = LocalResource::new(|| async move { check_backend().await });
 
     // Fetch notebook content from server (reactive to notebook_version for refresh)
     let nb_exp_id = exp_id_outer.clone();
-    let nb_run_id = run_id_outer.clone();
+    let nb_runs_list = runs_list_outer.clone();
     let notebook_resource = LocalResource::new(move || {
         let eid = nb_exp_id.clone();
-        let rid = nb_run_id.clone();
+        let rlist = nb_runs_list.clone();
+        let multi = is_multi;
         let _version = notebook_version.get();
-        async move { fetch_notebook_content(eid, rid).await }
+        async move {
+            if multi {
+                fetch_multi_notebook_content(eid).await
+            } else {
+                fetch_notebook_content(eid, rlist[0].clone()).await
+            }
+        }
     });
 
     view! {
@@ -2694,17 +2819,26 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                     let port_opt = jupyter_port.get();
                     let loading = is_loading.get();
                     let exp_id_outer = exp_id_outer.clone();
-                    let run_id_outer = run_id_outer.clone();
                     let rt_exp_id = exp_id_outer.clone();
-                    let rt_run_id = run_id_outer.clone();
+                    let rt_runs_list = runs_list_outer.clone();
+                    let multi1 = is_multi;
 
-                    let start_notebook = move |_| {
+                    let start_notebook = {
                         let eid = rt_exp_id.clone();
-                        let rid = rt_run_id.clone();
-                        set_is_loading.set(true);
-                        set_is_ready.set(false);
-                        spawn_local(async move {
-                            if let Ok(port) = start_jupyter(eid, rid).await {
+                        let rlist = rt_runs_list.clone();
+                        let multi = multi1;
+                        move |_| {
+                            let eid = eid.clone();
+                            let rlist = rlist.clone();
+                            set_is_loading.set(true);
+                            set_is_ready.set(false);
+                            spawn_local(async move {
+                                let res = if multi {
+                                    start_multi_jupyter(eid, rlist).await
+                                } else {
+                                    start_jupyter(eid, rlist[0].clone()).await
+                                };
+                            if let Ok(port) = res {
                                 set_jupyter_port.set(Some(port));
                                 // Ping the root URL until it responds.
                                 // We use NoCors mode because the dashboard and jupyter are on different ports.
@@ -2726,22 +2860,35 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                             }
                             set_is_loading.set(false);
                         });
-                    };
+                    }
+                };
 
-                    let rt_exp_id2 = exp_id_outer.clone();
-                    let rt_run_id2 = run_id_outer.clone();
+                let rt_exp_id2 = exp_id_outer.clone();
+                    let rt_runs_list2 = runs_list_outer.clone();
+                    let multi2 = is_multi;
 
-                    let stop_notebook = move |_| {
+                    let stop_notebook = {
                         let eid = rt_exp_id2.clone();
-                        let rid = rt_run_id2.clone();
-                        set_is_loading.set(true);
-                        spawn_local(async move {
-                            let _ = stop_jupyter(eid, rid).await;
-                            set_jupyter_port.set(None);
-                            set_is_loading.set(false);
-                        });
+                        let rlist = rt_runs_list2.clone();
+                        let multi = multi2;
+                        move |_| {
+                            let eid = eid.clone();
+                            let rlist = rlist.clone();
+                            set_is_loading.set(true);
+                            spawn_local(async move {
+                                if multi {
+                                    let _ = stop_multi_jupyter(eid).await;
+                                } else {
+                                    let _ = stop_jupyter(eid, rlist[0].clone()).await;
+                                }
+                                set_jupyter_port.set(None);
+                                set_is_loading.set(false);
+                            });
+                        }
                     };
 
+                    let runs_count = runs_list_outer.len();
+                    let runs_list_for_suspend = runs_list_outer.clone();
                     Suspend::new(async move {
                         let run = run_data.await;
                         let notebook_info = notebook_resource.await;
@@ -2751,7 +2898,7 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
 
                         let view_result: leptos::prelude::AnyView = match run {
                             Ok(run_info) => {
-                                let name_str = run_info.name.clone();
+                                let name_str = if is_multi { format!("Multiple Runs ({})", runs_count) } else { run_info.name.clone() };
 
                                 let nb_exists = notebook_info.as_ref().map(|n| n.exists).unwrap_or(false);
                                 let nb_sources: Vec<String> = notebook_info
@@ -2762,16 +2909,26 @@ fn InteractiveView(exp_id: String, selected: std::collections::HashSet<String>) 
                                     .unwrap_or_default();
 
                                 let create_exp_id = exp_id_outer.clone();
-                                let create_run_id = run_id_outer.clone();
-                                let create_notebook_click = move |_| {
+                                let create_runs_list = runs_list_for_suspend.clone();
+                                let multi3 = is_multi;
+                                let create_notebook_click = {
                                     let eid = create_exp_id.clone();
-                                    let rid = create_run_id.clone();
-                                    set_is_loading.set(true);
-                                    spawn_local(async move {
-                                        let _ = create_default_notebook(eid, rid).await;
-                                        set_notebook_version.update(|v| *v += 1);
-                                        set_is_loading.set(false);
-                                    });
+                                    let rlist = create_runs_list.clone();
+                                    let multi = multi3;
+                                    move |_| {
+                                        let eid = eid.clone();
+                                        let rlist = rlist.clone();
+                                        set_is_loading.set(true);
+                                        spawn_local(async move {
+                                            if multi {
+                                                let _ = create_multi_notebook(eid, rlist).await;
+                                            } else {
+                                                let _ = create_default_notebook(eid, rlist[0].clone()).await;
+                                            }
+                                            set_notebook_version.update(|v| *v += 1);
+                                            set_is_loading.set(false);
+                                        });
+                                    }
                                 };
 
                                 if let Some(p) = port_opt {
@@ -3096,18 +3253,6 @@ fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>) -> impl I
         a.click();
         let _ = web_sys::Url::revoke_object_url(&url);
     }
-
-    fn download_canvas_as_png(canvas: &web_sys::HtmlCanvasElement, filename: &str) {
-        use wasm_bindgen::JsCast;
-        let data_url = canvas.to_data_url_with_type("image/png").unwrap_or_default();
-        let doc = web_sys::window().unwrap().document().unwrap();
-        let a: web_sys::HtmlAnchorElement = doc
-            .create_element("a").unwrap()
-            .dyn_into().unwrap();
-        a.set_href(&data_url);
-        a.set_download(filename);
-        a.click();
-}
 
     // ── Export: CSV ───────────────────────────────────────────────
     let export_csv = move |_| {

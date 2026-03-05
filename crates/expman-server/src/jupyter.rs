@@ -105,6 +105,96 @@ pub async fn generate_notebook(run_dir: &Path, is_python: bool) -> Result<bool, 
     Ok(true)
 }
 
+/// Generate the full `.ipynb` JSON content for a multi-run interactive notebook.
+pub fn generate_multi_run_notebook_content(is_python: bool, runs: &[String]) -> String {
+    let cells = if is_python {
+        let load_snippets = runs.iter().map(|run| {
+            format!("df_{} = pl.read_parquet('{}/vectors.parquet').with_columns(pl.lit('{}').alias('run'))", run.replace('-', "_"), run, run)
+        }).collect::<Vec<_>>().join("\n");
+        let tail_snippets = runs.iter().map(|run| format!("df_{}.tail()", run.replace('-', "_"))).collect::<Vec<_>>().join(", ");
+ 
+         format!(
+             r##"{{
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {{}},
+   "outputs": [],
+   "source": [
+    "# Install required dependencies into this environment\n",
+    "import sys\n",
+    "!pip --python {{sys.executable}} install polars matplotlib"
+   ]
+  }},
+  {{
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {{}},
+   "outputs": [],
+   "source": [
+    "import polars as pl\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "# Load run vectors\n",
+    "{}\n",
+    "\n",
+    "# Display the latest metrics\n",
+    "{}"
+   ]
+  }}"##,
+            load_snippets.replace('\n', "\\n"),
+            tail_snippets.replace('\n', "\\n")
+        )
+    } else {
+        let load_snippets = runs.iter().map(|run| {
+            format!("    let df_{} = ParquetReader::new(&mut std::fs::File::open(\"{}/vectors.parquet\").unwrap()).finish()?;\n    // Note: To add a 'run' column in rust polars you would typically use lit(\"{}\") in a select/with_columns, \n    // but for simplicity here we just load them.", run.replace('-', "_"), run, run)
+        }).collect::<Vec<_>>().join("\n");
+
+        let snippet = format!("use polars::prelude::*;\n\nfn main() -> Result<(), PolarsError> {{\n    // Load run vectors\n{}\n    Ok(())\n}}", load_snippets);
+        format!(
+            r#"{{
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {{}},
+   "outputs": [],
+   "source": [
+    "{}"
+   ]
+  }}"#,
+            snippet.replace('\n', "\\n").replace('"', "\\\"")
+        )
+    };
+
+    format!(
+        r#"{{
+ "cells": [
+  {}
+ ],
+ "metadata": {{}},
+ "nbformat": 4,
+ "nbformat_minor": 5
+}}"#,
+        cells
+    )
+}
+
+/// Write the default `interactive.ipynb` into `exp_dir` if it does not already exist.
+///
+/// Returns `Ok(true)` if the notebook was created, `Ok(false)` if it already existed.
+pub async fn generate_multi_run_notebook(exp_dir: &Path, is_python: bool, runs: &[String]) -> Result<bool, String> {
+    let notebook_path = exp_dir.join("interactive.ipynb");
+    if notebook_path.exists() {
+        return Ok(false);
+    }
+
+    let content = generate_multi_run_notebook_content(is_python, runs);
+    if let Err(e) = tokio::fs::write(&notebook_path, content).await {
+        error!("Failed to generate interactive.ipynb: {}", e);
+        return Err(format!("Failed to generate interactive.ipynb: {}", e));
+    }
+
+    Ok(true)
+}
+
 /// Detect the best available interactive Python backend in the user's environment.
 ///
 /// Checks (in order): `jupyter notebook`, `ipython`, `python3`.
@@ -236,6 +326,65 @@ impl JupyterManager {
         Ok(port)
     }
 
+    /// Spawns a multi-run Jupyter Notebook in the experiment directory.
+    pub async fn spawn_multi(
+        &self,
+        exp: &str,
+        exp_dir: PathBuf,
+        is_python: bool,
+        runs: &[String],
+    ) -> Result<u16, String> {
+        let key = format!("{}:__multi__", exp);
+
+        // Already running?
+        {
+            let instances = self.instances.lock().unwrap();
+            if let Some(instance) = instances.get(&key) {
+                return Ok(instance.port);
+            }
+        }
+
+        let port = Self::get_available_port()
+            .ok_or_else(|| "No available ports for Jupyter".to_string())?;
+
+        // Generate notebook if it doesn't exist
+        generate_multi_run_notebook(&exp_dir, is_python, runs).await?;
+
+        info!("Spawning multi-run Jupyter Notebook for {} on port {}", exp, port);
+
+        let mut child = tokio::process::Command::new("jupyter")
+            .arg("notebook")
+            .arg("--no-browser")
+            .arg(format!("--port={}", port))
+            .arg("--ServerApp.token=''")
+            .arg("--ServerApp.password=''")
+            .arg("--ServerApp.disable_check_xsrf=True")
+            .arg("--ServerApp.tornado_settings={\"headers\":{\"Content-Security-Policy\":\"frame-ancestors *\"}}")
+            .current_dir(&exp_dir)
+            .spawn()
+            .map_err(|e| format!("Failed to spawn jupyter: {}", e))?;
+
+        // Small wait to ensure it hasn't instantly crashed
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        if let Ok(Some(status)) = child.try_wait() {
+            return Err(format!(
+                "Jupyter process crashed immediately with status {}",
+                status
+            ));
+        }
+
+        let mut instances = self.instances.lock().unwrap();
+        instances.insert(
+            key,
+            JupyterInstance {
+                port,
+                process: child,
+            },
+        );
+
+        Ok(port)
+    }
+
     /// Returns the port if the notebook is running.
     pub fn status(&self, exp: &str, run: &str) -> Option<u16> {
         let key = format!("{}:{}", exp, run);
@@ -322,7 +471,6 @@ mod tests {
         );
         assert_eq!(parsed["nbformat"], 4);
     }
-
     #[test]
     fn test_generate_notebook_content_rust_has_one_cell() {
         let content = generate_notebook_content(false);
@@ -330,6 +478,26 @@ mod tests {
         let cells = parsed["cells"].as_array().unwrap();
         assert_eq!(cells.len(), 1, "Rust notebook should have exactly 1 cell");
         assert_eq!(parsed["nbformat"], 4);
+    }
+
+    #[test]
+    fn test_generate_multi_run_notebook_content_python_shows_tails() {
+        let runs = vec!["run-1".to_string(), "run-2".to_string()];
+        let content = generate_multi_run_notebook_content(true, &runs);
+        let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
+        let cells = parsed["cells"].as_array().unwrap();
+        
+        // Find the cell with the tails snippet
+        let mut found = false;
+        for cell in cells {
+            if let Some(source) = cell["source"].as_array() {
+                let full_source = source.iter().map(|s| s.as_str().unwrap()).collect::<String>();
+                if full_source.contains("df_run_1.tail()") && full_source.contains("df_run_2.tail()") {
+                    found = true;
+                }
+            }
+        }
+        assert!(found, "Should have found a cell with individual tail calls");
     }
 
     #[tokio::test]
