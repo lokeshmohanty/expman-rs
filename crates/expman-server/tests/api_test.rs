@@ -189,3 +189,45 @@ async fn test_get_server_config() {
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["live_mode"], true);
 }
+
+#[tokio::test]
+async fn test_get_metrics() {
+    let (_tmp, state) = setup_test_env();
+    let app = build_router(state.clone());
+
+    // Write some fake metrics using expman storage
+    let run_dir = state.base_dir.join("test_exp").join("run1");
+    let parquet_path = run_dir.join("vectors.parquet");
+    
+    use expman::models::{MetricValue, VectorRow};
+    use expman::storage::append_vectors;
+    use std::collections::HashMap;
+
+    let mut values = HashMap::new();
+    values.insert("accuracy".to_string(), MetricValue::Float(0.85));
+    values.insert("loss".to_string(), MetricValue::Float(0.15));
+    
+    let rows = vec![
+        VectorRow::new(values.clone(), Some(1)),
+        VectorRow::new(values, Some(2)),
+    ];
+    append_vectors(&parquet_path, &rows).unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/experiments/test_exp/runs/run1/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    let metrics = json.as_array().unwrap();
+    assert_eq!(metrics.len(), 2);
+    assert_eq!(metrics[0]["step"], 1);
+    assert_eq!(metrics[0]["accuracy"], 0.85);
+}

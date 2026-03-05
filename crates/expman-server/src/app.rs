@@ -6,8 +6,8 @@ use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use lucide_leptos::{
-    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, Minus, Package,
-    Plus, RotateCcw, TriangleAlert,
+    Book, ChevronRight, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, LayoutGrid,
+    Minus, Package, Plus, RefreshCw, RotateCcw, StretchVertical, TriangleAlert,
 };
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::JsCast;
@@ -810,8 +810,7 @@ fn MetricsView(
         return v;
     }
 
-    let selected_runs_data: Vec<&Run> =
-        runs.iter().filter(|r| selected.contains(&r.id)).collect();
+    let selected_runs_data: Vec<&Run> = runs.iter().filter(|r| selected.contains(&r.id)).collect();
 
     let mut vector_keys = std::collections::BTreeSet::new();
     for r in &selected_runs_data {
@@ -845,10 +844,11 @@ fn MetricsView(
                                         <div class="flex space-x-3">
                                              {selected_clone.clone().into_iter().enumerate().map(|(i, s)| {
                                                  let color = CHART_COLORS[i % CHART_COLORS.len()];
+                                                 let run_name = runs.iter().find(|r| r.id == s).map(|r| r.name.clone()).unwrap_or(s.clone());
                                                  view! {
                                                      <div class="flex items-center space-x-1 text-[10px] text-slate-400">
                                                          <span class=format!("w-2 h-2 rounded-full") style=format!("background-color: {}", color)></span>
-                                                         <span class="font-mono">{s}</span>
+                                                         <span class="font-mono">{run_name}</span>
                                                      </div>
                                                  }
                                              }).collect_view()}
@@ -865,8 +865,8 @@ fn MetricsView(
             </div>
 
             <div class="bg-slate-950 border border-slate-800 rounded-xl p-6">
-                 <h4 class="text-sm font-semibold text-slate-300 mb-4">"Scalars Summary"</h4>
-                 <div class="overflow-x-auto">
+                 <h4 class="text-sm font-semibold text-slate-300 mb-4">"Scalars Overview"</h4>
+                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                      {
                          // Collect all scalar keys from selected runs
                          let mut scalar_keys = std::collections::BTreeSet::new();
@@ -881,37 +881,35 @@ fn MetricsView(
 
                          if keys.is_empty() {
                              view! {
-                                 <p class="text-sm text-slate-500 italic">"No scalar data available for selected runs."</p>
+                                 <div class="col-span-full py-12 text-center text-slate-500 italic">
+                                     "No scalar data available for selected runs."
+                                 </div>
                              }.into_any()
                          } else {
-                             let keys_for_header = keys.clone();
-                             view! {
-                                 <table class="w-full text-left border-collapse text-xs">
-                                     <thead class="bg-slate-900 text-slate-500 uppercase font-semibold">
-                                         <tr>
-                                             <th class="p-3 border-b border-slate-800">"Run"</th>
-                                             {keys_for_header.into_iter().map(|k| view! {
-                                                 <th class="p-3 border-b border-slate-800 text-blue-400">{k}</th>
+                             keys.into_iter().map(|k| {
+                                 let k_label = k.clone();
+                                 let runs_subset = selected_runs_data.iter().map(|r| (*r).clone()).collect::<Vec<_>>();
+                                 let runs_for_legend = runs_subset.clone();
+                                 view! {
+                                     <div class="bg-slate-900/50 border border-slate-800 rounded-lg p-4 flex flex-col h-80">
+                                         <h5 class="text-xs font-medium text-slate-400 mb-2 truncate" title=k_label.clone()>{k_label.clone()}</h5>
+                                         <div class="flex-grow min-h-0">
+                                             <ScalarChart scalar_key=k runs=runs_subset />
+                                         </div>
+                                         <div class="mt-3 flex flex-wrap gap-2 overflow-y-auto max-h-16">
+                                             {runs_for_legend.into_iter().enumerate().map(|(i, run)| {
+                                                 let color = CHART_COLORS[i % CHART_COLORS.len()];
+                                                 view! {
+                                                     <div class="flex items-center space-x-1 text-[10px] text-slate-400">
+                                                         <span class=format!("w-2 h-2 rounded-full shrink-0") style=format!("background-color: {}", color)></span>
+                                                         <span class="font-mono truncate max-w-[120px]" title={run.name.clone()}>{run.name.clone()}</span>
+                                                     </div>
+                                                 }
                                              }).collect_view()}
-                                         </tr>
-                                     </thead>
-                                     <tbody class="divide-y divide-slate-800/50 text-slate-300">
-                                         {selected_runs_data.into_iter().map(|r| {
-                                             let scalars = r.scalars.clone().unwrap_or_default();
-                                             let current_keys = keys.clone();
-                                             view! {
-                                                 <tr class="hover:bg-slate-800/20">
-                                                     <td class="p-3 font-medium text-white">{r.name.clone()}</td>
-                                                     {current_keys.into_iter().map(|k| {
-                                                         let val = scalars.get(&k).map(|v| v.to_string()).unwrap_or_else(|| "-".to_string());
-                                                         view! { <td class="p-3 font-mono text-slate-400">{val}</td> }
-                                                     }).collect_view()}
-                                                 </tr>
-                                             }
-                                         }).collect_view()}
-                                     </tbody>
-                                 </table>
-                             }.into_any()
+                                         </div>
+                                     </div>
+                                 }
+                             }).collect_view().into_any()
                          }
                      }
                  </div>
@@ -922,15 +920,72 @@ fn MetricsView(
 
 #[component]
 fn LineChart(
-    #[allow(unused_variables)] exp_id: String,
+    exp_id: String,
     selected_runs: std::collections::HashSet<String>,
     metric_key: String,
 ) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
-    let (view_range_x, set_view_range_x) = signal((0.0, 20.0));
-    let (view_range_y, set_view_range_y) = signal((0.0, 2.0));
+    let (view_range_x, set_view_range_x) = signal((0.0, 100.0));
+    let (view_range_y, set_view_range_y) = signal((0.0, 1.0));
     let (is_dragging, set_is_dragging) = signal(false);
     let (last_mouse_pos, set_last_mouse_pos) = signal(None::<(i32, i32)>);
+    let (grid_dense, set_grid_dense) = signal(true);
+
+    let metrics_resource = LocalResource::new({
+        let exp_id = exp_id.clone();
+        let selected_runs = selected_runs.clone();
+        move || {
+            let eid = exp_id.clone();
+            let runs = selected_runs.clone();
+            async move {
+                let mut results = std::collections::HashMap::<String, Vec<serde_json::Value>>::new();
+                for rid in runs {
+                    if let Ok(m) = fetch_run_metrics(eid.clone(), rid.clone()).await {
+                        results.insert(rid, m);
+                    }
+                }
+                results
+            }
+        }
+    });
+
+    // Auto-fit range when data is loaded
+    Effect::new({
+        let metric_key = metric_key.clone();
+        move |_| {
+            let data = metrics_resource.get();
+            if let Some(runs_data) = data {
+                let mut min_x = f64::MAX;
+                let mut max_x = f64::MIN;
+                let mut min_y = f64::MAX;
+                let mut max_y = f64::MIN;
+                let mut found = false;
+
+                for rows in runs_data.values() {
+                    for row in rows {
+                        if let (Some(step), Some(val)) = (
+                            row.get("step").and_then(|v| v.as_f64()),
+                            row.get(&metric_key).and_then(|v| v.as_f64()),
+                        ) {
+                            min_x = min_x.min(step);
+                            max_x = max_x.max(step);
+                            min_y = min_y.min(val);
+                            max_y = max_y.max(val);
+                            found = true;
+                        }
+                    }
+                }
+
+                if found {
+                    // Add some padding
+                    let x_padding = if max_x > min_x { (max_x - min_x) * 0.05 } else { 1.0 };
+                    let y_padding = if max_y > min_y { (max_y - min_y) * 0.1 } else { 0.1 };
+                    set_view_range_x.set((min_x, max_x + x_padding));
+                    set_view_range_y.set((min_y - y_padding, max_y + y_padding));
+                }
+            }
+        }
+    });
 
     let on_mousedown = move |ev: web_sys::MouseEvent| {
         set_is_dragging.set(true);
@@ -989,7 +1044,7 @@ fn LineChart(
 
             let (y_min, y_max) = view_range_y.get();
             let y_range = y_max - y_min;
-            let new_y_min = y_min; // Keep Y static for now or zoom both
+            let new_y_min = y_min;
             let new_y_max = y_min + y_range * zoom_factor;
 
             set_view_range_x.set((new_x_min, new_x_max));
@@ -997,80 +1052,446 @@ fn LineChart(
         }
     };
 
-    Effect::new(move |_| {
-        use plotters::prelude::*;
-        use plotters_canvas::CanvasBackend;
+    Effect::new({
+        let metric_key = metric_key.clone();
+        let selected_runs = selected_runs.clone();
+        move |_| {
+            use plotters::prelude::*;
+            use plotters_canvas::CanvasBackend;
 
-        if let Some(canvas) = canvas_ref.get() {
-            let (x_min, x_max) = view_range_x.get();
-            let (y_min, y_max) = view_range_y.get();
+            if let Some(canvas) = canvas_ref.get() {
+                let (x_min, x_max) = view_range_x.get();
+                let (y_min, y_max) = view_range_y.get();
 
-            let w = canvas.parent_element().unwrap().client_width() as u32;
-            let h = canvas.parent_element().unwrap().client_height() as u32;
-            if w > 0 && h > 0 {
-                canvas.set_width(w);
-                canvas.set_height(h);
-            }
+                let parent = canvas.parent_element().unwrap();
+                let w = parent.client_width() as u32;
+                let h = parent.client_height() as u32;
+                
+                if w > 0 && h > 0 {
+                    canvas.set_width(w);
+                    canvas.set_height(h);
+                }
 
-            let backend = CanvasBackend::with_canvas_object(canvas.clone().into()).unwrap();
-            let root = backend.into_drawing_area();
-            let _ = root.fill(&WHITE);
+                let backend = CanvasBackend::with_canvas_object(canvas.clone()).unwrap();
+                let root = backend.into_drawing_area();
+                
+                // Fill with dark background matching the UI (slate-950)
+                let _ = root.fill(&RGBColor(2, 6, 23));
 
-            let mut chart = ChartBuilder::on(&root)
-                .caption(
-                    &metric_key,
-                    ("sans-serif", 14)
-                        .into_font()
-                        .color(&BLACK),
-                )
-                .margin(10)
-                .x_label_area_size(30)
-                .y_label_area_size(40)
-                .build_cartesian_2d(x_min..x_max, y_min..y_max)
-                .unwrap();
+                if x_min >= x_max || y_min >= y_max {
+                    let _ = root.present();
+                    return;
+                }
 
-            chart
-                .configure_mesh()
-                .disable_x_mesh()
-                .y_desc("Value")
-                .axis_style(RGBColor(203, 213, 225)) // Slate-300
-                .label_style(
-                    ("sans-serif", 10)
-                        .into_font()
-                        .color(&BLACK),
-                )
-                .draw()
-                .unwrap();
-
-            for (i, run_id) in selected_runs.iter().enumerate() {
-                let run_len: f64 = run_id.len() as f64;
-                let y_data: Vec<(f64, f64)> = (0..100)
-                    .map(|i| {
-                        let x = i as f64;
-                        let base = x.sin().abs();
-                        let adjusted = base + (run_len % 10.0) / 10.0;
-                        (x, adjusted)
-                    })
-                    .filter(|(x, y)| *x >= x_min - 2.0 && *x <= x_max + 2.0 && *y >= y_min - 2.0 && *y <= y_max + 2.0)
-                    .collect();
-
-                let hex = CHART_COLORS[i % CHART_COLORS.len()];
-                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
-                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
-                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                let color = RGBColor(r, g, b);
-
-                chart
-                    .draw_series(LineSeries::new(y_data, color.stroke_width(2)))
+                let mut chart = ChartBuilder::on(&root)
+                    .caption(&metric_key, ("sans-serif", 16).into_font().color(&RGBColor(248, 250, 252)))
+                    .margin(20)
+                    .x_label_area_size(50)
+                    .y_label_area_size(70)
+                    .build_cartesian_2d(x_min..x_max, y_min..y_max)
                     .unwrap();
-            }
 
-            let _ = root.present();
+                let mut mesh = chart.configure_mesh();
+                
+                mesh.x_desc("Step")
+                    .y_desc("Value")
+                    .axis_desc_style(("sans-serif", 14).into_font().color(&RGBColor(203, 213, 225)))
+                    .axis_style(RGBColor(71, 85, 105)) // slate-600
+                    .label_style(("sans-serif", 12).into_font().color(&RGBColor(203, 213, 225))) // slate-300
+                    .light_line_style(RGBColor(30, 41, 59)) // slate-800
+                    .bold_line_style(RGBColor(51, 65, 85)); // slate-700
+
+                if !grid_dense.get() {
+                    mesh.disable_x_mesh().disable_y_mesh();
+                }
+
+                mesh.draw().unwrap();
+
+                // Manual clipping for CanvasBackend
+                let (x_range, y_range) = chart.plotting_area().get_pixel_range();
+                let ctx = canvas.get_context("2d").ok().flatten()
+                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok());
+                
+                if let Some(ctx) = ctx {
+                    ctx.save();
+                    ctx.begin_path();
+                    let x = x_range.start as f64;
+                    let y = y_range.start as f64;
+                    let w = (x_range.end - x_range.start) as f64;
+                    let h = (y_range.end - y_range.start) as f64;
+                    ctx.rect(x, y, w, h);
+                    ctx.clip();
+                }
+
+                // Draw series from real data
+                if let Some(runs_data) = metrics_resource.get() {
+                    for (i, run_id) in selected_runs.iter().enumerate() {
+                        if let Some(rows) = runs_data.get(run_id) {
+                            let y_data: Vec<(f64, f64)> = rows.iter()
+                                .filter_map(|row| {
+                                    let x = row.get("step").and_then(|v| v.as_f64());
+                                    let y = row.get(&metric_key).and_then(|v| v.as_f64());
+                                    if let (Some(x), Some(y)) = (x, y) {
+                                        Some((x, y))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect();
+
+                            if !y_data.is_empty() {
+                                let hex = CHART_COLORS[i % CHART_COLORS.len()];
+                                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                                let color = RGBColor(r, g, b);
+
+                                chart
+                                    .draw_series(LineSeries::new(y_data, color.stroke_width(2)))
+                                    .unwrap();
+                            }
+                        }
+                    }
+                }
+
+                if let Some(ctx) = canvas.get_context("2d").ok().flatten()
+                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok()) {
+                    ctx.restore();
+                }
+
+                let _ = root.present();
+            }
         }
     });
 
     view! {
-        <div class="w-full h-full relative" style="min-height: 250px;">
+        <div class="w-full h-full relative group" style="min-height: 250px;">
+            <div class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                <button
+                    on:click=move |_| set_grid_dense.update(|d| *d = !*d)
+                    class="p-1.5 bg-slate-800/80 hover:bg-blue-600/80 text-slate-300 hover:text-white rounded-md backdrop-blur-sm transition-all border border-slate-700"
+                    title=move || if grid_dense.get() { "Hide Grid" } else { "Show Grid" }
+                >
+                    {move || if grid_dense.get() {
+                        view! { <StretchVertical size=14 /> }.into_any()
+                    } else {
+                        view! { <LayoutGrid size=14 /> }.into_any()
+                    }}
+                </button>
+                <button
+                    on:click=move |_| {
+                        // Trigger re-fit by clearing and letting the effect handle it?
+                        // Or just force a re-calc? For now just reset to a default if data is missing
+                        set_view_range_x.set((0.0, 100.0));
+                        set_view_range_y.set((0.0, 1.0));
+                        // The effect should pick up data if it exists
+                    }
+                    class="p-1.5 bg-slate-800/80 hover:bg-blue-600/80 text-slate-300 hover:text-white rounded-md backdrop-blur-sm transition-all border border-slate-700"
+                    title="Reset Zoom"
+                >
+                    <RefreshCw size=14 />
+                </button>
+            </div>
+            <canvas
+                node_ref=canvas_ref
+                on:mousedown=on_mousedown
+                on:mousemove=on_mousemove
+                on:mouseup=on_mouseup
+                on:mouseleave=on_mouseup
+                on:wheel=on_wheel
+                class="absolute inset-0 w-full h-full cursor-crosshair"
+            ></canvas>
+        </div>
+    }
+}
+
+#[component]
+fn ScalarChart(
+    scalar_key: String,
+    runs: Vec<Run>,
+) -> impl IntoView {
+    let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
+    let (view_range_x, set_view_range_x) = signal((0.0, 100.0));
+    let (view_range_y, set_view_range_y) = signal((0.0, 1.0));
+    let (is_dragging, set_is_dragging) = signal(false);
+    let (last_mouse_pos, set_last_mouse_pos) = signal(None::<(i32, i32)>);
+    let (grid_dense, set_grid_dense) = signal(true);
+
+    // Initial value setup
+    Effect::new({
+        let scalar_key = scalar_key.clone();
+        let runs = runs.clone();
+        move |_| {
+            let mut min_val = f64::MAX;
+            let mut max_val = f64::MIN;
+            let mut min_dur = f64::MAX;
+            let mut max_dur = f64::MIN;
+            let mut found = false;
+
+            for run in &runs {
+                if let Some(scalars) = &run.scalars {
+                    if let Some(val) = scalars.get(&scalar_key) {
+                        let numeric_val = match val {
+                            MetricValue::Float(f) => Some(*f),
+                            MetricValue::Int(i) => Some(*i as f64),
+                            MetricValue::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+                            MetricValue::Text(_) => None,
+                        };
+
+                        if let Some(v) = numeric_val {
+                            let dur = run.duration_secs.unwrap_or(0.0);
+                            min_val = min_val.min(v);
+                            max_val = max_val.max(v);
+                            min_dur = min_dur.min(dur);
+                            max_dur = max_dur.max(dur);
+                            found = true;
+                        }
+                    }
+                }
+            }
+
+            if found {
+                let y_padding = if max_val > min_val { (max_val - min_val) * 0.2 } else { 1.0 };
+                let x_padding = if max_dur > min_dur { (max_dur - min_dur) * 0.1 } else { 1.0 };
+                set_view_range_x.set(((min_dur - x_padding).max(0.0), max_dur + x_padding));
+                set_view_range_y.set((min_val - y_padding, max_val + y_padding));
+            }
+        }
+    });
+
+    let on_mousedown = move |ev: web_sys::MouseEvent| {
+        set_is_dragging.set(true);
+        set_last_mouse_pos.set(Some((ev.client_x(), ev.client_y())));
+    };
+
+    let on_mousemove = move |ev: web_sys::MouseEvent| {
+        if is_dragging.get() {
+            if let Some((lx, ly)) = last_mouse_pos.get() {
+                let dx = ev.client_x() - lx;
+                let dy = ev.client_y() - ly;
+
+                if let Some(canvas) = canvas_ref.get() {
+                    let w = canvas.client_width() as f64;
+                    let h = canvas.client_height() as f64;
+
+                    let (x_min, x_max) = view_range_x.get();
+                    let (y_min, y_max) = view_range_y.get();
+
+                    let x_range = x_max - x_min;
+                    let y_range = y_max - y_min;
+
+                    let shift_x = (dx as f64 / w) * x_range;
+                    let shift_y = (dy as f64 / h) * y_range;
+
+                    set_view_range_x.set((x_min - shift_x, x_max - shift_x));
+                    set_view_range_y.set((y_min + shift_y, y_max + shift_y));
+                    set_last_mouse_pos.set(Some((ev.client_x(), ev.client_y())));
+                }
+            }
+        }
+    };
+
+    let on_mouseup = move |_| {
+        set_is_dragging.set(false);
+        set_last_mouse_pos.set(None);
+    };
+
+    let on_wheel = move |ev: web_sys::WheelEvent| {
+        ev.prevent_default();
+        let delta = ev.delta_y();
+        let zoom_factor = if delta > 0.0 { 1.1 } else { 0.9 };
+
+        if let Some(canvas) = canvas_ref.get() {
+            let rect = canvas.get_bounding_client_rect();
+            let mouse_x = ev.client_x() as f64 - rect.left();
+            let w = canvas.client_width() as f64;
+
+            let (x_min, x_max) = view_range_x.get();
+            let x_range = x_max - x_min;
+            let cursor_x_rel = mouse_x / w;
+            let pivot_x = x_min + cursor_x_rel * x_range;
+
+            let new_x_min = pivot_x - (pivot_x - x_min) * zoom_factor;
+            let new_x_max = pivot_x + (x_max - pivot_x) * zoom_factor;
+
+            let (y_min, y_max) = view_range_y.get();
+            let y_range = y_max - y_min;
+            let new_y_min = y_min;
+            let new_y_max = y_min + y_range * zoom_factor;
+
+            set_view_range_x.set((new_x_min, new_x_max));
+            set_view_range_y.set((new_y_min, new_y_max));
+        }
+    };
+
+    Effect::new({
+        let scalar_key = scalar_key.clone();
+        let runs = runs.clone();
+        move |_| {
+            use plotters::prelude::*;
+            use plotters_canvas::CanvasBackend;
+
+            if let Some(canvas) = canvas_ref.get() {
+                let (x_min, x_max) = view_range_x.get();
+                let (y_min, y_max) = view_range_y.get();
+
+                let parent = canvas.parent_element().unwrap();
+                let w = parent.client_width() as u32;
+                let h = parent.client_height() as u32;
+                
+                if w > 0 && h > 0 {
+                    canvas.set_width(w);
+                    canvas.set_height(h);
+                }
+
+                let backend = CanvasBackend::with_canvas_object(canvas.clone()).unwrap();
+                let root = backend.into_drawing_area();
+                let _ = root.fill(&RGBColor(2, 6, 23)); // slate-950 equivalent for inside card
+
+                if x_min >= x_max || y_min >= y_max {
+                    let _ = root.present();
+                    return;
+                }
+
+                // Process data
+                let mut plot_data = Vec::new();
+
+                for (idx, run) in runs.iter().enumerate() {
+                    if let Some(scalars) = &run.scalars {
+                        if let Some(val) = scalars.get(&scalar_key) {
+                            let numeric_val = match val {
+                                MetricValue::Float(f) => Some(*f),
+                                MetricValue::Int(i) => Some(*i as f64),
+                                MetricValue::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+                                MetricValue::Text(_) => None,
+                            };
+
+                            if let Some(v) = numeric_val {
+                                let dur = run.duration_secs.unwrap_or(0.0);
+                                plot_data.push((dur, v, idx));
+                            }
+                        }
+                    }
+                }
+
+                if plot_data.is_empty() {
+                    let _ = root.present();
+                    return;
+                }
+
+                let mut chart = ChartBuilder::on(&root)
+                    .margin(20)
+                    .x_label_area_size(50)
+                    .y_label_area_size(70)
+                    .build_cartesian_2d(x_min..x_max, y_min..y_max)
+                    .unwrap();
+
+                let mut mesh = chart.configure_mesh();
+                
+                mesh.x_desc("Duration (s)")
+                    .y_desc(scalar_key.clone())
+                    .axis_desc_style(("sans-serif", 14).into_font().color(&RGBColor(203, 213, 225)))
+                    .axis_style(RGBColor(71, 85, 105)) // slate-600
+                    .label_style(("sans-serif", 12).into_font().color(&RGBColor(203, 213, 225))) // slate-300
+                    .light_line_style(RGBColor(30, 41, 59)) // slate-800
+                    .bold_line_style(RGBColor(51, 65, 85)); // slate-700
+
+                if !grid_dense.get() {
+                    mesh.disable_x_mesh().disable_y_mesh();
+                }
+
+                mesh.draw().unwrap();
+
+                // Manual clipping for CanvasBackend
+                let (x_range, y_range) = chart.plotting_area().get_pixel_range();
+                let ctx = canvas.get_context("2d").ok().flatten()
+                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok());
+                
+                if let Some(ctx) = ctx {
+                    ctx.save();
+                    ctx.begin_path();
+                    let x = x_range.start as f64;
+                    let y = y_range.start as f64;
+                    let w = (x_range.end - x_range.start) as f64;
+                    let h = (y_range.end - y_range.start) as f64;
+                    ctx.rect(x, y, w, h);
+                    ctx.clip();
+                }
+
+                chart.draw_series(
+                    plot_data.into_iter().map(|(x, y, color_idx)| {
+                        let hex = CHART_COLORS[color_idx % CHART_COLORS.len()];
+                        let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                        let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                        let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                        let color = RGBColor(r, g, b);
+
+                        Circle::new((x, y), 5, color.filled())
+                    })
+                ).unwrap();
+
+                if let Some(ctx) = canvas.get_context("2d").ok().flatten()
+                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok()) {
+                    ctx.restore();
+                }
+
+                let _ = root.present();
+            }
+        }
+    });
+
+    view! {
+        <div class="w-full h-full relative group" style="min-height: 250px;">
+            <div class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                <button
+                    on:click=move |_| set_grid_dense.update(|d| *d = !*d)
+                    class="p-1.5 bg-slate-800/80 hover:bg-blue-600/80 text-slate-300 hover:text-white rounded-md backdrop-blur-sm transition-all border border-slate-700"
+                    title=move || if grid_dense.get() { "Hide Grid" } else { "Show Grid" }
+                >
+                    {move || if grid_dense.get() {
+                        view! { <StretchVertical size=14 /> }.into_any()
+                    } else {
+                        view! { <LayoutGrid size=14 /> }.into_any()
+                    }}
+                </button>
+                <button
+                    on:click=move |_| {
+                        let mut min_val = f64::MAX;
+                        let mut max_val = f64::MIN;
+                        let mut min_dur = f64::MAX;
+                        let mut max_dur = f64::MIN;
+                        for run in &runs {
+                            if let Some(scalars) = &run.scalars {
+                                if let Some(val) = scalars.get(&scalar_key) {
+                                    let numeric_val = match val {
+                                        MetricValue::Float(f) => Some(*f),
+                                        MetricValue::Int(i) => Some(*i as f64),
+                                        MetricValue::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+                                        MetricValue::Text(_) => None,
+                                    };
+                                    if let Some(v) = numeric_val {
+                                        let dur = run.duration_secs.unwrap_or(0.0);
+                                        min_val = min_val.min(v);
+                                        max_val = max_val.max(v);
+                                        min_dur = min_dur.min(dur);
+                                        max_dur = max_dur.max(dur);
+                                    }
+                                }
+                            }
+                        }
+                        if min_val <= max_val {
+                            let y_padding = if max_val > min_val { (max_val - min_val) * 0.2 } else { 1.0 };
+                            let x_padding = if max_dur > min_dur { (max_dur - min_dur) * 0.1 } else { 1.0 };
+                            set_view_range_x.set(((min_dur - x_padding).max(0.0), max_dur + x_padding));
+                            set_view_range_y.set((min_val - y_padding, max_val + y_padding));
+                        }
+                    }
+                    class="p-1.5 bg-slate-800/80 hover:bg-blue-600/80 text-slate-300 hover:text-white rounded-md backdrop-blur-sm transition-all border border-slate-700"
+                    title="Reset Zoom"
+                >
+                    <RefreshCw size=14 />
+                </button>
+            </div>
             <canvas
                 node_ref=canvas_ref
                 on:mousedown=on_mousedown
@@ -1187,6 +1608,23 @@ async fn fetch_artifacts(exp_id: String, run_id: String) -> Result<Vec<Artifact>
 
     if !resp.ok() {
         return Err(format!("Error fetching artifacts: {}", resp.status()));
+    }
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+async fn fetch_run_metrics(exp_id: String, run_id: String) -> Result<Vec<serde_json::Value>, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/metrics",
+        exp_id, run_id
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error fetching run metrics: {}", resp.status()));
     }
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
@@ -1396,32 +1834,11 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
                 <div class="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
                     <span class="text-xs font-mono text-slate-400">"Preview: " {move || selected_path.get()}</span>
                     <div class="flex items-center space-x-4">
-                        <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
-                            <button 
-                                on:click=move |_| set_zoom_scale.update(|z: &mut f64| *z = (*z - 0.1).max(0.1))
-                                class="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
-                                title="Zoom Out"
-                            >
-                                <Minus size=14 />
-                            </button>
-                            <span class="px-2 text-[10px] font-mono text-slate-300 min-w-[45px] text-center">
-                                {move || format!("{:.0}%", zoom_scale.get() * 100.0)}
-                            </span>
-                            <button 
-                                on:click=move |_| set_zoom_scale.update(|z: &mut f64| *z = (*z + 0.1).min(5.0))
-                                class="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
-                                title="Zoom In"
-                            >
-                                <Plus size=14 />
-                            </button>
-                            <button 
-                                on:click=move |_| set_zoom_scale.set(1.0)
-                                class="ml-1 p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors border-l border-slate-700"
-                                title="Reset Zoom"
-                            >
-                                <RotateCcw size=14 />
-                            </button>
-                        </div>
+                        <ZoomControls 
+                            zoom_scale=zoom_scale 
+                            set_zoom_scale=set_zoom_scale 
+                            size=14 
+                        />
                         {
                             let dl_exp_id = exp_id.clone();
                             let dl_run_id = run_id.clone();
@@ -1429,7 +1846,20 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
                         }
                     </div>
                 </div>
-                <div class="flex-grow flex flex-col min-h-0 bg-slate-950 overflow-auto text-slate-300 relative">
+                // Scroll-to-zoom: adjust zoom_scale on wheel events
+                <div
+                    class="flex-grow flex flex-col min-h-0 bg-slate-950 overflow-auto text-slate-300 relative"
+                    on:wheel=move |ev: web_sys::WheelEvent| {
+                        if ev.ctrl_key() {
+                            ev.prevent_default();
+                            let delta = ev.delta_y();
+                            set_zoom_scale.update(|z: &mut f64| {
+                                if delta > 0.0 { *z = (*z - 0.1).max(0.1); }
+                                else { *z = (*z + 0.1).min(5.0); }
+                            });
+                        }
+                    }
+                >
                     <div 
                         class="flex-grow flex flex-col items-center justify-center min-h-full min-w-full origin-center"
                         style=move || format!("transform: scale({});", zoom_scale.get())
@@ -1485,7 +1915,11 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
 }
 
 #[component]
-fn ConsoleView(exp_id: String, selected: std::collections::HashSet<String>, runs: Vec<Run>) -> impl IntoView {
+fn ConsoleView(
+    exp_id: String,
+    selected: std::collections::HashSet<String>,
+    runs: Vec<Run>,
+) -> impl IntoView {
     if selected.is_empty() {
         return view! { <div class="p-12 text-center text-slate-500">"Select one or more runs to view live console output."</div> }.into_any();
     }
@@ -1525,7 +1959,13 @@ fn ConsoleView(exp_id: String, selected: std::collections::HashSet<String>, runs
 }
 
 #[component]
-fn SingleConsoleView(exp_id: String, run_id: String, filename: String, status: String) -> impl IntoView {
+fn SingleConsoleView(
+    exp_id: String,
+    run_id: String,
+    filename: String,
+    status: String,
+) -> impl IntoView {
+    let (zoom_scale, set_zoom_scale) = signal(1.0);
     let (logs, set_logs) = signal(Vec::<String>::new());
     let is_connected = Rc::new(Cell::new(true));
 
@@ -1573,12 +2013,36 @@ fn SingleConsoleView(exp_id: String, run_id: String, filename: String, status: S
 
     view! {
         <div class="flex-grow flex flex-col overflow-hidden font-mono text-[11px] leading-relaxed">
-            <div class="flex-grow overflow-auto p-4 space-y-1 custom-scrollbar" id="console-scroll">
-                <For
-                    each=move || logs.get().into_iter().enumerate()
-                    key=|(i, _)| *i
-                    children=|(_, line)| view! { <div class="text-white whitespace-pre-wrap">{line}</div> }
+            // Zoom controls for console output
+            <div class="px-3 py-1 border-b border-slate-800/50 flex items-center justify-end bg-slate-900/20">
+                <ZoomControls 
+                    zoom_scale=zoom_scale 
+                    set_zoom_scale=set_zoom_scale 
+                    size=12 
                 />
+            </div>
+            // Scroll-to-zoom on console output
+            <div
+                class="flex-grow overflow-auto p-4 space-y-1 custom-scrollbar"
+                id="console-scroll"
+                on:wheel=move |ev: web_sys::WheelEvent| {
+                    if ev.ctrl_key() {
+                        ev.prevent_default();
+                        let delta = ev.delta_y();
+                        set_zoom_scale.update(|z: &mut f64| {
+                            if delta > 0.0 { *z = (*z - 0.1).max(0.1); }
+                            else { *z = (*z + 0.1).min(5.0); }
+                        });
+                    }
+                }
+            >
+                <div style=move || format!("transform: scale({}); transform-origin: top left;", zoom_scale.get())>
+                    <For
+                        each=move || logs.get().into_iter().enumerate()
+                        key=|(i, _)| *i
+                        children=|(_, line)| view! { <div class="text-white whitespace-pre-wrap">{line}</div> }
+                    />
+                </div>
             </div>
             <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between bg-slate-900/30">
                 {
@@ -1603,6 +2067,43 @@ fn SingleConsoleView(exp_id: String, run_id: String, filename: String, status: S
             </div>
         </div>
     }.into_any()
+}
+
+/// Reusable zoom controls for previews and console output.
+#[component]
+fn ZoomControls(
+    zoom_scale: ReadSignal<f64>,
+    set_zoom_scale: WriteSignal<f64>,
+    #[prop(default = 14)] size: usize,
+) -> impl IntoView {
+    view! {
+        <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+            <button
+                on:click=move |_| set_zoom_scale.update(|z| *z = (*z - 0.1).max(0.1))
+                class="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
+                title="Zoom Out"
+            >
+                <Minus size=size />
+            </button>
+            <span class="px-2 text-[10px] font-mono text-slate-300 min-w-[45px] text-center">
+                {move || format!("{:.0}%", zoom_scale.get() * 100.0)}
+            </span>
+            <button
+                on:click=move |_| set_zoom_scale.update(|z| *z = (*z + 0.1).min(5.0))
+                class="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"
+                title="Zoom In"
+            >
+                <Plus size=size />
+            </button>
+            <button
+                on:click=move |_| set_zoom_scale.set(1.0)
+                class="ml-1 p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors border-l border-slate-700"
+                title="Reset Zoom"
+            >
+                <RotateCcw size=size />
+            </button>
+        </div>
+    }
 }
 
 #[component]
@@ -2304,8 +2805,11 @@ fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>) -> impl I
                 let v = scalars.get(*k).map(|v| v.to_string()).unwrap_or("-".into());
                 csv.push_str(&format!("{},", v));
             }
-                let finished = run.finished_at.as_ref().map(|f| f.as_str()).unwrap_or("-");
-                csv.push_str(&format!("{},{},{},{},{}\n", dur, run.started_at, finished, desc, tags));
+            let finished = run.finished_at.as_deref().unwrap_or("-");
+            csv.push_str(&format!(
+                "{},{},{},{},{}\n",
+                dur, run.started_at, finished, desc, tags
+            ));
         }
         trigger_download(&csv, "runs.csv", "text/csv");
     };
@@ -2333,7 +2837,11 @@ fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>) -> impl I
                 let v = scalars.get(*k).map(|v| v.to_string()).unwrap_or("-".into());
                 tex.push_str(&format!(" & {}", v));
             }
-            let finished = run.finished_at.as_ref().map(|f| format_date(f)).unwrap_or_else(|| "-".into());
+            let finished = run
+                .finished_at
+                .as_ref()
+                .map(|f| format_date(f))
+                .unwrap_or_else(|| "-".into());
             tex.push_str(&format!(
                 " & {} & {} & {} & {} \\\\\n",
                 dur,
@@ -2370,7 +2878,11 @@ fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>) -> impl I
                 let v = scalars.get(*k).map(|v| v.to_string()).unwrap_or("-".into());
                 typ.push_str(&format!(", [{}]", v));
             }
-            let finished = run.finished_at.as_ref().map(|f| format_date(f)).unwrap_or_else(|| "-".into());
+            let finished = run
+                .finished_at
+                .as_ref()
+                .map(|f| format_date(f))
+                .unwrap_or_else(|| "-".into());
             typ.push_str(&format!(
                 ", [{}], [{}], [{}], [{}],\n",
                 dur,
