@@ -20,7 +20,7 @@ path = "src/main.rs"
 
 # ── Native-only dependencies (axum server) ────────────────────────────────────
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-expman = { path = "../expman", version = "0.3.2" }
+expman = { path = "../expman", version = "0.3.3" }
 tokio = { workspace = true }
 tokio-util = { version = "0.7", features = ["rt"] }
 tokio-stream = { workspace = true }

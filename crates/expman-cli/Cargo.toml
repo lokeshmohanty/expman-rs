@@ -19,8 +19,8 @@ name = "exp"
 path = "src/main.rs"
 
 [dependencies]
-expman = { path = "../expman", version = "0.3.2" }
-expman-server = { path = "../expman-server", version = "0.3.2" }
+expman = { path = "../expman", version = "0.3.3" }
+expman-server = { path = "../expman-server", version = "0.3.3" }
 tokio = { workspace = true }
 clap = { workspace = true }
 comfy-table = { workspace = true }
