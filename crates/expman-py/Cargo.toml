@@ -20,9 +20,9 @@ path = "../expman-cli/src/main.rs"
 doc = false
 
 [dependencies]
-expman = { path = "../expman", version = "0.3.0" }
-expman-cli = { path = "../expman-cli", version = "0.3.0" }
-expman-server = { path = "../expman-server", version = "0.3.0" }
+expman = { path = "../expman", version = "0.3.1" }
+expman-cli = { path = "../expman-cli", version = "0.3.1" }
+expman-server = { path = "../expman-server", version = "0.3.1" }
 pyo3 = { workspace = true, features = ["extension-module"] }
 tokio = { workspace = true }
 serde_json = { workspace = true }

@@ -177,7 +177,8 @@ bump PART:
     VERSION="$MAJOR.$MINOR.$PATCH"
     echo "Bumping version $CURRENT → $VERSION..."
     sd '^version = ".*"' "version = \"$VERSION\"" Cargo.toml
-    fd Cargo.toml crates --type f --exec sd '^version = ".*"' "version = \"$VERSION\""
+    fd --type f 'Cargo.toml' crates --exec sd '^version = ".*"' "version = \"$VERSION\""
+    fd --type f 'Cargo.toml' crates --exec sd '(path = "[^"]*",\s*version = )"[^"]*"' "\${1}\"$VERSION\""
     sd '^version = ".*"' "version = \"$VERSION\"" pyproject.toml
     cargo check > /dev/null 2>&1 || true
     git add Cargo.toml pyproject.toml crates/*/Cargo.toml
