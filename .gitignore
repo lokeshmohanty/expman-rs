@@ -8,6 +8,7 @@ __pycache__/
 *.so
 *.pyd
 dist/
+!crates/expman-server/dist/index.html
 *.egg-info/
 .venv/
 uv.lock
