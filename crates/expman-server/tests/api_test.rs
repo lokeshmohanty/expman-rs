@@ -198,7 +198,7 @@ async fn test_get_metrics() {
     // Write some fake metrics using expman storage
     let run_dir = state.base_dir.join("test_exp").join("run1");
     let parquet_path = run_dir.join("vectors.parquet");
-    
+
     use expman::models::{MetricValue, VectorRow};
     use expman::storage::append_vectors;
     use std::collections::HashMap;
@@ -206,7 +206,7 @@ async fn test_get_metrics() {
     let mut values = HashMap::new();
     values.insert("accuracy".to_string(), MetricValue::Float(0.85));
     values.insert("loss".to_string(), MetricValue::Float(0.15));
-    
+
     let rows = vec![
         VectorRow::new(values.clone(), Some(1)),
         VectorRow::new(values, Some(2)),

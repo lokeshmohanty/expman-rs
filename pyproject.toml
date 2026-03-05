@@ -29,8 +29,7 @@ manifest-path = "crates/expman-py/Cargo.toml"
 python-source = "python"
 module-name = "expman.expman"
 features = ["pyo3/extension-module"]
-include = ["docs/**/*", "README.md", "LICENSE"]
-binaries = ["exp"]
+include = ["docs/**/*", "README.md", "LICENSE", "python/expman/bin/*"]
 
 [tool.ruff]
 line-length = 100

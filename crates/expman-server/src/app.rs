@@ -40,8 +40,7 @@ fn clip_polyline_to_viewport(
     for window in points.windows(2) {
         let (x0, y0) = window[0];
         let (x1, y1) = window[1];
-        if let Some((cx0, cy0, cx1, cy1)) =
-            liang_barsky(x0, y0, x1, y1, x_min, x_max, y_min, y_max)
+        if let Some((cx0, cy0, cx1, cy1)) = liang_barsky(x0, y0, x1, y1, x_min, x_max, y_min, y_max)
         {
             let start_matches = current
                 .last()
@@ -54,11 +53,9 @@ fn clip_polyline_to_viewport(
                 current = vec![(cx0, cy0)];
             }
             current.push((cx1, cy1));
-        } else {
-            if !current.is_empty() {
-                segments.push(current.clone());
-                current = vec![];
-            }
+        } else if !current.is_empty() {
+            segments.push(current.clone());
+            current = vec![];
         }
     }
     if !current.is_empty() {
@@ -69,11 +66,16 @@ fn clip_polyline_to_viewport(
 
 /// Liang-Barsky parametric line clipping.
 /// Returns `Some((x0, y0, x1, y1))` of the clipped segment, or `None` if entirely outside.
+#[allow(clippy::too_many_arguments)]
 fn liang_barsky(
-    x0: f64, y0: f64,
-    x1: f64, y1: f64,
-    x_min: f64, x_max: f64,
-    y_min: f64, y_max: f64,
+    x0: f64,
+    y0: f64,
+    x1: f64,
+    y1: f64,
+    x_min: f64,
+    x_max: f64,
+    y_min: f64,
+    y_max: f64,
 ) -> Option<(f64, f64, f64, f64)> {
     let dx = x1 - x0;
     let dy = y1 - y0;
@@ -83,15 +85,25 @@ fn liang_barsky(
     let mut t1: f64 = 1.0;
     for i in 0..4 {
         if p[i] == 0.0 {
-            if q[i] < 0.0 { return None; }
+            if q[i] < 0.0 {
+                return None;
+            }
         } else {
             let t = q[i] / p[i];
             if p[i] < 0.0 {
-                if t > t1 { return None; }
-                if t > t0 { t0 = t; }
+                if t > t1 {
+                    return None;
+                }
+                if t > t0 {
+                    t0 = t;
+                }
             } else {
-                if t < t0 { return None; }
-                if t < t1 { t1 = t; }
+                if t < t0 {
+                    return None;
+                }
+                if t < t1 {
+                    t1 = t;
+                }
             }
         }
     }
@@ -100,11 +112,11 @@ fn liang_barsky(
 
 fn download_canvas_as_png(canvas: &web_sys::HtmlCanvasElement, filename: &str) {
     use wasm_bindgen::JsCast;
-    let data_url = canvas.to_data_url_with_type("image/png").unwrap_or_default();
+    let data_url = canvas
+        .to_data_url_with_type("image/png")
+        .unwrap_or_default();
     let doc = web_sys::window().unwrap().document().unwrap();
-    let a: web_sys::HtmlAnchorElement = doc
-        .create_element("a").unwrap()
-        .dyn_into().unwrap();
+    let a: web_sys::HtmlAnchorElement = doc.create_element("a").unwrap().dyn_into().unwrap();
     a.set_href(&data_url);
     a.set_download(filename);
     a.click();
@@ -593,7 +605,7 @@ fn ExperimentDetail() -> impl IntoView {
                         <p class="text-[10px] text-slate-500">"Select to compare metrics"</p>
                     </div>
                     <div class="flex space-x-1">
-                        <button 
+                        <button
                             on:click=move |_| {
                                 if let Some(Ok(run_list)) = runs.get() {
                                     let all_ids: std::collections::HashSet<String> = run_list.into_iter().map(|r| r.id).collect();
@@ -604,7 +616,7 @@ fn ExperimentDetail() -> impl IntoView {
                         >
                             "All"
                         </button>
-                        <button 
+                        <button
                             on:click=move |_| set_selected_runs.set(std::collections::HashSet::new())
                             class="text-[9px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded border border-slate-700 transition-colors"
                         >
@@ -1020,7 +1032,7 @@ fn LineChart(
     let (view_range_x, set_view_range_x) = signal((0.0, 100.0));
     let (view_range_y, set_view_range_y) = signal((0.0, 1.0));
     let (is_dragging, set_is_dragging) = signal(false);
-    let (last_mouse_pos, set_last_mouse_pos) = signal(None::< (i32, i32) >);
+    let (last_mouse_pos, set_last_mouse_pos) = signal(None::<(i32, i32)>);
     let (grid_dense, set_grid_dense) = signal(true);
 
     let metrics_resource = LocalResource::new({
@@ -1030,7 +1042,8 @@ fn LineChart(
             let eid = exp_id.clone();
             let runs = selected_runs.clone();
             async move {
-                let mut results = std::collections::HashMap::<String, Vec<serde_json::Value>>::new();
+                let mut results =
+                    std::collections::HashMap::<String, Vec<serde_json::Value>>::new();
                 for rid in runs {
                     if let Ok(m) = fetch_run_metrics(eid.clone(), rid.clone()).await {
                         results.insert(rid, m);
@@ -1070,8 +1083,16 @@ fn LineChart(
 
                 if found {
                     // Add some padding
-                    let x_padding = if max_x > min_x { (max_x - min_x) * 0.05 } else { 1.0 };
-                    let y_padding = if max_y > min_y { (max_y - min_y) * 0.1 } else { 0.1 };
+                    let x_padding = if max_x > min_x {
+                        (max_x - min_x) * 0.05
+                    } else {
+                        1.0
+                    };
+                    let y_padding = if max_y > min_y {
+                        (max_y - min_y) * 0.1
+                    } else {
+                        0.1
+                    };
                     set_view_range_x.set((min_x, max_x + x_padding));
                     set_view_range_y.set((min_y - y_padding, max_y + y_padding));
                 }
@@ -1155,16 +1176,19 @@ fn LineChart(
 
             let (x_min, x_max) = view_range_x.get();
             let (y_min, y_max) = view_range_y.get();
-            if x_min >= x_max || y_min >= y_max { return; }
+            if x_min >= x_max || y_min >= y_max {
+                return;
+            }
 
             // 1600x900 offscreen canvas, appended off-screen so CanvasBackend can get a 2D context
             let doc = web_sys::window().unwrap().document().unwrap();
-            let offscreen: web_sys::HtmlCanvasElement = doc
-                .create_element("canvas").unwrap().dyn_into().unwrap();
+            let offscreen: web_sys::HtmlCanvasElement =
+                doc.create_element("canvas").unwrap().dyn_into().unwrap();
             offscreen.set_width(1600);
             offscreen.set_height(900);
-            offscreen.set_attribute("style",
-                "position:absolute;left:-9999px;top:-9999px;").unwrap();
+            offscreen
+                .set_attribute("style", "position:absolute;left:-9999px;top:-9999px;")
+                .unwrap();
             doc.body().unwrap().append_child(&offscreen).unwrap();
 
             let backend = CanvasBackend::with_canvas_object(offscreen.clone()).unwrap();
@@ -1172,15 +1196,15 @@ fn LineChart(
             let _ = root.fill(&WHITE);
 
             let mut chart = ChartBuilder::on(&root)
-                .caption(&metric_key,
-                    ("sans-serif", 28).into_font().color(&BLACK))
+                .caption(&metric_key, ("sans-serif", 28).into_font().color(&BLACK))
                 .margin(40)
                 .x_label_area_size(70)
                 .y_label_area_size(90)
                 .build_cartesian_2d(x_min..x_max, y_min..y_max)
                 .unwrap();
 
-            chart.configure_mesh()
+            chart
+                .configure_mesh()
                 .x_desc("Step")
                 .y_desc("Value")
                 .axis_desc_style(("sans-serif", 22).into_font().color(&RGBColor(17, 24, 39)))
@@ -1188,55 +1212,70 @@ fn LineChart(
                 .label_style(("sans-serif", 18).into_font().color(&RGBColor(17, 24, 39)))
                 .light_line_style(RGBColor(229, 231, 235))
                 .bold_line_style(RGBColor(209, 213, 219))
-                .draw().unwrap();
+                .draw()
+                .unwrap();
 
             if let Some(runs_data) = metrics_resource.get() {
                 for (i, run_id) in selected_runs.iter().enumerate() {
                     if let Some(rows) = runs_data.get(run_id) {
-                        let raw_points: Vec<(f64, f64)> = rows.iter()
+                        let raw_points: Vec<(f64, f64)> = rows
+                            .iter()
                             .filter_map(|row| {
                                 let x = row.get("step").and_then(|v| v.as_f64())?;
                                 let y = row.get(&metric_key).and_then(|v| v.as_f64())?;
                                 Some((x, y))
                             })
                             .collect();
-                        if raw_points.is_empty() { continue; }
+                        if raw_points.is_empty() {
+                            continue;
+                        }
 
                         let hex = CHART_COLORS[i % CHART_COLORS.len()];
                         let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
                         let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
                         let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
 
-                        let run_name = runs_meta.iter().find(|r| r.id == *run_id).map(|r| r.name.clone()).unwrap_or_else(|| run_id.clone());
- 
-                         // Use same clipping as the live chart
-                         let clipped =
-                             clip_polyline_to_viewport(&raw_points, x_min, x_max, y_min, y_max);
-                         let mut first = true;
-                         for segment in clipped {
-                             if segment.len() >= 2 {
-                                 let series = chart.draw_series(LineSeries::new(
-                                     segment.into_iter(),
-                                     RGBColor(r, g, b).stroke_width(3),
-                                 )).unwrap();
-                                 if first {
-                                     let color_clone = RGBColor(r, g, b);
-                                     series.label(run_name.clone())
-                                         .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color_clone.stroke_width(2)));
-                                     first = false;
-                                 }
-                             }
-                         }
-                     }
-                 }
-                 
-                 chart.configure_series_labels()
-                     .background_style(&WHITE.mix(0.8))
-                     .border_style(&BLACK)
-                     .position(SeriesLabelPosition::UpperRight)
-                     .draw()
-                     .unwrap();
-             }
+                        let run_name = runs_meta
+                            .iter()
+                            .find(|r| r.id == *run_id)
+                            .map(|r| r.name.clone())
+                            .unwrap_or_else(|| run_id.clone());
+
+                        // Use same clipping as the live chart
+                        let clipped =
+                            clip_polyline_to_viewport(&raw_points, x_min, x_max, y_min, y_max);
+                        let mut first = true;
+                        for segment in clipped {
+                            if segment.len() >= 2 {
+                                let series = chart
+                                    .draw_series(LineSeries::new(
+                                        segment.into_iter(),
+                                        RGBColor(r, g, b).stroke_width(3),
+                                    ))
+                                    .unwrap();
+                                if first {
+                                    let color_clone = RGBColor(r, g, b);
+                                    series.label(run_name.clone()).legend(move |(x, y)| {
+                                        PathElement::new(
+                                            vec![(x, y), (x + 20, y)],
+                                            color_clone.stroke_width(2),
+                                        )
+                                    });
+                                    first = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                chart
+                    .configure_series_labels()
+                    .background_style(WHITE.mix(0.8))
+                    .border_style(BLACK)
+                    .position(SeriesLabelPosition::UpperRight)
+                    .draw()
+                    .unwrap();
+            }
 
             let _ = root.present();
             let fname = format!("{}.png", metric_key.replace('/', "_"));
@@ -1259,7 +1298,7 @@ fn LineChart(
                 let parent = canvas.parent_element().unwrap();
                 let w = parent.client_width() as u32;
                 let h = parent.client_height() as u32;
-                
+
                 if w > 0 && h > 0 {
                     canvas.set_width(w);
                     canvas.set_height(h);
@@ -1267,7 +1306,7 @@ fn LineChart(
 
                 let backend = CanvasBackend::with_canvas_object(canvas.clone()).unwrap();
                 let root = backend.into_drawing_area();
-                
+
                 // Fill with dark background matching the UI (slate-950)
                 let _ = root.fill(&RGBColor(2, 6, 23));
 
@@ -1277,7 +1316,12 @@ fn LineChart(
                 }
 
                 let mut chart = ChartBuilder::on(&root)
-                    .caption(&metric_key, ("sans-serif", 16).into_font().color(&RGBColor(248, 250, 252)))
+                    .caption(
+                        &metric_key,
+                        ("sans-serif", 16)
+                            .into_font()
+                            .color(&RGBColor(248, 250, 252)),
+                    )
                     .margin(20)
                     .x_label_area_size(50)
                     .y_label_area_size(70)
@@ -1285,12 +1329,20 @@ fn LineChart(
                     .unwrap();
 
                 let mut mesh = chart.configure_mesh();
-                
+
                 mesh.x_desc("Step")
                     .y_desc("Value")
-                    .axis_desc_style(("sans-serif", 14).into_font().color(&RGBColor(203, 213, 225)))
+                    .axis_desc_style(
+                        ("sans-serif", 14)
+                            .into_font()
+                            .color(&RGBColor(203, 213, 225)),
+                    )
                     .axis_style(RGBColor(71, 85, 105)) // slate-600
-                    .label_style(("sans-serif", 12).into_font().color(&RGBColor(203, 213, 225))) // slate-300
+                    .label_style(
+                        ("sans-serif", 12)
+                            .into_font()
+                            .color(&RGBColor(203, 213, 225)),
+                    ) // slate-300
                     .light_line_style(RGBColor(30, 41, 59)) // slate-800
                     .bold_line_style(RGBColor(51, 65, 85)); // slate-700
 
@@ -1398,10 +1450,7 @@ fn LineChart(
 }
 
 #[component]
-fn ScalarChart(
-    scalar_key: String,
-    runs: Vec<Run>,
-) -> impl IntoView {
+fn ScalarChart(scalar_key: String, runs: Vec<Run>) -> impl IntoView {
     let canvas_ref = NodeRef::<leptos::html::Canvas>::new();
     let (view_range_x, set_view_range_x) = signal((0.0, 100.0));
     let (view_range_y, set_view_range_y) = signal((0.0, 1.0));
@@ -1443,8 +1492,16 @@ fn ScalarChart(
             }
 
             if found {
-                let y_padding = if max_val > min_val { (max_val - min_val) * 0.2 } else { 1.0 };
-                let x_padding = if max_dur > min_dur { (max_dur - min_dur) * 0.1 } else { 1.0 };
+                let y_padding = if max_val > min_val {
+                    (max_val - min_val) * 0.2
+                } else {
+                    1.0
+                };
+                let x_padding = if max_dur > min_dur {
+                    (max_dur - min_dur) * 0.1
+                } else {
+                    1.0
+                };
                 set_view_range_x.set(((min_dur - x_padding).max(0.0), max_dur + x_padding));
                 set_view_range_y.set((min_val - y_padding, max_val + y_padding));
             }
@@ -1526,15 +1583,18 @@ fn ScalarChart(
 
             let (x_min, x_max) = view_range_x.get();
             let (y_min, y_max) = view_range_y.get();
-            if x_min >= x_max || y_min >= y_max { return; }
+            if x_min >= x_max || y_min >= y_max {
+                return;
+            }
 
             let doc = web_sys::window().unwrap().document().unwrap();
-            let offscreen: web_sys::HtmlCanvasElement = doc
-                .create_element("canvas").unwrap().dyn_into().unwrap();
+            let offscreen: web_sys::HtmlCanvasElement =
+                doc.create_element("canvas").unwrap().dyn_into().unwrap();
             offscreen.set_width(1600);
             offscreen.set_height(900);
-            offscreen.set_attribute("style",
-                "position:absolute;left:-9999px;top:-9999px;").unwrap();
+            offscreen
+                .set_attribute("style", "position:absolute;left:-9999px;top:-9999px;")
+                .unwrap();
             doc.body().unwrap().append_child(&offscreen).unwrap();
 
             let backend = CanvasBackend::with_canvas_object(offscreen.clone()).unwrap();
@@ -1548,9 +1608,9 @@ fn ScalarChart(
                     if let Some(val) = scalars.get(&scalar_key) {
                         let numeric_val = match val {
                             MetricValue::Float(f) => Some(*f),
-                            MetricValue::Int(i)   => Some(*i as f64),
-                            MetricValue::Bool(b)  => Some(if *b { 1.0 } else { 0.0 }),
-                            MetricValue::Text(_)  => None,
+                            MetricValue::Int(i) => Some(*i as f64),
+                            MetricValue::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+                            MetricValue::Text(_) => None,
                         };
                         if let Some(v) = numeric_val {
                             plot_data.push((run.duration_secs.unwrap_or(0.0), v, idx));
@@ -1565,15 +1625,15 @@ fn ScalarChart(
             }
 
             let mut chart = ChartBuilder::on(&root)
-                .caption(&scalar_key,
-                    ("sans-serif", 28).into_font().color(&BLACK))
+                .caption(&scalar_key, ("sans-serif", 28).into_font().color(&BLACK))
                 .margin(40)
                 .x_label_area_size(70)
                 .y_label_area_size(90)
                 .build_cartesian_2d(x_min..x_max, y_min..y_max)
                 .unwrap();
 
-            chart.configure_mesh()
+            chart
+                .configure_mesh()
                 .x_desc("Duration (s)")
                 .y_desc(scalar_key.clone())
                 .axis_desc_style(("sans-serif", 22).into_font().color(&RGBColor(17, 24, 39)))
@@ -1581,36 +1641,43 @@ fn ScalarChart(
                 .label_style(("sans-serif", 18).into_font().color(&RGBColor(17, 24, 39)))
                 .light_line_style(RGBColor(229, 231, 235))
                 .bold_line_style(RGBColor(209, 213, 219))
-                .draw().unwrap();
+                .draw()
+                .unwrap();
 
             for (idx, run) in runs.iter().enumerate() {
-                 let hex = CHART_COLORS[idx % CHART_COLORS.len()];
-                 let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
-                 let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
-                 let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                 let color = RGBColor(r, g, b);
- 
-                 let run_points: Vec<(f64, f64)> = plot_data.iter()
-                     .filter(|(_, _, c_idx)| *c_idx == idx)
-                     .filter(|(x, y, _)| *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max)
-                     .map(|(x, y, _)| (*x, *y))
-                     .collect();
- 
-                 if !run_points.is_empty() {
-                     chart.draw_series(
-                         run_points.into_iter().map(|(x, y)| Circle::new((x, y), 8, color.filled()))
-                     ).unwrap()
-                         .label(run.name.clone())
-                         .legend(move |(x, y)| Circle::new((x + 10, y), 5, color.filled()));
-                 }
-             }
- 
-             chart.configure_series_labels()
-                 .background_style(&WHITE.mix(0.8))
-                 .border_style(&BLACK)
-                 .position(SeriesLabelPosition::UpperRight)
-                 .draw()
-                 .unwrap();
+                let hex = CHART_COLORS[idx % CHART_COLORS.len()];
+                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                let color = RGBColor(r, g, b);
+
+                let run_points: Vec<(f64, f64)> = plot_data
+                    .iter()
+                    .filter(|(_, _, c_idx)| *c_idx == idx)
+                    .filter(|(x, y, _)| *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max)
+                    .map(|(x, y, _)| (*x, *y))
+                    .collect();
+
+                if !run_points.is_empty() {
+                    chart
+                        .draw_series(
+                            run_points
+                                .into_iter()
+                                .map(|(x, y)| Circle::new((x, y), 8, color.filled())),
+                        )
+                        .unwrap()
+                        .label(run.name.clone())
+                        .legend(move |(x, y)| Circle::new((x + 10, y), 5, color.filled()));
+                }
+            }
+
+            chart
+                .configure_series_labels()
+                .background_style(WHITE.mix(0.8))
+                .border_style(BLACK)
+                .position(SeriesLabelPosition::UpperRight)
+                .draw()
+                .unwrap();
 
             let _ = root.present();
             let fname = format!("{}.png", scalar_key.replace('/', "_"));
@@ -1633,7 +1700,7 @@ fn ScalarChart(
                 let parent = canvas.parent_element().unwrap();
                 let w = parent.client_width() as u32;
                 let h = parent.client_height() as u32;
-                
+
                 if w > 0 && h > 0 {
                     canvas.set_width(w);
                     canvas.set_height(h);
@@ -1682,12 +1749,20 @@ fn ScalarChart(
                     .unwrap();
 
                 let mut mesh = chart.configure_mesh();
-                
+
                 mesh.x_desc("Duration (s)")
                     .y_desc(scalar_key.clone())
-                    .axis_desc_style(("sans-serif", 14).into_font().color(&RGBColor(203, 213, 225)))
+                    .axis_desc_style(
+                        ("sans-serif", 14)
+                            .into_font()
+                            .color(&RGBColor(203, 213, 225)),
+                    )
                     .axis_style(RGBColor(71, 85, 105)) // slate-600
-                    .label_style(("sans-serif", 12).into_font().color(&RGBColor(203, 213, 225))) // slate-300
+                    .label_style(
+                        ("sans-serif", 12)
+                            .into_font()
+                            .color(&RGBColor(203, 213, 225)),
+                    ) // slate-300
                     .light_line_style(RGBColor(30, 41, 59)) // slate-800
                     .bold_line_style(RGBColor(51, 65, 85)); // slate-700
 
@@ -1699,9 +1774,12 @@ fn ScalarChart(
 
                 // Manual clipping for CanvasBackend
                 let (x_range, y_range) = chart.plotting_area().get_pixel_range();
-                let ctx = canvas.get_context("2d").ok().flatten()
+                let ctx = canvas
+                    .get_context("2d")
+                    .ok()
+                    .flatten()
                     .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok());
-                
+
                 if let Some(ctx) = ctx {
                     ctx.save();
                     ctx.begin_path();
@@ -1713,26 +1791,32 @@ fn ScalarChart(
                     ctx.clip();
                 }
 
-                chart.draw_series(
-                    plot_data
-                        .into_iter()
-                        // Filter out-of-viewport points so plotters doesn't
-                        // try to render circles with extreme pixel coordinates.
-                        .filter(|(x, y, _)| {
-                            *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max
-                        })
-                        .map(|(x, y, color_idx)| {
-                            let hex = CHART_COLORS[color_idx % CHART_COLORS.len()];
-                            let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
-                            let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
-                            let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
-                            let color = RGBColor(r, g, b);
-                            Circle::new((x, y), 5, color.filled())
-                        }),
-                ).unwrap();
+                chart
+                    .draw_series(
+                        plot_data
+                            .into_iter()
+                            // Filter out-of-viewport points so plotters doesn't
+                            // try to render circles with extreme pixel coordinates.
+                            .filter(|(x, y, _)| {
+                                *x >= x_min && *x <= x_max && *y >= y_min && *y <= y_max
+                            })
+                            .map(|(x, y, color_idx)| {
+                                let hex = CHART_COLORS[color_idx % CHART_COLORS.len()];
+                                let r = u8::from_str_radix(&hex[1..3], 16).unwrap_or(0);
+                                let g = u8::from_str_radix(&hex[3..5], 16).unwrap_or(0);
+                                let b = u8::from_str_radix(&hex[5..7], 16).unwrap_or(0);
+                                let color = RGBColor(r, g, b);
+                                Circle::new((x, y), 5, color.filled())
+                            }),
+                    )
+                    .unwrap();
 
-                if let Some(ctx) = canvas.get_context("2d").ok().flatten()
-                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok()) {
+                if let Some(ctx) = canvas
+                    .get_context("2d")
+                    .ok()
+                    .flatten()
+                    .and_then(|c| c.dyn_into::<web_sys::CanvasRenderingContext2d>().ok())
+                {
                     ctx.restore();
                 }
 
@@ -1922,7 +2006,10 @@ async fn fetch_artifacts(exp_id: String, run_id: String) -> Result<Vec<Artifact>
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
-async fn fetch_run_metrics(exp_id: String, run_id: String) -> Result<Vec<serde_json::Value>, String> {
+async fn fetch_run_metrics(
+    exp_id: String,
+    run_id: String,
+) -> Result<Vec<serde_json::Value>, String> {
     let resp = gloo_net::http::Request::get(&format!(
         "/api/experiments/{}/runs/{}/metrics",
         exp_id, run_id
@@ -2148,10 +2235,10 @@ fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoView {
                 <div class="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
                     <span class="text-xs font-mono text-slate-400">"Preview: " {move || selected_path.get()}</span>
                     <div class="flex items-center space-x-4">
-                        <ZoomControls 
-                            zoom_scale=zoom_scale 
-                            set_zoom_scale=set_zoom_scale 
-                            size=14 
+                        <ZoomControls
+                            zoom_scale=zoom_scale
+                            set_zoom_scale=set_zoom_scale
+                            size=14
                         />
                         {
                             let dl_exp_id = exp_id.clone();
@@ -2306,7 +2393,7 @@ fn ConsoleView(
                 <span>"&"</span>
                 <span class="px-2 py-0.5 bg-slate-800 rounded">"console.log"</span>
             </div>
-            
+
             <div class="flex-grow grid grid-cols-1 gap-8 min-h-0">
                 {selected.clone().into_iter().map(|run_id| {
                     let run_id_inner = run_id.clone();
@@ -2390,10 +2477,10 @@ fn SingleConsoleView(
         <div class="flex-grow flex flex-col overflow-hidden font-mono text-[11px] leading-relaxed">
             // Zoom controls for console output
             <div class="px-3 py-1 border-b border-slate-800/50 flex items-center justify-end bg-slate-900/20">
-                <ZoomControls 
-                    zoom_scale=zoom_scale 
-                    set_zoom_scale=set_zoom_scale 
-                    size=12 
+                <ZoomControls
+                    zoom_scale=zoom_scale
+                    set_zoom_scale=set_zoom_scale
+                    size=12
                 />
             </div>
             // Scroll-to-zoom on console output
@@ -2640,28 +2727,22 @@ async fn create_default_notebook(exp: String, run: String) -> Result<String, Str
 }
 
 async fn fetch_multi_jupyter_status(exp: String) -> Result<JupyterStatus, String> {
-    let resp = gloo_net::http::Request::get(&format!(
-        "/api/experiments/{}/jupyter/status",
-        exp
-    ))
-    .send()
-    .await
-    .map_err(|e| e.to_string())?;
+    let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/jupyter/status", exp))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
 async fn start_multi_jupyter(exp: String, runs: Vec<String>) -> Result<u16, String> {
-    let resp = gloo_net::http::Request::post(&format!(
-        "/api/experiments/{}/jupyter/start",
-        exp
-    ))
-    .json(&serde_json::json!({ "runs": runs }))
-    .map_err(|e| e.to_string())?
-    .send()
-    .await
-    .map_err(|e| e.to_string())?;
+    let resp = gloo_net::http::Request::post(&format!("/api/experiments/{}/jupyter/start", exp))
+        .json(&serde_json::json!({ "runs": runs }))
+        .map_err(|e| e.to_string())?
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
     let res: JupyterStartResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
@@ -2669,39 +2750,30 @@ async fn start_multi_jupyter(exp: String, runs: Vec<String>) -> Result<u16, Stri
 }
 
 async fn stop_multi_jupyter(exp: String) -> Result<(), String> {
-    gloo_net::http::Request::post(&format!(
-        "/api/experiments/{}/jupyter/stop",
-        exp
-    ))
-    .send()
-    .await
-    .map_err(|e| e.to_string())?;
+    gloo_net::http::Request::post(&format!("/api/experiments/{}/jupyter/stop", exp))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 async fn fetch_multi_notebook_content(exp: String) -> Result<NotebookInfo, String> {
-    let resp = gloo_net::http::Request::get(&format!(
-        "/api/experiments/{}/jupyter/notebook",
-        exp
-    ))
-    .send()
-    .await
-    .map_err(|e| e.to_string())?;
+    let resp = gloo_net::http::Request::get(&format!("/api/experiments/{}/jupyter/notebook", exp))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
 async fn create_multi_notebook(exp: String, runs: Vec<String>) -> Result<String, String> {
-    let resp = gloo_net::http::Request::post(&format!(
-        "/api/experiments/{}/jupyter/notebook",
-        exp
-    ))
-    .json(&serde_json::json!({ "runs": runs }))
-    .map_err(|e| e.to_string())?
-    .send()
-    .await
-    .map_err(|e| e.to_string())?;
+    let resp = gloo_net::http::Request::post(&format!("/api/experiments/{}/jupyter/notebook", exp))
+        .json(&serde_json::json!({ "runs": runs }))
+        .map_err(|e| e.to_string())?
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
     let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;

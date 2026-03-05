@@ -88,10 +88,7 @@ mod server {
                 "/experiments/{exp}/jupyter/start",
                 post(start_multi_jupyter),
             )
-            .route(
-                "/experiments/{exp}/jupyter/stop",
-                post(stop_multi_jupyter),
-            )
+            .route("/experiments/{exp}/jupyter/stop", post(stop_multi_jupyter))
             .route(
                 "/experiments/{exp}/jupyter/status",
                 get(status_multi_jupyter),
@@ -686,7 +683,11 @@ mod server {
             true
         };
 
-        match state.jupyter.spawn_multi(&exp, dir, is_python, &payload.runs).await {
+        match state
+            .jupyter
+            .spawn_multi(&exp, dir, is_python, &payload.runs)
+            .await
+        {
             Ok(port) => Json(serde_json::json!({ "port": port })).into_response(),
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
         }

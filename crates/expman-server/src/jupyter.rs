@@ -111,10 +111,14 @@ pub fn generate_multi_run_notebook_content(is_python: bool, runs: &[String]) -> 
         let load_snippets = runs.iter().map(|run| {
             format!("df_{} = pl.read_parquet('{}/vectors.parquet').with_columns(pl.lit('{}').alias('run'))", run.replace('-', "_"), run, run)
         }).collect::<Vec<_>>().join("\n");
-        let tail_snippets = runs.iter().map(|run| format!("df_{}.tail()", run.replace('-', "_"))).collect::<Vec<_>>().join(", ");
- 
-         format!(
-             r##"{{
+        let tail_snippets = runs
+            .iter()
+            .map(|run| format!("df_{}.tail()", run.replace('-', "_")))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        format!(
+            r##"{{
    "cell_type": "code",
    "execution_count": null,
    "metadata": {{}},
@@ -180,7 +184,11 @@ pub fn generate_multi_run_notebook_content(is_python: bool, runs: &[String]) -> 
 /// Write the default `interactive.ipynb` into `exp_dir` if it does not already exist.
 ///
 /// Returns `Ok(true)` if the notebook was created, `Ok(false)` if it already existed.
-pub async fn generate_multi_run_notebook(exp_dir: &Path, is_python: bool, runs: &[String]) -> Result<bool, String> {
+pub async fn generate_multi_run_notebook(
+    exp_dir: &Path,
+    is_python: bool,
+    runs: &[String],
+) -> Result<bool, String> {
     let notebook_path = exp_dir.join("interactive.ipynb");
     if notebook_path.exists() {
         return Ok(false);
@@ -350,7 +358,10 @@ impl JupyterManager {
         // Generate notebook if it doesn't exist
         generate_multi_run_notebook(&exp_dir, is_python, runs).await?;
 
-        info!("Spawning multi-run Jupyter Notebook for {} on port {}", exp, port);
+        info!(
+            "Spawning multi-run Jupyter Notebook for {} on port {}",
+            exp, port
+        );
 
         let mut child = tokio::process::Command::new("jupyter")
             .arg("notebook")
@@ -486,13 +497,18 @@ mod tests {
         let content = generate_multi_run_notebook_content(true, &runs);
         let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
         let cells = parsed["cells"].as_array().unwrap();
-        
+
         // Find the cell with the tails snippet
         let mut found = false;
         for cell in cells {
             if let Some(source) = cell["source"].as_array() {
-                let full_source = source.iter().map(|s| s.as_str().unwrap()).collect::<String>();
-                if full_source.contains("df_run_1.tail()") && full_source.contains("df_run_2.tail()") {
+                let full_source = source
+                    .iter()
+                    .map(|s| s.as_str().unwrap())
+                    .collect::<String>();
+                if full_source.contains("df_run_1.tail()")
+                    && full_source.contains("df_run_2.tail()")
+                {
                     found = true;
                 }
             }
