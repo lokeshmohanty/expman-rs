@@ -58,15 +58,15 @@ jobs:
           manylinux: auto
           before-script-linux: |
             mkdir -p python/expman/bin
-            cargo build --release -p expman-cli
+            RUSTC_WRAPPER= cargo build --release -p expman-cli
             cp target/release/exp python/expman/bin/exp
           before-script-macos: |
             mkdir -p python/expman/bin
-            cargo build --release -p expman-cli
+            RUSTC_WRAPPER= cargo build --release -p expman-cli
             cp target/release/exp python/expman/bin/exp
           before-script-windows: |
             python -c "import os, shutil; os.makedirs('python/expman/bin', exist_ok=True)"
-            cargo build --release -p expman-cli
+            python -c "import os, subprocess; os.environ.pop('RUSTC_WRAPPER', None); subprocess.run(['cargo', 'build', '--release', '-p', 'expman-cli'], check=True)"
             python -c "import shutil; shutil.copy('target/release/exp.exe', 'python/expman/bin/exp.exe')"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
