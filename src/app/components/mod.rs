@@ -1,3 +1,4 @@
+#![doc = include_str!("./README.md")]
 //! Reusable UI components.
 
 mod artifacts;

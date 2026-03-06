@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 //! `expman`: High-performance experiment manager
 //!
 //! Exposes a core library, CLI, Axum server + embedded frontend, and Python bindings.

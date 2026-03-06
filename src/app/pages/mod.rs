@@ -1,3 +1,4 @@
+#![doc = include_str!("./README.md")]
 //! Page-level components.
 
 mod dashboard;

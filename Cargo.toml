@@ -20,10 +20,12 @@ crate-type = ["rlib", "cdylib"]
 name = "exp"
 path = "src/main.rs"
 required-features = ["cli"]
+doc = false
 
 [[bin]]
 name = "expman-app"
 path = "src/app/main.rs"
+doc = false
 # No required-features, it uses wasm32 target cfg
 
 [features]

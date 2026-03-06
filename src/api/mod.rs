@@ -1,3 +1,4 @@
+#![doc = include_str!("./README.md")]
 //! API module: Axum router, helpers, and handler submodules.
 
 use std::net::SocketAddr;

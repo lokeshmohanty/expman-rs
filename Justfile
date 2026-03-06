@@ -36,7 +36,7 @@ build-frontend:
 build-docs:
     @echo "Building Rust documentation..."
     cargo doc --no-deps --all-features
-    @echo '<meta http-equiv="refresh" content="0; url=exp/index.html">' > target/doc/index.html
+    @echo '<meta http-equiv="refresh" content="0; url=expman/index.html">' > target/doc/index.html
 
 # Build the CLI binary and copy it to the Python package
 build-cli-for-py: build-frontend

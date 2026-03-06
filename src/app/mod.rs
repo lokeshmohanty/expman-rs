@@ -1,3 +1,4 @@
+#![doc = include_str!("./README.md")]
 //! Leptos frontend application (compiled to WASM via trunk).
 
 pub(crate) mod components;

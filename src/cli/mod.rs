@@ -1,8 +1,5 @@
+#![doc = include_str!("./README.md")]
 //! Library backing the [`exp`](../exp/index.html) binary.
-//!
-//! This crate provides the CLI argument types ([`Cli`], [`Commands`]) and the
-//! command implementations used by the `exp` executable.  See the
-//! [binary documentation](../exp/index.html) for usage examples.
 
 use std::path::PathBuf;
 
