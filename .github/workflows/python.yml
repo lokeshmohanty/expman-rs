@@ -2,42 +2,40 @@ name: Python CI
 
 on:
   workflow_call:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
       - uses: astral-sh/setup-uv@v4
         with:
           cache-dependency-glob: "wrappers/python/pyproject.toml"
       - name: Python lint (Ruff)
-        run: uv run --extra dev ruff check wrappers/python/ examples/
+        run: just lint-py
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: trunk
-      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@just
       - uses: astral-sh/setup-uv@v4
         with:
           cache-dependency-glob: "wrappers/python/pyproject.toml"
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+      - name: Download CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-bin-${{ runner.os == 'Windows' && 'windows-latest' || runner.os == 'macOS' && 'macos-latest' || 'ubuntu-latest' }}
+          path: bin-assets
       - name: Build and test
         run: |
-          mkdir -p wrappers/python/expman/bin
-          trunk build --release
-          cargo build --release --features cli
-          cp target/release/exp wrappers/python/expman/bin/exp
+          just bundle-cli-bin bin-assets
           cd wrappers/python
           uv sync --extra dev
           uv build --wheel --out-dir dist

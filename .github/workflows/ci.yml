@@ -7,9 +7,13 @@ on:
     branches: ["main"]
 
 jobs:
+  build-assets:
+    uses: ./.github/workflows/build-assets.yml
+
   rust:
+    needs: build-assets
     uses: ./.github/workflows/rust.yml
+
   python:
+    needs: build-assets
     uses: ./.github/workflows/python.yml
-  frontend:
-    uses: ./.github/workflows/frontend.yml

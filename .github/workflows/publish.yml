@@ -24,8 +24,13 @@ jobs:
               echo "should_release=false" >> $GITHUB_OUTPUT
           fi
 
-  publish-cargo:
+  build-assets:
     needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
+    uses: ./.github/workflows/build-assets.yml
+
+  publish-cargo:
+    needs: [check-release, build-assets]
     if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     environment: CARGO
@@ -34,16 +39,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@just
+      - name: Download frontend
+        uses: actions/download-artifact@v4
         with:
-          tool: trunk
-      - name: Build frontend
-        run: trunk build --release
+          name: frontend-dist
+          path: dist
       - name: Publish to crates.io
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   build-pypi:
-    needs: [check-release, publish-cargo]
+    needs: [check-release, build-assets]
     if: needs.check-release.outputs.should_release == 'true'
     strategy:
       matrix:
@@ -51,29 +57,32 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@just
+      - name: Download frontend
+        uses: actions/download-artifact@v4
         with:
-          targets: wasm32-unknown-unknown
-      - uses: taiki-e/install-action@v2
+          name: frontend-dist
+          path: dist
+      - name: Download CLI
+        uses: actions/download-artifact@v4
         with:
-          tool: trunk
-      - name: Build frontend
-        run: trunk build --release
+          name: cli-bin-${{ matrix.os }}
+          path: bin-assets
+      - name: Prepare Python package assets
+        run: |
+          just prep-py-assets
+          just bundle-cli-bin bin-assets
       - uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release --out dist --find-interpreter --manifest-path wrappers/python/Cargo.toml
-          sccache: 'true'
+          args: --release --out dist --find-interpreter
           manylinux: auto
-          before-script-linux: |
-            mkdir -p wrappers/python/expman/bin
-            cargo build --release --features cli
-            cp target/release/exp wrappers/python/expman/bin/exp
+          working-directory: wrappers/python
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
-          path: dist
+          path: wrappers/python/dist
 
   publish-pypi:
     needs: [check-release, build-pypi]

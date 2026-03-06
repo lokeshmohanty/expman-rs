@@ -32,18 +32,40 @@ build-frontend:
     @echo "Building frontend with trunk..."
     trunk build --release
 
+# CI Helper: Ensure dist directory exists for rust-embed (avoids build failures)
+prep-dist:
+    mkdir -p dist && touch dist/index.html
+
 # Build documentation with a custom landing page from README.md
-build-docs:
+build-docs: prep-dist
     @echo "Building Rust documentation..."
     cargo doc --no-deps --all-features
     @echo '<meta http-equiv="refresh" content="0; url=expman/index.html">' > target/doc/index.html
 
-# Build the CLI binary and copy it to the Python package
+# Build the CLI binary and copy it to the Python package (platform-aware)
 build-cli-for-py: build-frontend
     mkdir -p wrappers/python/expman/bin
     cargo build --release --features cli
-    cp target/release/exp wrappers/python/expman/bin/exp
-    chmod +x wrappers/python/expman/bin/exp
+    @if [ -f "target/release/exp.exe" ]; then \
+        cp target/release/exp.exe wrappers/python/expman/bin/exp.exe; \
+    elif [ -f "target/release/exp" ]; then \
+        cp target/release/exp wrappers/python/expman/bin/exp; \
+        chmod +x wrappers/python/expman/bin/exp; \
+    fi
+
+# Bundle a pre-built CLI binary into the Python package (source defaults to target/release)
+bundle-cli-bin SRC_DIR="target/release":
+    mkdir -p wrappers/python/expman/bin
+    @if [ -f "{{SRC_DIR}}/exp.exe" ]; then \
+        cp "{{SRC_DIR}}/exp.exe" wrappers/python/expman/bin/exp.exe; \
+    elif [ -f "{{SRC_DIR}}/exp" ]; then \
+        cp "{{SRC_DIR}}/exp" wrappers/python/expman/bin/exp; \
+        chmod +x wrappers/python/expman/bin/exp; \
+    fi
+
+# CI Helper: Prepare Python package assets (LICENSE, etc.)
+prep-py-assets:
+    cp LICENSE wrappers/python/ || true
 
 # Build the Python extension and place the shared library in the package directory
 build-py: build-cli-for-py
@@ -85,7 +107,9 @@ fmt:
     cargo fmt --all
 
 # Run clippy (excludes frontend WASM crate — use lint-frontend for that)
-lint: lint-frontend lint-py
+lint: lint-rust lint-py
+
+lint-rust: lint-frontend
     cargo clippy --all-features --all-targets -- -D warnings
 
 # Run clippy on the frontend (requires wasm32-unknown-unknown target)

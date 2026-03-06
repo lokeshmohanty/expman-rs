@@ -2,10 +2,6 @@ name: Rust CI
 
 on:
   workflow_call:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
 
 jobs:
   lint:
@@ -15,19 +11,42 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk,just
+      - uses: astral-sh/setup-uv@v4
+        with:
+          cache-dependency-glob: "wrappers/python/pyproject.toml"
       - uses: Swatinem/rust-cache@v2
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: just fmt-check
       - name: Run clippy
-        run: cargo clippy --all-features --all-targets -- -D warnings
+        run: just lint-rust
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@just
+      - uses: astral-sh/setup-uv@v4
+        with:
+          cache-dependency-glob: "wrappers/python/pyproject.toml"
       - uses: Swatinem/rust-cache@v2
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Run tests
-        run: cargo nextest run --all-features
+        run: just test-verbose

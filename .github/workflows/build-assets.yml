@@ -1,0 +1,62 @@
+name: Build Assets
+
+on:
+  workflow_call:
+    outputs:
+      frontend-artifact:
+        description: "Name of the frontend artifact"
+        value: "frontend-dist"
+      cli-artifact-prefix:
+        description: "Prefix for CLI artifacts (e.g. cli-bin-)"
+        value: "cli-bin-"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk,just
+      - uses: Swatinem/rust-cache@v2
+      - name: Build frontend
+        run: just build-frontend
+      - name: Upload frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 1
+
+  cli:
+    needs: frontend
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@just
+      - uses: Swatinem/rust-cache@v2
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+      - name: Build CLI
+        run: |
+          # We don't use build-cli-for-py here because we want to upload the raw binary first
+          cargo build --release --features cli
+      - name: Upload CLI binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-bin-${{ matrix.os }}
+          path: |
+            target/release/exp
+            target/release/exp.exe
+          if-no-files-found: ignore
+          retention-days: 1
