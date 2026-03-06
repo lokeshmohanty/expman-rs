@@ -32,6 +32,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
+      - name: Build frontend
+        run: cd crates/expman-server && trunk build --release
       - name: Build Rust CLI binary
         run: cargo build --release -p expman-cli
       - name: Upload CLI binary
@@ -58,6 +65,17 @@ jobs:
           tool: trunk
       - name: Build frontend
         run: cd crates/expman-server && trunk build --release
+      - name: Build CLI (macOS / Windows)
+        if: matrix.os != 'ubuntu-latest'
+        shell: bash
+        run: |
+          mkdir -p python/expman/bin
+          cargo build --release -p expman-cli
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp target/release/exp.exe python/expman/bin/exp.exe
+          else
+            cp target/release/exp python/expman/bin/exp
+          fi
       - uses: PyO3/maturin-action@v1
         with:
           command: build
@@ -65,17 +83,10 @@ jobs:
           sccache: 'true'
           manylinux: auto
           before-script-linux: |
+            cargo clean
             mkdir -p python/expman/bin
             RUSTC_WRAPPER= cargo build --release -p expman-cli
             cp target/release/exp python/expman/bin/exp
-          before-script-macos: |
-            mkdir -p python/expman/bin
-            RUSTC_WRAPPER= cargo build --release -p expman-cli
-            cp target/release/exp python/expman/bin/exp
-          before-script-windows: |
-            python -c "import os, shutil; os.makedirs('python/expman/bin', exist_ok=True)"
-            python -c "import os, subprocess; os.environ.pop('RUSTC_WRAPPER', None); subprocess.run(['cargo', 'build', '--release', '-p', 'expman-cli'], check=True)"
-            python -c "import shutil; shutil.copy('target/release/exp.exe', 'python/expman/bin/exp.exe')"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -107,12 +118,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
+      - name: Build frontend
+        run: cd crates/expman-server && trunk build --release
       - name: Publish expman
         run: cargo publish -p expman --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
       - name: Publish expman-server
-        run: cargo publish -p expman-server --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p expman-server --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --allow-dirty
       - name: Publish expman-cli
-        run: cargo publish -p expman-cli --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p expman-cli --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --allow-dirty
       # Wait a bit for crates.io index to update
       - run: sleep 60
 

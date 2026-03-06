@@ -9,6 +9,12 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 readme = "README.md"
+include = [
+    "src/**/*",
+    "dist/**/*",
+    "Cargo.toml",
+    "README.md"
+]
 
 [lib]
 name = "expman_server"
