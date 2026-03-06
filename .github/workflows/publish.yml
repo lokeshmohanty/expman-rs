@@ -83,7 +83,7 @@ jobs:
           sccache: 'true'
           manylinux: auto
           before-script-linux: |
-            cargo clean
+            RUSTC_WRAPPER= cargo clean
             mkdir -p python/expman/bin
             RUSTC_WRAPPER= cargo build --release -p expman-cli
             cp target/release/exp python/expman/bin/exp

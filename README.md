@@ -42,19 +42,9 @@ cargo install expman-cli
 pip install expman-rs
 ```
 
-### Alternatively: Download or Install from GitHub
+### Alternatively: Download from GitHub Releases
 
-- **Direct Download**: Download the pre-built `exp` binary or Python wheels from [GitHub Releases](https://github.com/lokeshmohanty/expman-rs/releases).
-- **Python (pip)**:
-
-  ```bash
-  pip install git+https://github.com/lokeshmohanty/expman-rs.git
-  ```
-- **Rust (cargo)**:
-
-  ```bash
-  cargo install --git https://github.com/lokeshmohanty/expman-rs.git expman-cli
-  ```
+- **Direct Download**: Download the pre-built standalone `exp` binaries or Python wheels directly from our [GitHub Releases](https://github.com/lokeshmohanty/expman-rs/releases).
 
 ## Quick Start
 
