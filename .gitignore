@@ -8,6 +8,7 @@ __pycache__/
 *.so
 *.pyd
 dist/
+python/expman/bin/
 !crates/expman-server/dist/
 crates/expman-server/dist/*
 !crates/expman-server/dist/index.html

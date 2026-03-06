@@ -12,6 +12,22 @@ use comfy_table::{presets::UTF8_FULL, Table};
 
 use expman::storage;
 use expman_server::{serve, ServerConfig};
+use tracing_subscriber::EnvFilter;
+
+pub fn init_tracing() {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .with_target(false)
+        .compact()
+        .try_init();
+}
+
+pub async fn run_cli() -> Result<()> {
+    let args = std::env::args().collect();
+    run_cli_with_args(args).await
+}
 
 #[derive(Parser)]
 #[command(
@@ -81,6 +97,55 @@ pub enum Commands {
         #[arg(long, short)]
         output: Option<PathBuf>,
     },
+}
+
+pub async fn run_cli_with_args(args: Vec<String>) -> Result<()> {
+    let cli = match Cli::try_parse_from(args) {
+        Ok(cli) => cli,
+        Err(e) => {
+            if e.use_stderr() {
+                eprintln!("{}", e);
+                return Err(e.into());
+            } else {
+                println!("{}", e);
+                return Ok(());
+            }
+        }
+    };
+
+    match cli.command {
+        Commands::Serve {
+            dir,
+            host,
+            port,
+            no_live,
+        } => {
+            cmd_serve(dir, host, port, !no_live).await?;
+        }
+        Commands::List { dir, experiment } => {
+            cmd_list(dir, experiment)?;
+        }
+        Commands::Inspect { run_dir } => {
+            cmd_inspect(run_dir)?;
+        }
+        Commands::Clean {
+            experiment,
+            dir,
+            keep,
+            force,
+        } => {
+            cmd_clean(dir, experiment, keep, force)?;
+        }
+        Commands::Export {
+            run_dir,
+            format,
+            output,
+        } => {
+            cmd_export(run_dir, format, output)?;
+        }
+    }
+
+    Ok(())
 }
 
 // ─── Command implementations ──────────────────────────────────────────────────
