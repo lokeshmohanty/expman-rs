@@ -1,4 +1,4 @@
-use expman::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
+use expman::core::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
 use std::collections::HashMap;
 
 fn main() {

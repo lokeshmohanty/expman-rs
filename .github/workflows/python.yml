@@ -1,0 +1,45 @@
+name: Python CI
+
+on:
+  workflow_call:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          cache-dependency-glob: "wrappers/python/pyproject.toml"
+      - name: Python lint (Ruff)
+        run: uv run --extra dev ruff check wrappers/python/ examples/
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v4
+        with:
+          cache-dependency-glob: "wrappers/python/pyproject.toml"
+      - name: Build and test
+        run: |
+          mkdir -p wrappers/python/expman/bin
+          trunk build --release
+          cargo build --release --features cli
+          cp target/release/exp wrappers/python/expman/bin/exp
+          cd wrappers/python
+          uv sync --extra dev
+          uv build --wheel --out-dir dist
+          uv pip install dist/*.whl
+          uv run pytest tests

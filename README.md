@@ -20,12 +20,12 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 ## Screenshots
 
 <p align="center">
-  <img src="assets/dashboard-interactive.png" width="400" />
-  <img src="assets/dashboard-metrics.png" width="400" />
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-interactive.png" width="400" />
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-metrics.png" width="400" />
 </p>
 <p align="center">
-  <img src="assets/dashboard-artifacts.png" width="400" />
-  <img src="assets/dashboard-interactive-notebook.png" width="400" />
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-artifacts.png" width="400" />
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-interactive-notebook.png" width="400" />
 </p>
 
 ## Installation
@@ -33,7 +33,7 @@ High-performance experiment manager written in Rust, with a Python wrapper for n
 ### From Cargo
 
 ```bash
-cargo install expman-cli
+cargo install expman
 ```
 
 ### From PYPI
@@ -118,11 +118,13 @@ just build-docs                # build and open documentation
 
 ## Documentation
 
-For detailed usage, refer to the standalone documentation files for each component:
-- [`expman-cli`](crates/expman-cli/README.md) - Command-line interface definitions and references.
-- [`expman`](crates/expman/README.md) - Core high-performance async Rust logging engine.
-- [`expman-py`](crates/expman-py/README.md) - Python extension for non-blocking logging.
-- [`expman-server`](crates/expman-server/README.md) - Axum web server and SSE live streaming API.
+For detailed usage, refer to the source code modules in `src/`:
+- [`cli`](src/cli/) - Command-line interface definitions and references.
+- [`core`](src/core/) - Core high-performance async Rust logging engine.
+- [`wrappers/python`](src/wrappers/python/) - Python extension Rust bindings.
+- [`api`](src/api/) - Axum web server and SSE live streaming API.
+- [`app`](src/app/) - Leptos frontend web application.
+- [`python-package`](wrappers/python/) - Python package code and tests.
 
 
 ### Dashboard Features
@@ -146,7 +148,7 @@ To run the Python examples, ensure you have built the extension first with `just
 To run the Rust example, use:
 
 ```bash
-cargo run --example logging -p expman
+cargo run --example logging --features cli
 ```
 
 ## Experiments Layout

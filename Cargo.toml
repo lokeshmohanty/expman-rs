@@ -1,13 +1,5 @@
-[workspace]
-resolver = "2"
-members = [
-    "crates/expman",
-    "crates/expman-server",
-    "crates/expman-cli",
-    "crates/expman-py",
-]
-
-[workspace.package]
+[package]
+name = "expman"
 version = "0.3.9"
 edition = "2021"
 authors = ["Lokesh Mohanty <lokesh1197@gmail.com>"]
@@ -17,40 +9,85 @@ repository = "https://github.com/lokeshmohanty/expman-rs"
 homepage = "https://lokeshmohanty.github.io/expman-rs/"
 documentation = "https://lokeshmohanty.github.io/expman-rs/"
 readme = "README.md"
+resolver = "2"
+default-run = "exp"
 
-[workspace.dependencies]
-# Async runtime
-tokio = { version = "1", features = ["full"] }
-tokio-stream = "0.1"
+[lib]
+name = "expman"
+crate-type = ["rlib", "cdylib"]
 
-# Web
-axum = { version = "0.8", features = ["ws"] }
-tower-http = { version = "0.6", features = ["fs", "cors"] }
-rust-embed = { version = "8", features = ["include-exclude"] }
+[[bin]]
+name = "exp"
+path = "src/main.rs"
+required-features = ["cli"]
 
-# Serialization
+[[bin]]
+name = "expman-app"
+path = "src/app/main.rs"
+# No required-features, it uses wasm32 target cfg
+
+[features]
+default = []
+cli = ["dep:clap", "dep:comfy-table", "dep:indicatif"]
+server = ["dep:axum", "dep:tower-http", "dep:rust-embed", "dep:mime_guess", "dep:tokio-util", "dep:futures-util"]
+python = ["dep:pyo3"]
+
+[dependencies]
+# Shared dependencies
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
 
-# Arrow / Parquet
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Core dependencies
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
 arrow = { version = "58", features = ["ipc"] }
 parquet = { version = "58", features = ["arrow"] }
-
-# Utilities
-chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tracing-appender = "0.2"
-thiserror = "2"
-anyhow = "1"
+# CLI dependencies
+clap = { version = "4", features = ["derive", "color"], optional = true }
+comfy-table = { version = "7", optional = true }
+indicatif = { version = "0.18", optional = true }
 
-# CLI
-clap = { version = "4", features = ["derive", "color"] }
-mime_guess = "2"
-comfy-table = "7"
-indicatif = "0.18"
+# Server dependencies
+axum = { version = "0.8", features = ["ws", "macros"], optional = true }
+tower-http = { version = "0.6", features = ["fs", "cors"], optional = true }
+rust-embed = { version = "8", features = ["include-exclude"], optional = true }
+mime_guess = { version = "2", optional = true }
+tokio-util = { version = "0.7", features = ["rt"], optional = true }
+futures-util = { version = "0.3", optional = true }
 
 # Python bindings
-pyo3 = { version = "0.28", features = ["extension-module", "abi3-py39"] }
+pyo3 = { version = "0.28", features = ["extension-module", "abi3-py39"], optional = true }
+
+# ── WASM-only dependencies (Leptos frontend) ──────────────────────────────────
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+leptos = { version = "0.8", features = ["csr"] }
+leptos_router = "0.8"
+console_error_panic_hook = "0.1"
+gloo-net = "0.6"
+web-sys = { version = "0.3", features = ["HtmlInputElement", "HtmlTextAreaElement", "HtmlAnchorElement", "Window", "Storage", "RequestMode", "RequestInit", "EventSource", "MessageEvent", "Document", "Blob", "BlobPropertyBag", "Url", "ResizeObserver", "MouseEvent", "WheelEvent"] }
+lucide-leptos = { version = "2.576", features = ["all-icons"] }
+stylist = "0.14"
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+log = "0.4"
+console_log = "1.0"
+plotters = { version = "0.3", default-features = false, features = ["svg_backend", "line_series"] }
+plotters-canvas = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

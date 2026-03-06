@@ -1,6 +1,6 @@
 //! Example of using expman directly from Rust.
 
-use expman::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
+use expman::core::{ExperimentConfig, LoggingEngine, MetricValue, RunStatus};
 use std::collections::HashMap;
 use std::io::Write;
 use std::thread;
