@@ -101,15 +101,7 @@ pub enum Commands {
 pub async fn run_cli_with_args(args: Vec<String>) -> Result<()> {
     let cli = match Cli::try_parse_from(args) {
         Ok(cli) => cli,
-        Err(e) => {
-            if e.use_stderr() {
-                eprintln!("{}", e);
-                return Err(e.into());
-            } else {
-                println!("{}", e);
-                return Ok(());
-            }
-        }
+        Err(e) => e.exit(),
     };
 
     match cli.command {

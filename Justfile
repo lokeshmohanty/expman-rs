@@ -45,7 +45,7 @@ build-docs: prep-dist
 # Build the CLI binary and copy it to the Python package (platform-aware)
 build-cli-for-py: build-frontend
     mkdir -p wrappers/python/expman/bin
-    cargo build --release --features cli
+    cargo build --release --features cli,server
     @if [ -f "target/release/exp.exe" ]; then \
         cp target/release/exp.exe wrappers/python/expman/bin/exp.exe; \
     elif [ -f "target/release/exp" ]; then \
