@@ -23,8 +23,45 @@ pub fn init_tracing() {
 }
 
 pub async fn run_cli() -> Result<()> {
-    let args = std::env::args().collect();
-    run_cli_with_args(args).await
+    let cli = <Cli as clap::Parser>::parse();
+    run_with_cli(cli).await
+}
+
+async fn run_with_cli(cli: Cli) -> Result<()> {
+    match cli.command {
+        #[cfg(feature = "server")]
+        Commands::Serve {
+            dir,
+            host,
+            port,
+            no_live,
+        } => {
+            cmd_serve(dir, host, port, !no_live).await?;
+        }
+        Commands::List { dir, experiment } => {
+            cmd_list(dir, experiment)?;
+        }
+        Commands::Inspect { run_dir } => {
+            cmd_inspect(run_dir)?;
+        }
+        Commands::Clean {
+            experiment,
+            dir,
+            keep,
+            force,
+        } => {
+            cmd_clean(dir, experiment, keep, force)?;
+        }
+        Commands::Export {
+            run_dir,
+            format,
+            output,
+        } => {
+            cmd_export(run_dir, format, output)?;
+        }
+    }
+
+    Ok(())
 }
 
 #[derive(Parser)]
@@ -96,48 +133,6 @@ pub enum Commands {
         #[arg(long, short)]
         output: Option<PathBuf>,
     },
-}
-
-pub async fn run_cli_with_args(args: Vec<String>) -> Result<()> {
-    let cli = match Cli::try_parse_from(args) {
-        Ok(cli) => cli,
-        Err(e) => e.exit(),
-    };
-
-    match cli.command {
-        #[cfg(feature = "server")]
-        Commands::Serve {
-            dir,
-            host,
-            port,
-            no_live,
-        } => {
-            cmd_serve(dir, host, port, !no_live).await?;
-        }
-        Commands::List { dir, experiment } => {
-            cmd_list(dir, experiment)?;
-        }
-        Commands::Inspect { run_dir } => {
-            cmd_inspect(run_dir)?;
-        }
-        Commands::Clean {
-            experiment,
-            dir,
-            keep,
-            force,
-        } => {
-            cmd_clean(dir, experiment, keep, force)?;
-        }
-        Commands::Export {
-            run_dir,
-            format,
-            output,
-        } => {
-            cmd_export(run_dir, format, output)?;
-        }
-    }
-
-    Ok(())
 }
 
 // ─── Command implementations ──────────────────────────────────────────────────
