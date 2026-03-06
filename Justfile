@@ -76,7 +76,7 @@ build-docs:
     @echo "Documentation built at target/doc/index.html"
 
 # Build the CLI binary and copy it to the Python package
-build-cli-for-py:
+build-cli-for-py: build-frontend
     mkdir -p python/expman/bin
     cargo build --release -p expman-cli
     cp target/release/exp python/expman/bin/exp

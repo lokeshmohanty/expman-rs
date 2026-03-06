@@ -50,6 +50,14 @@ jobs:
     steps:
       # maturin is being used instead of uv build because uv doesn't use manylinux container which leads to error
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
+      - name: Build frontend
+        run: cd crates/expman-server && trunk build --release
       - uses: PyO3/maturin-action@v1
         with:
           command: build

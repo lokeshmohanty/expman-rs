@@ -72,6 +72,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: trunk
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v5
         with:
@@ -79,6 +84,7 @@ jobs:
       - name: Build Rust extension and run tests
         run: |
           mkdir -p python/expman/bin
+          cd crates/expman-server && trunk build --release && cd ../..
           cargo build --release -p expman-cli
           cp target/release/exp python/expman/bin/exp
           uv sync --extra dev
