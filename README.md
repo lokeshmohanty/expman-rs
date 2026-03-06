@@ -113,7 +113,9 @@ exp clean resnet --keep 5 --force   # delete old runs
 exp export ./experiments/resnet/runs/20240101_120000 --format csv
 ```
 
-## Development (Nix)
+## Development
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions on setting up your local environment, building the Python bindings, and important git configuration notes.
 
 ```bash
 nix develop                    # enter dev shell

@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "expman-rs"
-version = "0.3.3"
+version = "0.3.4"
 description = "High-performance experiment manager with Rust backend"
 authors = [{ name = "Lokesh Mohanty", email = "lokesh1197@gmail.com" }]
 license = { text = "MIT" }
@@ -29,7 +29,7 @@ manifest-path = "crates/expman-py/Cargo.toml"
 python-source = "python"
 module-name = "expman.expman"
 features = ["pyo3/extension-module"]
-include = ["docs/**/*", "README.md", "LICENSE", "python/expman/bin/*"]
+include = ["python/expman/bin/exp*", "docs/**/*", "README.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 100

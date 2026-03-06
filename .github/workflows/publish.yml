@@ -56,6 +56,18 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: 'true'
           manylinux: auto
+          before-script-linux: |
+            mkdir -p python/expman/bin
+            cargo build --release -p expman-cli
+            cp target/release/exp python/expman/bin/exp
+          before-script-macos: |
+            mkdir -p python/expman/bin
+            cargo build --release -p expman-cli
+            cp target/release/exp python/expman/bin/exp
+          before-script-windows: |
+            python -c "import os, shutil; os.makedirs('python/expman/bin', exist_ok=True)"
+            cargo build --release -p expman-cli
+            python -c "import shutil; shutil.copy('target/release/exp.exe', 'python/expman/bin/exp.exe')"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -69,6 +81,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          cache-dependency-glob: "pyproject.toml"
       - name: Build sdist
         run: uv build --sdist --out-dir dist
       - name: Upload sdist
@@ -101,6 +115,8 @@ jobs:
     environment: PYPI
     steps:
       - uses: astral-sh/setup-uv@v5
+        with:
+          cache-dependency-glob: "pyproject.toml"
       - name: Download all wheels
         uses: actions/download-artifact@v4
         with:

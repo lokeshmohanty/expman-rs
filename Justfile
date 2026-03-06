@@ -75,8 +75,15 @@ build-docs:
     @rm target/doc/readme_content.html
     @echo "Documentation built at target/doc/index.html"
 
+# Build the CLI binary and copy it to the Python package
+build-cli-for-py:
+    mkdir -p python/expman/bin
+    cargo build --release -p expman-cli
+    cp target/release/exp python/expman/bin/exp
+    chmod +x python/expman/bin/exp
+
 # Build the Python extension and place the shared library in the package directory
-build-py:
+build-py: build-cli-for-py
     @if [ ! -d ".venv" ]; then \
         uv venv --seed --python 3.12; \
     fi
@@ -84,7 +91,7 @@ build-py:
     uv run maturin develop --release
 
 # Build and install the Python extension for development
-dev-py:
+dev-py: build-cli-for-py
     @if [ ! -d ".venv" ]; then \
         echo "Creating virtual environment with uv..."; \
         uv venv --seed --python 3.12; \

@@ -62,6 +62,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          cache-dependency-glob: "pyproject.toml"
       - name: Python lint (Ruff)
         run: uv run --extra dev ruff check python/ examples/
 
@@ -72,8 +74,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: astral-sh/setup-uv@v5
+        with:
+          cache-dependency-glob: "pyproject.toml"
       - name: Build Rust extension and run tests
         run: |
+          mkdir -p python/expman/bin
+          cargo build --release -p expman-cli
+          cp target/release/exp python/expman/bin/exp
           uv sync --extra dev
           uv build --wheel --out-dir dist
           uv pip install dist/*.whl
