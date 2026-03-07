@@ -49,6 +49,8 @@ jobs:
   github-release:
     needs: [check-release, build]
     if: needs.check-release.outputs.should_release == 'true'
+    permissions:
+      contents: write
     uses: ./.github/workflows/github-release.yml
     with:
       version: ${{ needs.check-release.outputs.version }}
