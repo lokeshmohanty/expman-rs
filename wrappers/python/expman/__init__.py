@@ -26,6 +26,8 @@ import os
 import sys
 from typing import Any
 
+from .tensorboard import SummaryWriter
+
 _current_exp: Experiment | None = None
 
 
@@ -287,4 +289,5 @@ __all__ = [
     "warn",
     "close",
     "__version__",
+    "SummaryWriter",
 ]
