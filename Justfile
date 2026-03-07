@@ -20,7 +20,7 @@ test: test-py
     cargo nextest run --all-features
 
 # Run tests with output
-test-release: test-py
+test-release:
     cargo nextest run --all-features --no-capture
 
 # Watch and re-run tests on change
