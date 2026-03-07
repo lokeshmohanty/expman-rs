@@ -21,6 +21,8 @@ jobs:
           path: dist
       - name: Check formatting
         run: just fmt-check
+      - name: Install protobuf compiler
+        run: sudo apt-get install -y protobuf-compiler
       - name: Run clippy
         run: just lint-rust
         env:
@@ -42,6 +44,8 @@ jobs:
         with:
           name: frontend-dist
           path: dist
+      - name: Install protobuf compiler
+        run: sudo apt-get install -y protobuf-compiler
       - name: Run tests
         run: just test-release
         env:

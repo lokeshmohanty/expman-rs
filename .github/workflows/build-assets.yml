@@ -47,6 +47,15 @@ jobs:
         with:
           name: frontend-dist
           path: dist
+      - name: Install protobuf compiler
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y protobuf-compiler
+      - name: Install protobuf compiler (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+      - name: Install protobuf compiler (Windows)
+        if: runner.os == 'Windows'
+        run: choco install protoc
       - name: Build CLI
         run: |
           # We don't use build-cli-for-py here because we want to upload the raw binary first
