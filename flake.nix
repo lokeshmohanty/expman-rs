@@ -10,8 +10,23 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, fenix, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  nixConfig = {
+    extra-substituters = [ "https://lokeshmohanty.cachix.org" ];
+    extra-trusted-public-keys = [
+      "lokeshmohanty.cachix.org-1:XkCPbX2XsKzlr0P/MecvqruyTeOA8SzJzwMcCOfuLuI="
+    ];
+  };
+
+  outputs =
+    {
+      self,
+      nixpkgs,
+      fenix,
+      flake-utils,
+      ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -37,78 +52,97 @@
         # Base Python for uv
         pythonBase = pkgs.python312;
 
-      in {
+      in
+      {
         devShells.default = pkgs.mkShell {
           name = "expman-rs";
 
           packages = [
-            # Rust
             fullToolchain
-            pkgs.cargo-watch      # cargo watch -x test
-            pkgs.cargo-nextest    # faster test runner
-            pkgs.cargo-edit       # cargo add/rm
-            pkgs.cargo-expand     # macro expansion debugging
-
-            # Python + maturin for PyO3 builds
-            pythonBase
-            pkgs.uv
-            pkgs.maturin
-
-            # Build tools
             pkgs.pkg-config
             pkgs.openssl
-
-            # Dev utilities
-            pkgs.just             # justfile task runner
-            pkgs.hyperfine        # benchmarking
-            pkgs.tokei            # code stats
-            pkgs.trunk            # WASM builder
-            pkgs.wasm-bindgen-cli # WASM glue
-            pkgs.pre-commit       # pre-commit hooks
-            pkgs.ruff             # Python linter
-            pkgs.python312Packages.pytest # Python testing
-            pkgs.sd
-            pkgs.fd
+            pkgs.just
+            pkgs.trunk
+            pkgs.wasm-bindgen-cli
+            pkgs.uv
+            pkgs.maturin
           ];
 
-          # Environment variables
           RUST_LOG = "debug";
           RUST_BACKTRACE = "1";
-
-          # Ensure maturin can find Python
           PYO3_PYTHON = "${pythonBase}/bin/python3";
 
-          # We'll use uv to manage the environment now
-
           shellHook = ''
-            echo "🦀 expman-rs dev environment (uv-managed)"
-            echo "  Rust: $(rustc --version)"
-            echo "  Python: $(python3 --version)"
-            echo "  UV: $(uv --version)"
-            echo ""
-            echo "Commands:"
-            echo "  just build                 - build everything (Rust + Python)"
-            echo "  just test                  - run all tests"
-            echo "  cargo watch -x 'nextest run' - watch mode"
-            echo "  just dev-py                - build Python extension (uv pip install -e .)"
-            echo "  just serve ./experiments"
-            echo ""
-
-            if [ ! -d ".venv" ]; then
-              echo "💡 Run 'just dev-py' to initialize the uv virtual environment."
-            fi
+            echo "🦀 expman-rs dev environment"
           '';
         };
 
-        # Package: the CLI binary
-        packages.default = pkgs.rustPlatform.buildRustPackage {
-          pname = "expman";
-          version = "0.1.0";
-          src = ./.;
-          cargoLock.lockFile = ./Cargo.lock;
-          buildInputs = [ pkgs.openssl ];
-          nativeBuildInputs = [ pkgs.pkg-config ];
-          cargoBuildFlags = [ "-p" "expman-cli" ];
+        packages = rec {
+          # Rust CLI package (Backend + Integrated Frontend build)
+          expman = pkgs.rustPlatform.buildRustPackage {
+            pname = "expman";
+            version = "0.4.7";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+
+            buildInputs = [ pkgs.openssl ];
+            nativeBuildInputs = [
+              pkgs.pkg-config
+              pkgs.lld
+              pkgs.trunk
+              pkgs.wasm-bindgen-cli
+              pkgs.binaryen
+              fullToolchain
+            ];
+
+            # Build the frontend before the main package
+            # Setting TRUNK_OFFLINE=true ensures it uses the Nix-provided wasm-bindgen-cli
+            preBuild = ''
+              export HOME=$TMPDIR
+              export TRUNK_OFFLINE=true
+              export TRUNK_BUILD_WASM_OPT=false
+              trunk build --release
+            '';
+
+            buildFeatures = [
+              "cli"
+              "server"
+            ];
+            cargoBuildFlags = [
+              "--bin"
+              "exp"
+            ];
+
+            # Tests are handled in CI
+            doCheck = false;
+          };
+
+          # Python package
+          python3Packages = {
+            expman-rs = pkgs.python3.pkgs.buildPythonPackage {
+              pname = "expman-rs";
+              version = "0.4.7";
+              format = "pyproject";
+              src = ./.;
+              postPatch = "cp Cargo.lock wrappers/python/";
+              sourceRoot = "source/wrappers/python";
+              nativeBuildInputs = [
+                pkgs.maturin
+                pkgs.rustPlatform.maturinBuildHook
+                pkgs.rustPlatform.cargoSetupHook
+                pkgs.cargo
+                pkgs.rustc
+              ];
+              buildInputs = [ pkgs.openssl ];
+              cargoDeps = pkgs.rustPlatform.importCargoLock {
+                lockFile = ./Cargo.lock;
+              };
+            };
+          };
+
+          exp = expman;
+          default = exp;
         };
-      });
+      }
+    );
 }

@@ -42,6 +42,21 @@ cargo install expman
 pip install expman-rs
 ```
 
+### From Nix
+
+```bash
+# Run standalone CLI
+nix run github:lokeshmohanty/expman-rs
+
+# Build local package
+nix build .#expman-rust
+nix build .#python3Packages.expman-rs
+```
+
+> [!TIP]
+> This project provides a Cachix cache. Enable it for faster builds:
+> `cachix use lokeshmohanty`
+
 ### Alternatively: Download from GitHub Releases
 
 - **Direct Download**: Download the pre-built standalone `exp` binaries or Python wheels directly from our [GitHub Releases](https://github.com/lokeshmohanty/expman-rs/releases).

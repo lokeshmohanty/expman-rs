@@ -20,11 +20,11 @@ test: test-py
     cargo nextest run --all-features
 
 # Run tests with output
-test-verbose:
+test-release:
     cargo nextest run --all-features --no-capture
 
 # Watch and re-run tests on change
-watch:
+test-watch:
     cargo watch -x 'nextest run --workspace'
 
 # Build the frontend dashboard
@@ -43,7 +43,7 @@ build-docs: prep-dist
     @echo '<meta http-equiv="refresh" content="0; url=expman/index.html">' > target/doc/index.html
 
 # Build the CLI binary and copy it to the Python package (platform-aware)
-build-cli-for-py: build-frontend
+build-cli-for-py:
     mkdir -p wrappers/python/expman/bin
     cargo build --release --features cli,server
     @if [ -f "target/release/exp.exe" ]; then \
@@ -91,7 +91,7 @@ run *ARGS:
     cargo run --features cli,server -- {{ARGS}}
 
 # Start the dashboard server
-serve DIR="./experiments": build-frontend
+serve DIR="./experiments":
     cargo run --features cli,server -- serve {{DIR}}
 
 # List experiments
@@ -131,6 +131,10 @@ example-rust:
 # Run the Python basic training example
 example-py: dev-py
     uv run python examples/python/basic_training.py
+
+# Quick check (lint + type check without full build)
+check: fmt-check lint-rust lint-py
+    cargo check --all-features
 
 # Full CI check
 ci: fmt-check lint test lint-py test-py
@@ -172,7 +176,8 @@ bump PART:
     echo "Bumping version $CURRENT → $VERSION..."
     sd '^version = ".*"' "version = \"$VERSION\"" Cargo.toml
     sd '^version = ".*"' "version = \"$VERSION\"" wrappers/python/pyproject.toml
+    sd 'version = ".*"; # Updated version' "version = \"$VERSION\"; # Updated version" flake.nix
     cargo check > /dev/null 2>&1 || true
-    git add Cargo.toml wrappers/python/pyproject.toml
+    git add Cargo.toml wrappers/python/pyproject.toml flake.nix
     git commit -m "release: bump version to $VERSION"
     echo "Bumped version to $VERSION"

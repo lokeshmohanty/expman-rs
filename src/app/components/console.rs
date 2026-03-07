@@ -83,6 +83,7 @@ pub(crate) fn SingleConsoleView(
         filename
     );
     let event_source = web_sys::EventSource::new(&url).unwrap();
+    let es_val = StoredValue::new_local(event_source.clone());
     let es_clone = event_source.clone();
 
     let is_connected_clone = is_connected.clone();
@@ -102,7 +103,7 @@ pub(crate) fn SingleConsoleView(
     on_error.forget();
 
     on_cleanup(move || {
-        event_source.close();
+        es_val.with_value(|es: &web_sys::EventSource| es.close());
     });
 
     view! {

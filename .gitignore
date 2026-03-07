@@ -1,6 +1,6 @@
 # Rust
 /target/
-Cargo.lock
+# Cargo.lock # commented as it is a binary package
 
 # Python
 __pycache__/
@@ -8,9 +8,6 @@ __pycache__/
 *.so
 *.pyd
 dist/
-!crates/expman-server/dist/
-crates/expman-server/dist/*
-!crates/expman-server/dist/index.html
 *.egg-info/
 .venv/
 uv.lock

@@ -19,15 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: taiki-e/install-action@just
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
       - uses: astral-sh/setup-uv@v4
         with:
           cache-dependency-glob: "wrappers/python/pyproject.toml"
-      - name: Download frontend
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: dist
       - name: Download CLI
         uses: actions/download-artifact@v4
         with:
@@ -38,6 +35,8 @@ jobs:
           just bundle-cli-bin bin-assets
           cd wrappers/python
           uv sync --extra dev
+          # Skip frontend build since we already have the CLI binary
+          export EXPMAN_SKIP_FRONTEND_BUILD=1
           uv build --wheel --out-dir dist
           uv pip install dist/*.whl
           uv run pytest tests

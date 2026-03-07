@@ -78,6 +78,8 @@ jobs:
           args: --release --out dist --find-interpreter
           manylinux: auto
           working-directory: wrappers/python
+        env:
+          CARGO_PROFILE_RELEASE_LTO: fat
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
