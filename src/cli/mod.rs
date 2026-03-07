@@ -130,7 +130,7 @@ pub enum Commands {
         /// Path to the run directory
         run_dir: PathBuf,
         /// Output format
-        #[arg(long, short, default_value = "csv", value_parser = ["csv", "json"])]
+        #[arg(long, short, default_value = "csv", value_parser = ["csv", "json", "tensorboard"])]
         format: String,
         /// Output file (default: stdout)
         #[arg(long, short)]
@@ -390,14 +390,34 @@ pub fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> 
                 out
             }
         }
+        "tensorboard" => {
+            let out_dir = output.clone().unwrap_or_else(|| PathBuf::from("tb_logs"));
+            std::fs::create_dir_all(&out_dir)?;
+            let out_dir_str = out_dir.to_string_lossy().to_string();
+            let mut writer = tensorboard_rs::summary_writer::SummaryWriter::new(&out_dir_str);
+            for row in &rows {
+                let step = row.get("step").and_then(|v| v.as_i64()).unwrap_or(0);
+                for (k, v) in row {
+                    if k == "step" || k == "timestamp" {
+                        continue;
+                    }
+                    if let Some(val) = v.as_f64() {
+                        writer.add_scalar(k, val as f32, step as usize);
+                    }
+                }
+            }
+            writer.flush();
+            "TensorBoard logs generated.\n".to_string()
+        }
         _ => anyhow::bail!("Unknown format: {}", format),
     };
 
     match output {
-        Some(path) => {
+        Some(path) if format != "tensorboard" => {
             std::fs::write(&path, &content)?;
             println!("Exported {} rows to {}", rows.len(), path.display());
         }
+        Some(path) => println!("Exported TensorBoard logs to {}", path.display()),
         None => print!("{}", content),
     }
 

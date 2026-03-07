@@ -30,7 +30,7 @@ doc = false
 
 [features]
 default = []
-cli = ["dep:clap", "dep:comfy-table", "dep:indicatif", "dep:tboard"]
+cli = ["dep:clap", "dep:comfy-table", "dep:indicatif", "dep:tboard", "dep:tensorboard-rs"]
 server = ["dep:axum", "dep:tower-http", "dep:rust-embed", "dep:mime_guess", "dep:tokio-util", "dep:futures-util"]
 python = ["dep:pyo3"]
 
@@ -58,6 +58,7 @@ clap = { version = "4", features = ["derive", "color"], optional = true }
 comfy-table = { version = "7", optional = true }
 indicatif = { version = "0.18", optional = true }
 tboard = { version = "0.1", optional = true }
+tensorboard-rs = { version = "0.5.9", optional = true }
 
 # Server dependencies
 axum = { version = "0.8", features = ["ws", "macros"], optional = true }
