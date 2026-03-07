@@ -124,8 +124,10 @@
               version = "0.4.8";
               format = "pyproject";
               src = ./.;
-              postPatch = "cp Cargo.lock wrappers/python/";
-              sourceRoot = "source/wrappers/python";
+              postPatch = "cp ../../Cargo.lock .";
+              postUnpack = ''
+                export sourceRoot=$sourceRoot/wrappers/python
+              '';
               nativeBuildInputs = [
                 pkgs.maturin
                 pkgs.rustPlatform.maturinBuildHook

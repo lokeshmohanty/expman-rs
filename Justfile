@@ -20,7 +20,7 @@ test: test-py
     cargo nextest run --all-features
 
 # Run tests with output
-test-release:
+test-release: test-py
     cargo nextest run --all-features --no-capture
 
 # Watch and re-run tests on change
@@ -176,7 +176,7 @@ bump PART:
     echo "Bumping version $CURRENT → $VERSION..."
     sd '^version = ".*"' "version = \"$VERSION\"" Cargo.toml
     sd '^version = ".*"' "version = \"$VERSION\"" wrappers/python/pyproject.toml
-    sd 'version = ".*"; # Updated version' "version = \"$VERSION\"; # Updated version" flake.nix
+    sd 'version = ".*"' "version = \"$VERSION\"" flake.nix
     cargo check > /dev/null 2>&1 || true
     git add Cargo.toml wrappers/python/pyproject.toml flake.nix
     git commit -m "release: bump version to $VERSION"

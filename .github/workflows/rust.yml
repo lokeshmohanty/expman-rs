@@ -12,12 +12,7 @@ jobs:
         with:
           components: clippy, rustfmt
           targets: wasm32-unknown-unknown
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: trunk,just,cargo-nextest
-      - uses: astral-sh/setup-uv@v4
-        with:
-          cache-dependency-glob: "wrappers/python/pyproject.toml"
+      - uses: taiki-e/install-action@just
       - uses: Swatinem/rust-cache@v2
       - name: Download frontend
         uses: actions/download-artifact@v4
@@ -28,6 +23,8 @@ jobs:
         run: just fmt-check
       - name: Run clippy
         run: just lint-rust
+        env:
+          EXPMAN_SKIP_FRONTEND_BUILD: "1"
 
   test:
     runs-on: ubuntu-latest
@@ -39,11 +36,13 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: just,cargo-nextest
-      - uses: astral-sh/setup-uv@v4
-        with:
-          cache-dependency-glob: "wrappers/python/pyproject.toml"
       - uses: Swatinem/rust-cache@v2
-      - name: Ensure dist exists
-        run: mkdir -p dist && touch dist/index.html
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
       - name: Run tests
         run: just test-release
+        env:
+          EXPMAN_SKIP_FRONTEND_BUILD: "1"

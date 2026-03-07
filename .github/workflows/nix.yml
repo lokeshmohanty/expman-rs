@@ -12,6 +12,25 @@ on:
       - '.github/workflows/nix.yml'
 
 jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for release commit
+        id: check
+        shell: bash
+        run: |
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          if [[ "$COMMIT_MESSAGE" =~ ^release:\ bump\ version\ to\ ([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              echo "should_release=true" >> $GITHUB_OUTPUT
+              echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+              echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -29,7 +48,38 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
       - name: Build Rust CLI
-        run: nix build .#expman
+        run: nix build .#expman -o result-cli
 
       - name: Build Python Package
-        run: nix build .#python3Packages.expman-rs
+        run: nix build .#python3Packages.expman-rs -o result-python
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nix-build-results
+          path: |
+            result-cli/bin/exp
+            result-python/dist/*.whl
+          retention-days: 1
+
+  github-release:
+    needs: [check-release, build]
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Nix artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nix-build-results
+          path: dist-nix
+      - name: Append to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-release.outputs.version }}
+          files: |
+            dist-nix/result-cli/bin/exp
+            dist-nix/result-python/dist/*.whl
+          generate_release_notes: false
