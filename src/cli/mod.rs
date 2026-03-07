@@ -494,9 +494,7 @@ pub fn cmd_import(dir: PathBuf, input: PathBuf) -> Result<()> {
 
     for event in reader.flatten() {
         let step = event.step;
-        let entry = row_map
-            .entry(step)
-            .or_insert_with(std::collections::HashMap::new);
+        let entry = row_map.entry(step).or_default();
 
         if let Some(tboard::tensorboard::event::What::Summary(summary)) = event.what {
             for value in summary.value {
