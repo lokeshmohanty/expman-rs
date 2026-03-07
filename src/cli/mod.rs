@@ -59,6 +59,9 @@ async fn run_with_cli(cli: Cli) -> Result<()> {
         } => {
             cmd_export(run_dir, format, output)?;
         }
+        Commands::Import { dir, input } => {
+            cmd_import(dir, input)?;
+        }
     }
 
     Ok(())
@@ -132,6 +135,14 @@ pub enum Commands {
         /// Output file (default: stdout)
         #[arg(long, short)]
         output: Option<PathBuf>,
+    },
+    /// Import logs from a TensorBoard directory
+    Import {
+        /// Path to the expman experiments directory
+        #[arg(long, default_value = "./experiments")]
+        dir: PathBuf,
+        /// Path to the TensorBoard log directory or file
+        input: PathBuf,
     },
 }
 
@@ -388,6 +399,90 @@ pub fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> 
             println!("Exported {} rows to {}", rows.len(), path.display());
         }
         None => print!("{}", content),
+    }
+
+    Ok(())
+}
+
+pub fn cmd_import(dir: PathBuf, input: PathBuf) -> Result<()> {
+    if !input.exists() {
+        anyhow::bail!("Input path does not exist: {}", input.display());
+    }
+
+    // Try to find an events file if it's a directory
+    let file_path = if input.is_dir() {
+        let mut events_file = None;
+        for entry in std::fs::read_dir(&input)? {
+            let entry = entry?;
+            if entry.file_name().to_string_lossy().contains("tfevents") {
+                events_file = Some(entry.path());
+                break;
+            }
+        }
+        events_file.ok_or_else(|| anyhow::anyhow!("No tfevents file found in directory"))?
+    } else {
+        input.clone()
+    };
+
+    let exp_name = input
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("imported_tb");
+
+    // Create new experiment and run
+    let exp_dir = dir.join(exp_name);
+    let run_name = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
+    let run_dir = exp_dir.join(&run_name);
+    std::fs::create_dir_all(&run_dir)?;
+
+    let file = std::fs::File::open(&file_path)?;
+    let reader = tboard::SummaryReader::new(file);
+    let mut row_map: std::collections::BTreeMap<
+        i64,
+        std::collections::HashMap<String, crate::core::models::MetricValue>,
+    > = std::collections::BTreeMap::new();
+
+    for event_result in reader {
+        if let Ok(event) = event_result {
+            let step = event.step;
+            let entry = row_map.entry(step).or_insert_with(|| {
+                let map = std::collections::HashMap::new();
+                map
+            });
+
+            if let Some(summary_field) = event.what {
+                if let tboard::tensorboard::event::What::Summary(summary) = summary_field {
+                    for value in summary.value {
+                        if let Some(tboard::tensorboard::summary::value::Value::SimpleValue(val)) =
+                            value.value
+                        {
+                            entry.insert(
+                                value.tag,
+                                crate::core::models::MetricValue::Float(val as f64),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut rows = Vec::new();
+    for (step, map) in row_map {
+        rows.push(crate::core::models::VectorRow::new(map, Some(step as u64)));
+    }
+
+    if !rows.is_empty() {
+        let vectors_path = run_dir.join("vectors.parquet");
+        storage::append_vectors(&vectors_path, &rows)?;
+        println!(
+            "Imported {} steps from TensorBoard to {}/{}",
+            rows.len(),
+            exp_name,
+            run_name
+        );
+    } else {
+        println!("No scalar metrics found in TensorBoard logs.");
     }
 
     Ok(())

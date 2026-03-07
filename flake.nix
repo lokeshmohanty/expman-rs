@@ -66,6 +66,7 @@
             pkgs.wasm-bindgen-cli
             pkgs.uv
             pkgs.maturin
+            pkgs.protobuf
           ];
 
           RUST_LOG = "debug";
@@ -92,6 +93,7 @@
               pkgs.trunk
               pkgs.wasm-bindgen-cli
               pkgs.binaryen
+              pkgs.protobuf
               fullToolchain
             ];
 
