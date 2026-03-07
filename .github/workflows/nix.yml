@@ -34,8 +34,14 @@ jobs:
       - name: Build Rust CLI
         run: nix build .#expman -o result-cli
 
+      - name: Push Rust CLI to Cachix
+        run: cachix push lokeshmohanty result-cli
+
       - name: Build Python Package
         run: nix build .#python3Packages.expman-rs -o result-python
+
+      - name: Push Python Package to Cachix
+        run: cachix push lokeshmohanty result-python
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
