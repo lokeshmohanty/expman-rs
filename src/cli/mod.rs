@@ -492,26 +492,21 @@ pub fn cmd_import(dir: PathBuf, input: PathBuf) -> Result<()> {
         std::collections::HashMap<String, crate::core::models::MetricValue>,
     > = std::collections::BTreeMap::new();
 
-    for event_result in reader {
-        if let Ok(event) = event_result {
-            let step = event.step;
-            let entry = row_map.entry(step).or_insert_with(|| {
-                let map = std::collections::HashMap::new();
-                map
-            });
+    for event in reader.flatten() {
+        let step = event.step;
+        let entry = row_map
+            .entry(step)
+            .or_insert_with(std::collections::HashMap::new);
 
-            if let Some(summary_field) = event.what {
-                if let tboard::tensorboard::event::What::Summary(summary) = summary_field {
-                    for value in summary.value {
-                        if let Some(tboard::tensorboard::summary::value::Value::SimpleValue(val)) =
-                            value.value
-                        {
-                            entry.insert(
-                                value.tag,
-                                crate::core::models::MetricValue::Float(val as f64),
-                            );
-                        }
-                    }
+        if let Some(tboard::tensorboard::event::What::Summary(summary)) = event.what {
+            for value in summary.value {
+                if let Some(tboard::tensorboard::summary::value::Value::SimpleValue(val)) =
+                    value.value
+                {
+                    entry.insert(
+                        value.tag,
+                        crate::core::models::MetricValue::Float(val as f64),
+                    );
                 }
             }
         }
