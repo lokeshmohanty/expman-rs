@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "expman-rs"
-version = "0.4.7"
+version = "0.4.8"
 description = "High-performance experiment manager with Rust backend"
 authors = [{ name = "Lokesh Mohanty", email = "lokesh1197@gmail.com" }]
 license = { text = "MIT" }
@@ -33,7 +33,7 @@ include = ["expman/bin/exp*", "README.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "0.4.8"
 
 [tool.ruff.lint]
 select = [

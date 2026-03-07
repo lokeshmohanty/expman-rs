@@ -81,7 +81,7 @@
           # Rust CLI package (Backend + Integrated Frontend build)
           expman = pkgs.rustPlatform.buildRustPackage {
             pname = "expman";
-            version = "0.4.7";
+            version = "0.4.8";
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
 
@@ -121,7 +121,7 @@
           python3Packages = {
             expman-rs = pkgs.python3.pkgs.buildPythonPackage {
               pname = "expman-rs";
-              version = "0.4.7";
+              version = "0.4.8";
               format = "pyproject";
               src = ./.;
               postPatch = "cp Cargo.lock wrappers/python/";
