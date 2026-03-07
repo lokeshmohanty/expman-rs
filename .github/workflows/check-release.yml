@@ -1,0 +1,31 @@
+name: Check Release
+
+on:
+  workflow_call:
+    outputs:
+      should_release:
+        description: "true if this is a release commit, false otherwise"
+        value: ${{ jobs.check.outputs.should_release }}
+      version:
+        description: "The extracted version string (e.g. 1.0.0)"
+        value: ${{ jobs.check.outputs.version }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for release commit
+        id: check
+        shell: bash
+        run: |
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          if [[ "$COMMIT_MESSAGE" =~ ^release:\ bump\ version\ to\ ([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              echo "should_release=true" >> $GITHUB_OUTPUT
+              echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+              echo "should_release=false" >> $GITHUB_OUTPUT
+          fi

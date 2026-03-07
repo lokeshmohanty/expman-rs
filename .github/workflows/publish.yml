@@ -6,23 +6,7 @@ on:
 
 jobs:
   check-release:
-    runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      version: ${{ steps.check.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check for release commit
-        id: check
-        shell: bash
-        run: |
-          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
-          if [[ "$COMMIT_MESSAGE" =~ ^release:\ bump\ version\ to\ ([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-              echo "should_release=true" >> $GITHUB_OUTPUT
-              echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
-          else
-              echo "should_release=false" >> $GITHUB_OUTPUT
-          fi
+    uses: ./.github/workflows/check-release.yml
 
   build-assets:
     needs: check-release
@@ -32,94 +16,25 @@ jobs:
   publish-cargo:
     needs: [check-release, build-assets]
     if: needs.check-release.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    environment: CARGO
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: taiki-e/install-action@just
-      - name: Download frontend
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: dist
-      - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
-  build-pypi:
-    needs: [check-release, build-assets]
-    if: needs.check-release.outputs.should_release == 'true'
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: taiki-e/install-action@just
-      - name: Download frontend
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: dist
-      - name: Download CLI
-        uses: actions/download-artifact@v4
-        with:
-          name: cli-bin-${{ matrix.os }}
-          path: bin-assets
-      - name: Prepare Python package assets
-        run: |
-          just prep-py-assets
-          just bundle-cli-bin bin-assets
-      - uses: PyO3/maturin-action@v1
-        with:
-          command: build
-          args: --release --out dist --find-interpreter
-          manylinux: auto
-          working-directory: wrappers/python
-        env:
-          CARGO_PROFILE_RELEASE_LTO: fat
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ matrix.os }}
-          path: wrappers/python/dist
+    uses: ./.github/workflows/publish-cargo.yml
+    with:
+      frontend-artifact: ${{ needs.build-assets.outputs.frontend-artifact }}
+    secrets: inherit
 
   publish-pypi:
-    needs: [check-release, build-pypi]
-    runs-on: ubuntu-latest
-    environment: PYPI
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
-      - name: Download wheels
-        uses: actions/download-artifact@v4
-        with:
-          pattern: wheels-*
-          path: dist
-          merge-multiple: true
-      - name: Publish to PyPI
-        run: uv publish
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+    needs: [check-release, build-assets]
+    if: needs.check-release.outputs.should_release == 'true'
+    uses: ./.github/workflows/publish-pypi.yml
+    with:
+      frontend-artifact: ${{ needs.build-assets.outputs.frontend-artifact }}
+      cli-artifact-prefix: ${{ needs.build-assets.outputs.cli-artifact-prefix }}
+    secrets: inherit
 
   github-release:
     needs: [check-release, publish-pypi]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download wheels
-        uses: actions/download-artifact@v4
-        with:
-          pattern: wheels-*
-          path: dist
-          merge-multiple: true
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.check-release.outputs.version }}
-          files: dist/*.whl
-          generate_release_notes: true
+    if: needs.check-release.outputs.should_release == 'true'
+    uses: ./.github/workflows/github-release.yml
+    with:
+      version: ${{ needs.check-release.outputs.version }}
+      artifact-pattern: "wheels-*"
+    secrets: inherit

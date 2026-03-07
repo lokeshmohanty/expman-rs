@@ -1,0 +1,27 @@
+name: Publish Cargo
+
+on:
+  workflow_call:
+    inputs:
+      frontend-artifact:
+        description: "Name of the frontend built artifact"
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: CARGO
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: taiki-e/install-action@just
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.frontend-artifact }}
+          path: dist
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}

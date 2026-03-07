@@ -1,0 +1,68 @@
+name: Publish PyPI
+
+on:
+  workflow_call:
+    inputs:
+      frontend-artifact:
+        description: "Name of the frontend dist artifact"
+        required: true
+        type: string
+      cli-artifact-prefix:
+        description: "Prefix for CLI artifacts to bundle"
+        required: true
+        type: string
+
+jobs:
+  build-wheels:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@just
+      - name: Download frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.frontend-artifact }}
+          path: dist
+      - name: Download CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.cli-artifact-prefix }}${{ matrix.os }}
+          path: bin-assets
+      - name: Prepare Python package assets
+        run: |
+          just prep-py-assets
+          just bundle-cli-bin bin-assets
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --find-interpreter
+          manylinux: auto
+          working-directory: wrappers/python
+        env:
+          CARGO_PROFILE_RELEASE_LTO: fat
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wrappers/python/dist
+
+  publish:
+    needs: [build-wheels]
+    runs-on: ubuntu-latest
+    environment: PYPI
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - name: Publish to PyPI
+        run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

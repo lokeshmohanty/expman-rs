@@ -1,0 +1,45 @@
+name: GitHub Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "The version string (e.g. 1.0.0)"
+        required: true
+        type: string
+      artifact-pattern:
+        description: "Pattern matching the artifacts to attach to the release (e.g. wheels-*)"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        if: ${{ inputs.artifact-pattern != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.artifact-pattern }}
+          path: dist-release
+          merge-multiple: true
+
+      - name: Create Release (with artifacts)
+        if: ${{ inputs.artifact-pattern != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          files: dist-release/**/*
+          generate_release_notes: true
+
+      - name: Create Release (without artifacts)
+        if: ${{ inputs.artifact-pattern == '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          generate_release_notes: true
