@@ -359,6 +359,24 @@ pub fn cmd_clean(dir: PathBuf, experiment: String, keep: usize, force: bool) -> 
     Ok(())
 }
 
+/// Export metrics from a run to CSV, JSON, or TensorBoard format.
+///
+/// Reads `vectors.parquet` from the given run directory and converts the
+/// data to the requested output format.
+///
+/// # Supported formats
+/// - `csv` — comma-separated values
+/// - `json` — pretty-printed JSON array
+/// - `tensorboard` — TensorBoard event files (written via `tensorboard-rs`)
+///
+/// # Arguments
+/// * `run_dir` - Path to the run directory containing `vectors.parquet`
+/// * `format` - Output format: `"csv"`, `"json"`, or `"tensorboard"`
+/// * `output` - Destination path. For CSV/JSON: file path. For TensorBoard:
+///   directory path. If `None`, CSV/JSON are printed to stdout.
+///
+/// # Errors
+/// Returns an error if no `vectors.parquet` exists in the run directory.
 pub fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> Result<()> {
     let vectors_path = run_dir.join("vectors.parquet");
     if !vectors_path.exists() {
@@ -424,6 +442,18 @@ pub fn cmd_export(run_dir: PathBuf, format: String, output: Option<PathBuf>) -> 
     Ok(())
 }
 
+/// Import TensorBoard event logs into an expman experiment.
+///
+/// Reads scalar summaries from `tfevents` files in the given `input` directory
+/// (or a single event file) and creates a new expman run under `dir/<input_basename>`.
+///
+/// # Arguments
+/// * `dir` - Base experiments directory (e.g. `./experiments`)
+/// * `input` - Path to a TensorBoard log directory or a single `tfevents` file
+///
+/// # Errors
+/// Returns an error if the input path doesn't exist, no `tfevents` file is found,
+/// or the event file cannot be parsed.
 pub fn cmd_import(dir: PathBuf, input: PathBuf) -> Result<()> {
     if !input.exists() {
         anyhow::bail!("Input path does not exist: {}", input.display());

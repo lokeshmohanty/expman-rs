@@ -116,6 +116,35 @@ exp list ./experiments -e resnet    # list runs for an experiment
 exp inspect ./experiments/resnet/runs/20240101_120000
 exp clean resnet --keep 5 --force   # delete old runs
 exp export ./experiments/resnet/runs/20240101_120000 --format csv
+exp export ./experiments/resnet/runs/20240101_120000 --format tensorboard -o ./tb_logs
+exp import /path/to/tensorboard_logs --dir ./experiments
+```
+
+### TensorBoard Interoperability
+
+**Drop-in SummaryWriter** — Replace your TensorBoard import, keep the same code:
+```python
+# Before:
+# from torch.utils.tensorboard import SummaryWriter
+
+# After:
+from expman import SummaryWriter
+
+writer = SummaryWriter(log_dir="runs/my_experiment")
+for step in range(100):
+    writer.add_scalar("loss", 1.0 / (step + 1), step)
+writer.close()
+```
+
+**Import existing TensorBoard logs** into expman:
+```bash
+exp import /path/to/tensorboard_logs --dir ./experiments
+```
+
+**Export expman runs to TensorBoard** format:
+```bash
+exp export ./experiments/my_exp/20240101_120000 --format tensorboard -o ./tb_logs
+tensorboard --logdir ./tb_logs
 ```
 
 ## Development
@@ -156,6 +185,7 @@ For detailed usage, refer to the source code modules in `src/`:
 Practical code samples are provided in the [examples/](examples/) directory. The Python example demonstrates logging metrics, alongside generating and storing rich media artifacts (audio, video, plots) directly natively.
 
 - **Python**: [examples/python/basic_training.py](examples/python/basic_training.py)
+- **Python (TensorBoard migration)**: [examples/python/tensorboard_migration.py](examples/python/tensorboard_migration.py)
 - **Rust**: [examples/rust/logging.rs](examples/rust/logging.rs)
 
 To run the Python examples, ensure you have built the extension first with `just dev-py` and installed the dev dependencies (`uv pip install -e ".[dev]"`).
