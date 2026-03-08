@@ -33,7 +33,9 @@ pub fn list_experiments(base_dir: &Path) -> Result<Vec<String>> {
         let entry = entry?;
         if entry.file_type()?.is_dir() {
             if let Some(name) = entry.file_name().to_str() {
-                names.push(name.to_string());
+                if name != ".ipynb_checkpoints" {
+                    names.push(name.to_string());
+                }
             }
         }
     }
@@ -54,7 +56,7 @@ pub fn list_runs(experiment_dir: &Path) -> Result<Vec<String>> {
                 // However, an experiment folder contains runs (directories).
                 // We should probably filter for directories that contain a run.yaml or metrics.parquet
                 // But for now, just listing all dirs except maybe some reserved ones.
-                if name != "artifacts" {
+                if name != "artifacts" && name != ".ipynb_checkpoints" {
                     names.push(name.to_string());
                 }
             }

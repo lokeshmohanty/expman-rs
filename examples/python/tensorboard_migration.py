@@ -76,7 +76,7 @@ def simulate_training():
 def context_manager_example():
     """Show SummaryWriter used as a context manager."""
 
-    with SummaryWriter(log_dir="runs/ctx_manager_demo") as writer:
+    with SummaryWriter(log_dir="experiments/ctx_manager_demo") as writer:
         for step in range(20):
             writer.add_scalar("metric", step * 0.1, step)
     # Writer is automatically closed here

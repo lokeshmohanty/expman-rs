@@ -26,4 +26,4 @@ jobs:
       - name: Install protobuf compiler
         run: sudo apt-get install -y protobuf-compiler
       - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --allow-dirty

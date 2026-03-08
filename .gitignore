@@ -22,6 +22,7 @@ result
 *.pt
 model.pt
 notes.txt
+.ipynb_checkpoints/
 
 # Editor
 .idea/

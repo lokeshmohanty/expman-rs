@@ -91,8 +91,11 @@ class SummaryWriter:
             base_dir=base_dir,
             flush_interval_rows=50,
             flush_interval_ms=500,
-            redirect_console=False,
+            redirect_console=True,
         )
+        # Ensure files are created immediately
+        self._exp.log_params({})
+        self._exp.info("SummaryWriter initialized")
 
     def add_scalar(
         self,
