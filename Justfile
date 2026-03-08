@@ -176,8 +176,8 @@ bump PART:
     echo "Bumping version $CURRENT → $VERSION..."
     sd '^version = ".*"' "version = \"$VERSION\"" Cargo.toml
     sd '^version = ".*"' "version = \"$VERSION\"" wrappers/python/pyproject.toml
-    sd 'version = ".*"' "version = \"$VERSION\"" flake.nix
-    cargo check > /dev/null 2>&1 || true
-    git add Cargo.toml wrappers/python/pyproject.toml flake.nix
+    sd 'version = ".*";' "version = \"$VERSION\";" flake.nix
+    cargo update -p expman
+    git add Cargo.toml Cargo.lock wrappers/python/pyproject.toml flake.nix
     git commit -m "release: bump version to $VERSION"
     echo "Bumped version to $VERSION"
