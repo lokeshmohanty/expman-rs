@@ -34,7 +34,7 @@ build-frontend:
 
 # CI Helper: Ensure dist directory exists for rust-embed (avoids build failures)
 prep-dist:
-    mkdir -p dist && touch dist/index.html
+    mkdir -p dist
 
 # Build documentation with a custom landing page from README.md
 build-docs: prep-dist

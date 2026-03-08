@@ -11,6 +11,15 @@ documentation = "https://lokeshmohanty.github.io/expman-rs/"
 readme = "README.md"
 resolver = "2"
 default-run = "exp"
+include = [
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+    "build.rs",
+    "src/**/*",
+    "dist/**/*",
+    "Trunk.toml",
+]
 
 [lib]
 name = "expman"
