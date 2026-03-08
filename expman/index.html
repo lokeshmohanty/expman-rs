@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Experiment Manager built using Rust"><title>expman - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-77263533.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="expman" data-themes="" data-resource-suffix="" data-rustdoc-version="1.94.0 (4a4ef493e 2026-03-02)" data-channel="1.94.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-7bab91a1.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-ffcac47a.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate expman</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../expman/index.html">expman</a><span class="version">0.5.3</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#experiment-manager-built-using-rust" title="Experiment Manager built using Rust">Experiment Manager built using Rust</a><ul><li><a href="#features" title="Features">Features</a></li><li><a href="#screenshots" title="Screenshots">Screenshots</a></li><li><a href="#installation" title="Installation">Installation</a></li><li><a href="#quick-start" title="Quick Start">Quick Start</a></li><li><a href="#for-rust" title="For Rust">For Rust</a></li><li><a href="#development" title="Development">Development</a></li><li><a href="#documentation" title="Documentation">Documentation</a></li><li><a href="#examples" title="Examples">Examples</a></li><li><a href="#experiments-layout" title="Experiments Layout">Experiments Layout</a></li></ul></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>expman</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/expman/lib.rs.html#1-18">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="experiment-manager-built-using-rust"><a class="doc-anchor" href="#experiment-manager-built-using-rust">§</a>Experiment Manager built using Rust</h2>
+<p><a href="https://crates.io/crates/expman"><img src="https://img.shields.io/crates/v/expman.svg" alt="Crates.io" /></a>
+<a href="https://pypi.org/project/expman-rs/"><img src="https://img.shields.io/pypi/v/expman-rs.svg" alt="PyPI" /></a>
+<a href="https://github.com/lokeshmohanty/expman-rs"><img src="https://img.shields.io/badge/github-repo-blue.svg?logo=github" alt="GitHub Repo" /></a>
+<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+<a href="https://lokeshmohanty.github.io/expman-rs"><img src="https://img.shields.io/badge/docs-deploy-blue" alt="Documentation" /></a></p>
+<p>High-performance experiment manager written in Rust, with a Python wrapper for non-blocking logging, a live web dashboard, and a friendly CLI.</p>
+<h3 id="features"><a class="doc-anchor" href="#features">§</a>Features</h3>
+<ul>
+<li><strong>Non-blocking Python logging</strong>: <code>log_vector()</code> is a ~100ns channel send — never blocks your training loop</li>
+<li><strong>Live dashboard</strong>: SSE-powered real-time metric streaming, run comparison charts, artifact browser</li>
+<li><strong>Scalar metric filtering</strong>: Toggle which metric columns appear in the runs table with one click</li>
+<li><strong>Single binary</strong>: CLI + web server in one <code>exp</code> binary — no Python runtime needed for the server</li>
+<li><strong>Efficient storage</strong>: Batched Arrow/Parquet writes, not per-step read-concat-write</li>
+<li><strong>Nix dev environment</strong>: Reproducible with <code>nix develop</code></li>
+</ul>
+<h3 id="screenshots"><a class="doc-anchor" href="#screenshots">§</a>Screenshots</h3><p align="center">
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-interactive.png" width="400" />
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-metrics.png" width="400" />
+</p>
+<p align="center">
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-artifacts.png" width="400" />
+  <img src="https://github.com/lokeshmohanty/expman-rs/raw/main/assets/dashboard-interactive-notebook.png" width="400" />
+</p>
+<h3 id="installation"><a class="doc-anchor" href="#installation">§</a>Installation</h3><h4 id="from-cargo"><a class="doc-anchor" href="#from-cargo">§</a>From Cargo</h4><div class="example-wrap"><pre class="language-bash"><code>cargo install expman</code></pre></div><h4 id="from-pypi"><a class="doc-anchor" href="#from-pypi">§</a>From PYPI</h4><div class="example-wrap"><pre class="language-bash"><code>pip install expman-rs</code></pre></div><h4 id="from-nix"><a class="doc-anchor" href="#from-nix">§</a>From Nix</h4><div class="example-wrap"><pre class="language-bash"><code># Run standalone CLI
+nix run github:lokeshmohanty/expman-rs
+
+# Build local package
+nix build .#expman-rust
+nix build .#python3Packages.expman-rs</code></pre></div>
+<blockquote>
+<p>[!TIP]
+This project provides a Cachix cache. Enable it for faster builds:
+<code>cachix use lokeshmohanty</code></p>
+</blockquote>
+<h4 id="alternatively-download-from-github-releases"><a class="doc-anchor" href="#alternatively-download-from-github-releases">§</a>Alternatively: Download from GitHub Releases</h4>
+<ul>
+<li><strong>Direct Download</strong>: Download the pre-built standalone <code>exp</code> binaries or Python wheels directly from our <a href="https://github.com/lokeshmohanty/expman-rs/releases">GitHub Releases</a>.</li>
+</ul>
+<h3 id="quick-start"><a class="doc-anchor" href="#quick-start">§</a>Quick Start</h3><h4 id="python"><a class="doc-anchor" href="#python">§</a>Python</h4>
+<p><strong>Option A: Global Singleton (Easiest)</strong></p>
+<div class="example-wrap"><pre class="language-python"><code>import expman as exp
+
+exp.init(&quot;resnet_cifar10&quot;)
+exp.log_params({&quot;lr&quot;: 0.001})
+exp.log_vector({&quot;loss&quot;: 0.5}, step=0)
+# Auto-closes on script exit</code></pre></div>
+<p><strong>Option B: Context Manager (Recommended for scope control)</strong></p>
+<div class="example-wrap"><pre class="language-python"><code>from expman import Experiment
+
+with Experiment(&quot;resnet_cifar10&quot;) as exp:
+    exp.log_vector({&quot;loss&quot;: 0.5}, step=0)</code></pre></div><h3 id="for-rust"><a class="doc-anchor" href="#for-rust">§</a>For Rust</h3>
+<p>Basic usage:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>expman::{ExperimentConfig, LoggingEngine, RunStatus};
+
+<span class="kw">fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
+   <span class="kw">let </span>config = ExperimentConfig::new(<span class="string">"my_rust_exp"</span>, <span class="string">"./experiments"</span>);
+   <span class="kw">let </span>engine = LoggingEngine::new(config)<span class="question-mark">?</span>;
+
+   engine.log_vector([(<span class="string">"loss"</span>.to_string(), <span class="number">0.5</span>.into())].into(), <span class="prelude-val">Some</span>(<span class="number">0</span>));
+
+   engine.close(RunStatus::Finished);
+   <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h4 id="dashboard"><a class="doc-anchor" href="#dashboard">§</a>Dashboard</h4><div class="example-wrap"><pre class="language-bash"><code>exp serve ./experiments
+# Open http://localhost:8000</code></pre></div><h4 id="cli"><a class="doc-anchor" href="#cli">§</a>CLI</h4><div class="example-wrap"><pre class="language-bash"><code>exp list ./experiments              # list all experiments
+exp list ./experiments -e resnet    # list runs for an experiment
+exp inspect ./experiments/resnet/runs/20240101_120000
+exp clean resnet --keep 5 --force   # delete old runs
+exp export ./experiments/resnet/runs/20240101_120000 --format csv
+exp export ./experiments/resnet/runs/20240101_120000 --format tensorboard -o ./tb_logs
+exp import /path/to/tensorboard_logs --dir ./experiments</code></pre></div><h4 id="tensorboard-interoperability"><a class="doc-anchor" href="#tensorboard-interoperability">§</a>TensorBoard Interoperability</h4>
+<p><strong>Drop-in SummaryWriter</strong> — Replace your TensorBoard import, keep the same code:</p>
+<div class="example-wrap"><pre class="language-python"><code># Before:
+# from torch.utils.tensorboard import SummaryWriter
+
+# After:
+from expman import SummaryWriter
+
+writer = SummaryWriter(log_dir=&quot;runs/my_experiment&quot;)
+for step in range(100):
+    writer.add_scalar(&quot;loss&quot;, 1.0 / (step + 1), step)
+writer.close()</code></pre></div>
+<p><strong>Import existing TensorBoard logs</strong> into expman:</p>
+<div class="example-wrap"><pre class="language-bash"><code>exp import /path/to/tensorboard_logs --dir ./experiments</code></pre></div>
+<p><strong>Export expman runs to TensorBoard</strong> format:</p>
+<div class="example-wrap"><pre class="language-bash"><code>exp export ./experiments/my_exp/20240101_120000 --format tensorboard -o ./tb_logs
+tensorboard --logdir ./tb_logs</code></pre></div><h3 id="development"><a class="doc-anchor" href="#development">§</a>Development</h3>
+<p>Please see <a href="CONTRIBUTING.md">CONTRIBUTING.md</a> for detailed instructions on setting up your local environment, building the Python bindings, and important git configuration notes.</p>
+<div class="example-wrap"><pre class="language-bash"><code>nix develop                    # enter dev shell
+just test                      # run all tests
+just dev-py                    # build Python extension (uv pip install -e .)
+just serve ./experiments       # start dashboard
+just watch                     # watch mode for tests
+just build-docs                # build and open documentation</code></pre></div><h3 id="documentation"><a class="doc-anchor" href="#documentation">§</a>Documentation</h3>
+<p>For detailed usage, refer to the source code modules in <code>src/</code>:</p>
+<ul>
+<li><a href="src/cli/"><code>cli</code></a> - Command-line interface definitions and references.</li>
+<li><a href="src/core/"><code>core</code></a> - Core high-performance async Rust logging engine.</li>
+<li><a href="src/wrappers/python/"><code>wrappers/python</code></a> - Python extension Rust bindings.</li>
+<li><a href="src/api/"><code>api</code></a> - Axum web server and SSE live streaming API.</li>
+<li><a href="src/app/"><code>app</code></a> - Leptos frontend web application.</li>
+<li><a href="wrappers/python/"><code>python-package</code></a> - Python package code and tests.</li>
+</ul>
+<h4 id="dashboard-features"><a class="doc-anchor" href="#dashboard-features">§</a>Dashboard Features</h4>
+<ul>
+<li><strong>Live Metrics</strong>: Real-time SSE streaming of experiment metrics and logs.</li>
+<li><strong>Live Jupyter Notebooks</strong>: Instantly spawn a live Jupyter instance natively bound to any run’s execution environment directly from the UI, with auto-generated analytics boilerplate (Polars).</li>
+<li><strong>Scalar Filter</strong>: Toggle individual metric columns in the Runs table via chip buttons — no page reload.</li>
+<li><strong>Deep Inspection</strong>: View detailed run configurations, metadata, and artifacts.</li>
+<li><strong>Artifact Browser</strong>: Preview <code>parquet</code>, <code>csv</code>, and other files directly in the browser.</li>
+<li><strong>Comparison View</strong>: Overlay multiple runs on a shared timeline for analysis.</li>
+<li><strong>Server-side filtering</strong>: Pass <code>?metrics=loss,acc</code> to <code>/api/experiments/:exp/runs</code> to limit which scalars are returned.</li>
+</ul>
+<h3 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h3>
+<p>Practical code samples are provided in the <a href="examples/">examples/</a> directory. The Python example demonstrates logging metrics, alongside generating and storing rich media artifacts (audio, video, plots) directly natively.</p>
+<ul>
+<li><strong>Python</strong>: <a href="examples/python/basic_training.py">examples/python/basic_training.py</a></li>
+<li><strong>Python (TensorBoard migration)</strong>: <a href="examples/python/tensorboard_migration.py">examples/python/tensorboard_migration.py</a></li>
+<li><strong>Rust</strong>: <a href="examples/rust/logging.rs">examples/rust/logging.rs</a></li>
+</ul>
+<p>To run the Python examples, ensure you have built the extension first with <code>just dev-py</code> and installed the dev dependencies (<code>uv pip install -e ".[dev]"</code>).</p>
+<p>To run the Rust example, use:</p>
+<div class="example-wrap"><pre class="language-bash"><code>cargo run --example logging --features cli</code></pre></div><h3 id="experiments-layout"><a class="doc-anchor" href="#experiments-layout">§</a>Experiments Layout</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>experiments/
+  my_experiment/
+    experiment.yaml          # display name, description
+    <span class="number">20240101_120000</span>/         # run directory
+      metrics.parquet      # all logged metrics (Arrow/Parquet)
+      config.yaml          # logged params/hyperparameters
+      run.yaml             # run metadata (status, duration, timestamps)
+      run.log              # text log
+      artifacts/           # user-saved files</code></pre></div>
+<p><code>expman</code>: High-performance experiment manager</p>
+<p>Exposes a core library, CLI, Axum server + embedded frontend, and Python bindings.</p>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="api/index.html" title="mod expman::api">api</a></dt><dd>ExpMan Backend API</dd><dt><a class="mod" href="cli/index.html" title="mod expman::cli">cli</a></dt><dd>ExpMan CLI</dd><dt><a class="mod" href="core/index.html" title="mod expman::core">core</a></dt><dd>ExpMan Core Logging Engine</dd><dt><a class="mod" href="wrappers/index.html" title="mod expman::wrappers">wrappers</a></dt><dd>ExpMan Language Wrappers</dd></dl></section></div></main></body></html>
