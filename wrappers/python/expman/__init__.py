@@ -168,6 +168,21 @@ class Experiment:
         """Name of this run."""
         return self._exp.run_name
 
+    @property
+    def tensorboard_dir(self) -> str:
+        """Path to TensorBoard log directory for this run.
+        
+        Creates the directory if it doesn't exist. Pass this to your
+        profiler or TensorBoard SummaryWriter:
+        
+            profiler = torch.profiler.profile(
+                on_trace_ready=torch.profiler.tensorboard_trace_handler(exp.tensorboard_dir)
+            )
+        """
+        tb_dir = os.path.join(self._exp.run_dir, "tensorboard")
+        os.makedirs(tb_dir, exist_ok=True)
+        return tb_dir
+
     def close(self, status: str = "FINISHED") -> None:
         """
         Gracefully close the experiment.
@@ -258,6 +273,15 @@ def save_artifact(path: str) -> None:
         print("Warning: No active experiment. Call expman.init() first.")
 
 
+def tensorboard_dir() -> str | None:
+    """Get the TensorBoard log directory for the current global experiment."""
+    if _current_exp:
+        return _current_exp.tensorboard_dir
+    else:
+        print("Warning: No active experiment. Call expman.init() first.")
+        return None
+
+
 def info(message: str) -> None:
     """Log an info message to the current global experiment."""
     if _current_exp:
@@ -285,6 +309,7 @@ __all__ = [
     "log_scalar",
     "log_params",
     "save_artifact",
+    "tensorboard_dir",
     "info",
     "warn",
     "close",

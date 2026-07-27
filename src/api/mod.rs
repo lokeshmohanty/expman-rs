@@ -16,14 +16,16 @@ pub use self::state::AppState;
 pub use self::state::ServerConfig;
 
 mod artifacts;
-mod experiments;
-mod frontend;
-mod jupyter_handlers;
-pub(crate) mod jupyter_service;
-mod metrics;
-mod runs;
+pub mod experiments;
+pub mod frontend;
+pub mod jupyter_handlers;
+pub mod jupyter_service;
+pub mod metrics;
+pub mod runs;
 pub mod state;
-mod stats;
+pub mod stats;
+pub mod tensorboard_handlers;
+pub mod tensorboard_service;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -115,6 +117,26 @@ fn api_router() -> Router<AppState> {
             get(jupyter_handlers::get_multi_jupyter_notebook)
                 .post(jupyter_handlers::create_multi_jupyter_notebook),
         )
+        .route(
+            "/experiments/{exp}/runs/{run}/tensorboard/start",
+            post(tensorboard_handlers::start_tensorboard),
+        )
+        .route(
+            "/experiments/{exp}/runs/{run}/tensorboard/stop",
+            post(tensorboard_handlers::stop_tensorboard),
+        )
+        .route(
+            "/experiments/{exp}/runs/{run}/tensorboard/status",
+            get(tensorboard_handlers::status_tensorboard),
+        )
+        .route(
+            "/experiments/{exp}/runs/{run}/tensorboard/has_logs",
+            get(tensorboard_handlers::has_tensorboard_logs),
+        )
+        .route(
+            "/tensorboard/available",
+            get(tensorboard_handlers::available_tensorboard),
+        )
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────
@@ -138,8 +160,11 @@ pub fn build_router(state: AppState) -> Router {
 /// Start the server on the given address.
 pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
     let state = AppState::new(config.base_dir.clone());
-    let state_shutdown_all = state.clone();
-    let state_shutdown_token = state.clone();
+    
+    let cancel_token = state.shutdown_token.clone();
+    let jupyter_manager = state.jupyter.clone();
+    let tensorboard_manager = state.tensorboard.clone();
+
     let app = build_router(state);
 
     let addr: SocketAddr = format!("{}:{}", config.host, config.port).parse()?;
@@ -147,19 +172,19 @@ pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    axum::serve(listener, app)
+    let server = axum::serve(listener, app)
         .with_graceful_shutdown(async move {
             tokio::signal::ctrl_c()
                 .await
                 .expect("failed to install CTRL+C handler");
             info!("Shutting down ExpMan server...");
-            state_shutdown_token.shutdown_token.cancel();
-        })
-        .await?;
+            cancel_token.cancel();
+        });
 
-    // Cleanup all Jupyter instances
-    info!("Cleaning up interactive notebooks...");
-    state_shutdown_all.jupyter.shutdown_all().await;
+    let _ = server.await;
+    info!("Server shutting down, cleaning up processes...");
+    jupyter_manager.shutdown_all().await;
+    tensorboard_manager.shutdown_all().await;
 
     Ok(())
 }

@@ -145,13 +145,34 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
         }
     });
 
+    // Auto-select first available artifact if selected_path doesn't exist
+    Effect::new(move |_| {
+        if let Some(Ok(list)) = artifact_resource.get() {
+            if list.is_empty() {
+                if !selected_path.get_untracked().is_empty() {
+                    set_selected_path.set(String::new());
+                }
+            } else {
+                let current = selected_path.get_untracked();
+                let exists = list.iter().any(|a| a.path == current);
+                if !exists {
+                    if let Some(run_log) = list.iter().find(|a| a.path == "run.log") {
+                        set_selected_path.set(run_log.path.clone());
+                    } else if let Some(first) = list.first() {
+                        set_selected_path.set(first.path.clone());
+                    }
+                }
+            }
+        }
+    });
+
     let content_resource = LocalResource::new(move || {
         let eid = exp_id_val.with_value(|v| v.clone());
         let rid = run_id_val.with_value(|v| v.clone());
         let path = selected_path.get();
         async move {
-            if rid.is_empty() {
-                return Ok("Select a run".to_string());
+            if rid.is_empty() || path.is_empty() {
+                return Ok(String::new());
             }
 
             let ext = path.split('.').next_back().unwrap_or("").to_lowercase();
@@ -185,6 +206,14 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
                 <Suspense fallback=|| view! { <div class="p-4 text-slate-500 text-sm">"Loading..."</div> }>
                     {move || Suspend::new(async move {
                         let list = artifact_resource.await.unwrap_or_default();
+
+                        if list.is_empty() {
+                            return view! {
+                                <div class="p-6 text-center text-slate-500 text-xs italic">
+                                    "No artifacts found for this run."
+                                </div>
+                            }.into_any();
+                        }
 
                         let mut default_artifacts = Vec::new();
                         let mut stored_artifacts = Vec::new();
@@ -274,7 +303,12 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
             // Right: Preview
             <div class="w-2/3 flex flex-col h-full bg-slate-950">
                 <div class="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
-                    <span class="text-xs font-mono text-slate-400">"Preview: " {move || selected_path.get()}</span>
+                    <span class="text-xs font-mono text-slate-400">
+                        {move || {
+                            let p = selected_path.get();
+                            if p.is_empty() { "No file selected".to_string() } else { format!("Preview: {}", p) }
+                        }}
+                    </span>
                     <div class="flex items-center space-x-4">
                         <ZoomControls
                             zoom_scale=zoom_scale
@@ -284,7 +318,18 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
                         {
                             let dl_exp_id = exp_id.clone();
                             let dl_run_id = run_id.clone();
-                            view! { <a href=move || format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", dl_exp_id.clone(), dl_run_id.clone(), selected_path.get()) download class="text-[10px] text-blue-500 hover:underline">"Download Raw"</a> }
+                            view! {
+                                <a
+                                    href=move || format!("/api/experiments/{}/runs/{}/artifacts/content?path={}", dl_exp_id.clone(), dl_run_id.clone(), selected_path.get())
+                                    download
+                                    class=move || format!(
+                                        "text-[10px] text-blue-500 hover:underline {}",
+                                        if selected_path.get().is_empty() { "pointer-events-none opacity-50" } else { "" }
+                                    )
+                                >
+                                    "Download Raw"
+                                </a>
+                            }
                         }
                     </div>
                 </div>
@@ -310,6 +355,13 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
                             let prev_run_id = run_id.clone();
                             move || {
                                 let path = selected_path.get();
+                                if path.is_empty() {
+                                    return view! {
+                                        <div class="p-8 text-center text-slate-500 italic">
+                                            "No artifact selected or available for preview."
+                                        </div>
+                                    }.into_any();
+                                }
                                 let ext = path.split('.').next_back().unwrap_or("").to_lowercase();
                                 let is_video = matches!(ext.as_str(), "mp4" | "webm" | "ogg");
                                 let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "flac");
@@ -402,8 +454,17 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
                                    <div class="flex-grow flex flex-col h-full w-full">
                                        <Suspense fallback=|| view! { <div class="p-8 animate-pulse space-y-2"><div class="h-2 bg-slate-800 rounded w-3/4"></div><div class="h-2 bg-slate-800 rounded w-1/2"></div></div> }>
                                            {move || Suspend::new(async move {
-                                               let content = content_resource.await.unwrap_or_else(|e| format!("Error loading preview: {}", e));
-                                               view! { <TabularPreview content=content /> }
+                                               match content_resource.await {
+                                                   Ok(content) => view! { <TabularPreview content=content /> }.into_any(),
+                                                   Err(err) => view! {
+                                                       <ErrorState
+                                                           title="Artifact Preview Unavailable"
+                                                           message=err
+                                                           action_label="Retry"
+                                                           on_action=Callback::new(move |_| { content_resource.refetch(); })
+                                                       />
+                                                   }.into_any(),
+                                               }
                                            })}
                                        </Suspense>
                                    </div>

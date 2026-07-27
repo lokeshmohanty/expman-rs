@@ -8,6 +8,7 @@ use tokio_util::sync::CancellationToken;
 pub struct AppState {
     pub base_dir: Arc<PathBuf>,
     pub jupyter: super::jupyter_service::JupyterManager,
+    pub tensorboard: super::tensorboard_service::TensorBoardManager,
     pub shutdown_token: CancellationToken,
 }
 
@@ -16,6 +17,7 @@ impl AppState {
         Self {
             base_dir: Arc::new(base_dir),
             jupyter: super::jupyter_service::JupyterManager::new(),
+            tensorboard: super::tensorboard_service::TensorBoardManager::new(),
             shutdown_token: CancellationToken::new(),
         }
     }
