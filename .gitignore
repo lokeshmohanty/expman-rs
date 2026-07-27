@@ -30,3 +30,10 @@ notes.txt
 *.swp
 .next/
 .env
+
+# agent harness runtime (keep AGENTS.md, STATUS.md, docs/, .agents/skills tracked)
+.claude/settings.local.json
+.agents/*.lock
+.agents/sessions/
+.gitnexus/
+graphify-out/
