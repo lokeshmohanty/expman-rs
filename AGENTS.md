@@ -1,6 +1,6 @@
 # expman-rs — Agent Index
 
-> Minimal index. Read `STATUS.md` next for current state. Full documentation in
+> Minimal index. `STATUS.md` is on demand, not by default: read it (or grep the section you need) only when the task turns on current state. Full documentation in
 > `docs/` (start at `docs/index.md`). Global harness rules: `~/.agents/AGENTS.md`.
 
 ## What this is

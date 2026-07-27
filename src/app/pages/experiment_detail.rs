@@ -150,55 +150,73 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
                 <div class="flex-grow overflow-auto p-2 space-y-1 custom-scrollbar">
                      <Suspense fallback=|| view! { <div class="p-4 text-slate-500 text-xs">"Loading runs..."</div> }>
                         {move || Suspend::new(async move {
-                            let run_list: Vec<Run> = runs.await.unwrap_or_default();
-                            view! {
-                                {run_list.into_iter().map(|run| {
-                                    let rid_inner = run.id.clone();
-                                    let is_selected = Signal::derive(move || selected_runs.with(|set| set.contains(&rid_inner)));
-                                    let is_running = run.status == "RUNNING";
-                                    let run_clone = run.clone();
-                                    let rid_click = run.id.clone();
-
-                                    let v: AnyView = view! {
-                                        <div
-                                            class=move || format!(
-                                                "p-2 rounded-lg transition-all duration-200 border group/item relative pr-8 {} {}",
-                                                if is_selected.get() { "bg-blue-600/10 border-blue-500/50" } else { "hover:bg-slate-800/50 border-transparent text-slate-400" },
-                                                if is_selected.get() { "text-white" } else { "" }
-                                            )
-                                        >
-                                            <div class="cursor-pointer" on:click=move |_| toggle_run(rid_click.clone())>
-                                                <div class="flex items-center justify-between">
-                                                    <div class="flex items-center space-x-2 overflow-hidden">
-                                                        <div class=format!("w-1.5 h-1.5 rounded-full flex-shrink-0 {}", if is_running { "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" } else { "bg-slate-600" })></div>
-                                                        <span class="font-medium text-xs truncate">{run.name.clone()}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="mt-1 ml-3.5 space-y-0.5">
-
-                                                    <div class="flex flex-wrap gap-1 mt-1 empty:hidden">
-                                                        {run_clone.tags.clone().unwrap_or_default().into_iter().take(2).map(|t| view! {
-                                                            <span class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] border border-blue-500/20">{t}</span>
-                                                        }).collect_view()}
-                                                    </div>
-                                                </div>
+                            match runs.await {
+                                Ok(run_list) => {
+                                    if run_list.is_empty() {
+                                        return view! {
+                                            <div class="p-4 text-center text-slate-500 text-xs italic">
+                                                "No runs recorded in this experiment."
                                             </div>
+                                        }.into_any();
+                                    }
+                                    view! {
+                                        {run_list.into_iter().map(|run| {
+                                            let rid_inner = run.id.clone();
+                                            let is_selected = Signal::derive(move || selected_runs.with(|set| set.contains(&rid_inner)));
+                                            let is_running = run.status == "RUNNING";
+                                            let run_clone = run.clone();
+                                            let rid_click = run.id.clone();
 
-                                            // Edit Button (visible on hover)
-                                            <button
-                                                on:click=move |e| {
-                                                    e.stop_propagation();
-                                                    open_run_edit(run_clone.clone());
-                                                }
-                                                class="absolute top-2 right-2 p-1 text-slate-600 hover:text-blue-400 opacity-0 group-hover/item:opacity-100 transition-opacity"
-                                                title="Edit Run"
-                                            >
-                                                <SettingsIcon size=12 />
-                                            </button>
-                                        </div>
-                                    }.into_any();
-                                    v
-                                }).collect_view()}
+                                            let v: AnyView = view! {
+                                                <div
+                                                    class=move || format!(
+                                                        "p-2 rounded-lg transition-all duration-200 border group/item relative pr-8 {} {}",
+                                                        if is_selected.get() { "bg-blue-600/10 border-blue-500/50" } else { "hover:bg-slate-800/50 border-transparent text-slate-400" },
+                                                        if is_selected.get() { "text-white" } else { "" }
+                                                    )
+                                                >
+                                                    <div class="cursor-pointer" on:click=move |_| toggle_run(rid_click.clone())>
+                                                        <div class="flex items-center justify-between">
+                                                            <div class="flex items-center space-x-2 overflow-hidden">
+                                                                <div class=format!("w-1.5 h-1.5 rounded-full flex-shrink-0 {}", if is_running { "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" } else { "bg-slate-600" })></div>
+                                                                <span class="font-medium text-xs truncate">{run.name.clone()}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-1 ml-3.5 space-y-0.5">
+
+                                                            <div class="flex flex-wrap gap-1 mt-1 empty:hidden">
+                                                                {run_clone.tags.clone().unwrap_or_default().into_iter().take(2).map(|t| view! {
+                                                                    <span class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded-md text-[9px] border border-blue-500/20">{t}</span>
+                                                                }).collect_view()}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    // Edit Button (visible on hover)
+                                                    <button
+                                                        on:click=move |e| {
+                                                            e.stop_propagation();
+                                                            open_run_edit(run_clone.clone());
+                                                        }
+                                                        class="absolute top-2 right-2 p-1 text-slate-600 hover:text-blue-400 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                                        title="Edit Run"
+                                                    >
+                                                        <SettingsIcon size=12 />
+                                                    </button>
+                                                </div>
+                                            }.into_any();
+                                            v
+                                        }).collect_view()}
+                                    }.into_any()
+                                },
+                                Err(err) => view! {
+                                    <ErrorState
+                                        title="Failed to Load Runs"
+                                        message=err
+                                        action_label="Retry"
+                                        on_action=Callback::new(move |_| { runs.refetch(); })
+                                    />
+                                }.into_any(),
                             }
                         })}
                     </Suspense>
@@ -372,7 +390,7 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
             <div class="flex-grow flex flex-col space-y-4 min-h-0">
                 // Tabs
                 <div class="flex space-x-1 bg-slate-900 border border-slate-800 p-1 rounded-xl w-fit flex-shrink-0">
-                    {["runs", "metrics", "artifacts", "console", "interactive"].into_iter().map(|t| {
+                    {["runs", "metrics", "tensorboard", "artifacts", "console", "interactive"].into_iter().map(|t| {
                         let tab = t.to_string();
                         let tab_click = tab.clone();
                         let is_active = move || active_tab.get() == tab;
@@ -402,6 +420,7 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
                             let run_list: Vec<Run> = runs.get().and_then(|r| r.ok()).unwrap_or_default();
                             view! { <MetricsView exp_id=id() selected=selected_runs.get() runs=run_list /> }.into_any()
                         },
+                        "tensorboard" => view! { <TensorBoardView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "artifacts" => view! { <ArtifactView exp_id=id() selected=selected_runs.get() /> }.into_any(),
                         "console" => {
                             let run_list: Vec<Run> = runs.get().and_then(|r| r.ok()).unwrap_or_default();

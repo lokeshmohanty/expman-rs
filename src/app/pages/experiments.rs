@@ -3,6 +3,7 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
 
+use crate::app::components::ErrorState;
 use crate::app::fetch::*;
 
 #[component]
@@ -25,29 +26,51 @@ pub(crate) fn Experiments() -> impl IntoView {
                     <tbody class="divide-y divide-slate-800">
                         <Suspense fallback=|| view! { <tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">"Loading..."</td></tr> }>
                             {move || Suspend::new(async move {
-                                let exps = experiments.get().and_then(|r| r.ok()).unwrap_or_default();
-                                view! {
-                                    {exps.into_iter().map(|exp| {
-                                        let id = exp.id.clone();
-                                        view! {
-                                            <tr class="hover:bg-slate-800/30 transition-colors cursor-pointer" on:click=move |_| {
-                                                 // Navigate to details on row click
-                                            }>
-                                                <td class="px-6 py-4 font-medium">
-                                                    <A href=format!("/experiments/{}", id) attr:class="text-blue-400 hover:underline">{exp.display_name}</A>
-                                                </td>
-                                                <td class="px-6 py-4 text-slate-400 text-sm">{exp.description.unwrap_or_default()}</td>
-                                                <td class="px-6 py-4">
-                                                    <div class="flex flex-wrap gap-1">
-                                                        {exp.tags.into_iter().map(|t| view! {
-                                                            <span class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded text-[10px]">{t}</span>
-                                                        }).collect_view()}
-                                                    </div>
-                                                </td>
-                                                <td class="px-6 py-4 text-slate-300 text-sm font-mono">{exp.runs_count}</td>
-                                            </tr>
+                                match experiments.await {
+                                    Ok(exps) => {
+                                        if exps.is_empty() {
+                                            return view! {
+                                                <tr>
+                                                    <td colspan="4" class="px-6 py-12 text-center text-slate-500 text-sm italic">
+                                                        "No experiments recorded yet."
+                                                    </td>
+                                                </tr>
+                                            }.into_any();
                                         }
-                                    }).collect_view()}
+                                        view! {
+                                            {exps.into_iter().map(|exp| {
+                                                let id = exp.id.clone();
+                                                view! {
+                                                    <tr class="hover:bg-slate-800/30 transition-colors cursor-pointer">
+                                                        <td class="px-6 py-4 font-medium">
+                                                            <A href=format!("/experiments/{}", id) attr:class="text-blue-400 hover:underline">{exp.display_name}</A>
+                                                        </td>
+                                                        <td class="px-6 py-4 text-slate-400 text-sm">{exp.description.unwrap_or_default()}</td>
+                                                        <td class="px-6 py-4">
+                                                            <div class="flex flex-wrap gap-1">
+                                                                {exp.tags.into_iter().map(|t| view! {
+                                                                    <span class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded text-[10px]">{t}</span>
+                                                                }).collect_view()}
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-6 py-4 text-slate-300 text-sm font-mono">{exp.runs_count}</td>
+                                                    </tr>
+                                                }
+                                            }).collect_view()}
+                                        }.into_any()
+                                    },
+                                    Err(err) => view! {
+                                        <tr>
+                                            <td colspan="4" class="p-6">
+                                                <ErrorState
+                                                    title="Failed to Load Experiments"
+                                                    message=err
+                                                    action_label="Retry"
+                                                    on_action=Callback::new(move |_| { experiments.refetch(); })
+                                                />
+                                            </td>
+                                        </tr>
+                                    }.into_any(),
                                 }
                             })}
                         </Suspense>

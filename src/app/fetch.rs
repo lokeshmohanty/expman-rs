@@ -151,10 +151,14 @@ pub(crate) async fn fetch_artifact_content(
     .map_err(|e| e.to_string())?;
 
     if !resp.ok() {
-        return Err(format!(
-            "Error fetching artifact content: {}",
-            resp.status()
-        ));
+        let status = resp.status();
+        let msg = match status {
+            404 => format!("Artifact file '{}' was not found (404)", path),
+            403 => format!("Access denied to artifact file '{}' (403)", path),
+            500 => format!("Server error while reading artifact file '{}' (500)", path),
+            _ => format!("Failed to fetch artifact content (HTTP {})", status),
+        };
+        return Err(msg);
     }
 
     resp.text().await.map_err(|e| e.to_string())
@@ -341,4 +345,71 @@ pub(crate) fn extract_cell_sources(ipynb_content: &str) -> Vec<String> {
             }
         })
         .collect()
+}
+
+pub(crate) async fn check_tensorboard_available() -> Result<TensorBoardBackendInfo, String> {
+    let resp = gloo_net::http::Request::get("/api/tensorboard/available")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+pub(crate) async fn check_tensorboard_has_logs(
+    exp: String,
+    run: String,
+) -> Result<TensorBoardLogsInfo, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/tensorboard/has_logs",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+pub(crate) async fn fetch_tensorboard_status(
+    exp: String,
+    run: String,
+) -> Result<TensorBoardStatus, String> {
+    let resp = gloo_net::http::Request::get(&format!(
+        "/api/experiments/{}/runs/{}/tensorboard/status",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+pub(crate) async fn start_tensorboard(exp: String, run: String) -> Result<u16, String> {
+    let resp = gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/runs/{}/tensorboard/start",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    let res: TensorBoardStartResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(res.port)
+}
+
+pub(crate) async fn stop_tensorboard(exp: String, run: String) -> Result<(), String> {
+    gloo_net::http::Request::post(&format!(
+        "/api/experiments/{}/runs/{}/tensorboard/stop",
+        exp, run
+    ))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }

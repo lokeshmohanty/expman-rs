@@ -93,3 +93,24 @@ pub(crate) struct NotebookInfo {
     pub(crate) exists: bool,
     pub(crate) content: Option<String>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct TensorBoardBackendInfo {
+    pub(crate) available: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct TensorBoardLogsInfo {
+    pub(crate) has_logs: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct TensorBoardStatus {
+    pub(crate) running: bool,
+    pub(crate) port: Option<u16>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct TensorBoardStartResponse {
+    pub(crate) port: u16,
+}

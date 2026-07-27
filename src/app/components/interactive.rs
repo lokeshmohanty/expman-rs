@@ -5,6 +5,7 @@ use leptos::task::spawn_local;
 use lucide_leptos::{Cog as SettingsIcon, FlaskConical, TriangleAlert};
 use web_sys::RequestMode;
 
+use super::error_state::ErrorState;
 use crate::app::fetch::*;
 
 #[component]
@@ -384,14 +385,13 @@ pub(crate) fn InteractiveView(
                                 }
                             },
                             Err(e) => {
-                                let err_msg = e.clone();
                                 view! {
-                                    <div class="p-8 text-red-500 text-center bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg max-w-md mx-auto mt-10">
-                                        <div class="font-bold flex items-center justify-center space-x-2 mb-2">
-                                            <span>"Failed to Load Run"</span>
-                                        </div>
-                                        <p class="text-sm opacity-80">{err_msg}</p>
-                                    </div>
+                                    <ErrorState
+                                        title="Failed to Load Run"
+                                        message=e
+                                        action_label="Retry"
+                                        on_action=Callback::new(move |_| { run_data.refetch(); })
+                                    />
                                 }.into_any()
                             }
                         };
