@@ -352,7 +352,7 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
                                                     }
                                                 }).collect_view().into_any()
                                             } else {
-                                                view! {}.into_any()
+                                                view! { "" }.into_any()
                                             }
                                         }}
                                     </select>

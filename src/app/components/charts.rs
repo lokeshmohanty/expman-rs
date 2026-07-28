@@ -364,7 +364,7 @@ pub(crate) fn LineChart(
                             if segment.len() >= 2 {
                                 let series = chart
                                     .draw_series(LineSeries::new(
-                                        segment.into_iter(),
+                                        segment,
                                         RGBColor(r, g, b).stroke_width(3),
                                     ))
                                     .unwrap();
@@ -501,7 +501,7 @@ pub(crate) fn LineChart(
                                 if segment.len() >= 2 {
                                     chart
                                         .draw_series(LineSeries::new(
-                                            segment.into_iter(),
+                                            segment,
                                             color.stroke_width(2),
                                         ))
                                         .unwrap();
