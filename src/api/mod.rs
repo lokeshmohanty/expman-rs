@@ -42,9 +42,20 @@ fn exp_dir(base: &std::path::Path, exp: &str) -> PathBuf {
 
 fn api_router() -> Router<AppState> {
     Router::new()
-        .route("/projects", get(projects::list_projects).post(projects::create_project))
-        .route("/projects/{project}", get(projects::get_project).patch(projects::update_project).delete(projects::delete_project))
-        .route("/projects/{project}/readme", get(projects::get_project_readme).put(projects::update_project_readme))
+        .route(
+            "/projects",
+            get(projects::list_projects).post(projects::create_project),
+        )
+        .route(
+            "/projects/{project}",
+            get(projects::get_project)
+                .patch(projects::update_project)
+                .delete(projects::delete_project),
+        )
+        .route(
+            "/projects/{project}/readme",
+            get(projects::get_project_readme).put(projects::update_project_readme),
+        )
         .route("/experiments", get(experiments::list_experiments))
         .route("/experiments/{exp}/runs", get(runs::list_runs))
         .route(

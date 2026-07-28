@@ -10,7 +10,9 @@ pub(crate) mod utils;
 use leptos::prelude::*;
 use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::path;
-use lucide_leptos::{Book, Cog as SettingsIcon, FlaskConical, FolderKanban, Github, LayoutDashboard, Package};
+use lucide_leptos::{
+    Book, Cog as SettingsIcon, FlaskConical, FolderKanban, Github, LayoutDashboard, Package,
+};
 
 use pages::*;
 use utils::SidebarContext;

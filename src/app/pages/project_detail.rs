@@ -9,7 +9,7 @@ use crate::app::components::ErrorState;
 use crate::app::fetch;
 
 fn render_markdown(md: &str) -> String {
-    use pulldown_cmark::{Parser, Options, html};
+    use pulldown_cmark::{html, Options, Parser};
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_STRIKETHROUGH);

@@ -15,7 +15,9 @@ use parquet::file::properties::WriterProperties;
 use serde_yaml;
 
 use crate::core::error::Result;
-use crate::core::models::{ExperimentMetadata, MetricValue, ProjectMetadata, RunMetadata, RunStatus, VectorRow};
+use crate::core::models::{
+    ExperimentMetadata, MetricValue, ProjectMetadata, RunMetadata, RunStatus, VectorRow,
+};
 
 // ─── Directory helpers ────────────────────────────────────────────────────────
 

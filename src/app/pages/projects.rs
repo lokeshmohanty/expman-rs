@@ -27,9 +27,15 @@ pub(crate) fn Projects() -> impl IntoView {
         leptos::task::spawn_local(async move {
             match fetch::create_project(
                 name,
-                if display.is_empty() { None } else { Some(display) },
+                if display.is_empty() {
+                    None
+                } else {
+                    Some(display)
+                },
                 if desc.is_empty() { None } else { Some(desc) },
-            ).await {
+            )
+            .await
+            {
                 Ok(_) => {
                     show_create.set(false);
                     new_name.set(String::new());
