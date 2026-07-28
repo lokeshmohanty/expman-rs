@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use leptos_router::components::A;
 use lucide_leptos::{ChevronRight, FlaskConical, LayoutDashboard, Package};
 
+use crate::app::components::ErrorState;
 use crate::app::fetch::*;
 
 #[component]
@@ -17,47 +18,74 @@ pub(crate) fn Dashboard() -> impl IntoView {
 
             <Suspense fallback=|| view! { <div class="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-6"><div class="bg-slate-900 h-32 rounded-xl"></div><div class="bg-slate-900 h-32 rounded-xl"></div><div class="bg-slate-900 h-32 rounded-xl"></div></div> }>
                 {move || Suspend::new(async move {
-                    let s = stats.get().and_then(|r| r.ok()).unwrap_or_default();
-                    let exps = experiments.get().and_then(|r| r.ok()).unwrap_or_default();
+                    let exps_res = experiments.await;
+                    let stats_res = stats.await;
 
-                    view! {
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <StatCard label="Total Experiments" value=s.total_experiments.to_string()>
-                                <FlaskConical size=24 />
-                            </StatCard>
-                            <StatCard label="Active Runs" value=s.active_runs.to_string() >
-                                <div class="relative">
-                                    <LayoutDashboard size=24 />
-                                    {move || (s.active_runs > 0).then(|| view! { <span class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-ping"></span> })}
+                    match (exps_res, stats_res) {
+                        (Ok(exps), Ok(s)) => {
+                            view! {
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <StatCard label="Total Experiments" value=s.total_experiments.to_string()>
+                                        <FlaskConical size=24 />
+                                    </StatCard>
+                                    <StatCard label="Active Runs" value=s.active_runs.to_string() >
+                                        <div class="relative">
+                                            <LayoutDashboard size=24 />
+                                            {move || (s.active_runs > 0).then(|| view! { <span class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-ping"></span> })}
+                                        </div>
+                                    </StatCard>
+                                    <StatCard label="Total Storage" value="0 MB".to_string() >
+                                        <Package size=24 />
+                                    </StatCard>
                                 </div>
-                            </StatCard>
-                            <StatCard label="Total Storage" value="0 MB".to_string() >
-                                <Package size=24 />
-                            </StatCard>
-                        </div>
 
-                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                            <h2 class="text-xl font-semibold mb-4 text-white">"Recent Experiments"</h2>
-                            <div class="divide-y divide-slate-800">
-                                {exps.into_iter().take(5).map(|exp| {
-                                    let id = exp.id.clone();
-                                    view! {
-                                        <A href=format!("/experiments/{}", id) attr:class="flex items-center justify-between py-3 hover:bg-slate-800/30 transition-colors px-2 rounded-lg group text-slate-300">
-                                            <div>
-                                                <p class="font-medium text-slate-100">{exp.display_name}</p>
-                                                <p class="text-sm text-slate-500">{exp.description.unwrap_or_default()}</p>
-                                            </div>
-                                            <div class="flex items-center space-x-4">
-                                                <span class="text-xs text-slate-600 font-mono">{exp.runs_count} " runs"</span>
-                                                <div class="text-slate-600 group-hover:text-blue-400 transition-colors">
-                                                    <ChevronRight size=18 />
+                                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <h2 class="text-xl font-semibold mb-4 text-white">"Recent Experiments"</h2>
+                                    <div class="divide-y divide-slate-800">
+                                        {if exps.is_empty() {
+                                            view! {
+                                                <div class="py-6 text-center text-slate-500 text-sm italic">
+                                                    "No experiments recorded yet."
                                                 </div>
-                                            </div>
-                                        </A>
-                                    }
-                                }).collect_view()}
-                            </div>
-                        </div>
+                                            }.into_any()
+                                        } else {
+                                            exps.into_iter().take(5).map(|exp| {
+                                                let id = exp.id.clone();
+                                                view! {
+                                                    <A href=format!("/experiments/{}", id) attr:class="flex items-center justify-between py-3 hover:bg-slate-800/30 transition-colors px-2 rounded-lg group text-slate-300">
+                                                        <div>
+                                                            <p class="font-medium text-slate-100">{exp.display_name}</p>
+                                                            <p class="text-sm text-slate-500">{exp.description.unwrap_or_default()}</p>
+                                                        </div>
+                                                        <div class="flex items-center space-x-4">
+                                                            <span class="text-xs text-slate-600 font-mono">{exp.runs_count} " runs"</span>
+                                                            <div class="text-slate-600 group-hover:text-blue-400 transition-colors">
+                                                                <ChevronRight size=18 />
+                                                            </div>
+                                                        </div>
+                                                    </A>
+                                                }
+                                            }).collect_view().into_any()
+                                        }}
+                                    </div>
+                                </div>
+                            }.into_any()
+                        },
+                        (Err(err), _) | (_, Err(err)) => {
+                            view! {
+                                <div class="bg-slate-900 border border-slate-800 rounded-xl p-8">
+                                    <ErrorState
+                                        title="Failed to Load Dashboard"
+                                        message=err
+                                        action_label="Retry"
+                                        on_action=Callback::new(move |_| {
+                                            experiments.refetch();
+                                            stats.refetch();
+                                        })
+                                    />
+                                </div>
+                            }.into_any()
+                        }
                     }
                 })}
             </Suspense>

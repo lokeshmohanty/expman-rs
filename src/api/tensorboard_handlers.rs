@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 
-use super::state::AppState;
 use super::run_dir;
+use super::state::AppState;
 
 /// Checks if `tensorboard` is available in the environment.
 pub async fn available_tensorboard() -> impl IntoResponse {
