@@ -1129,7 +1129,7 @@ dependencies = [
 
 [[package]]
 name = "expman"
-version = "0.5.3"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "arrow",
