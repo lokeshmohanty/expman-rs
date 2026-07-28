@@ -20,18 +20,19 @@ pub(crate) fn Experiments() -> impl IntoView {
                             <th class="px-6 py-4 font-semibold text-slate-300">"Name"</th>
                             <th class="px-6 py-4 font-semibold text-slate-300">"Description"</th>
                             <th class="px-6 py-4 font-semibold text-slate-300">"Tags"</th>
+                            <th class="px-6 py-4 font-semibold text-slate-300">"Project"</th>
                             <th class="px-6 py-4 font-semibold text-slate-300">"Runs"</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-800">
-                        <Suspense fallback=|| view! { <tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">"Loading..."</td></tr> }>
+                        <Suspense fallback=|| view! { <tr><td colspan="5" class="px-6 py-10 text-center text-slate-500">"Loading..."</td></tr> }>
                             {move || Suspend::new(async move {
                                 match experiments.await {
                                     Ok(exps) => {
                                         if exps.is_empty() {
                                             return view! {
                                                 <tr>
-                                                    <td colspan="4" class="px-6 py-12 text-center text-slate-500 text-sm italic">
+                                                    <td colspan="5" class="px-6 py-12 text-center text-slate-500 text-sm italic">
                                                         "No experiments recorded yet."
                                                     </td>
                                                 </tr>
@@ -53,6 +54,11 @@ pub(crate) fn Experiments() -> impl IntoView {
                                                                 }).collect_view()}
                                                             </div>
                                                         </td>
+                                                        <td class="px-6 py-4 text-sm">
+                                                            {exp.project.clone().map(|p| view! {
+                                                                <A href=format!("/projects/{}", p) attr:class="text-blue-400 hover:underline text-xs font-mono">{p}</A>
+                                                            })}
+                                                        </td>
                                                         <td class="px-6 py-4 text-slate-300 text-sm font-mono">{exp.runs_count}</td>
                                                     </tr>
                                                 }
@@ -61,7 +67,7 @@ pub(crate) fn Experiments() -> impl IntoView {
                                     },
                                     Err(err) => view! {
                                         <tr>
-                                            <td colspan="4" class="p-6">
+                                            <td colspan="5" class="p-6">
                                                 <ErrorState
                                                     title="Failed to Load Experiments"
                                                     message=err

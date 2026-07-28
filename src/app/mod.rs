@@ -10,7 +10,7 @@ pub(crate) mod utils;
 use leptos::prelude::*;
 use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::path;
-use lucide_leptos::{Book, Cog as SettingsIcon, FlaskConical, Github, LayoutDashboard, Package};
+use lucide_leptos::{Book, Cog as SettingsIcon, FlaskConical, FolderKanban, Github, LayoutDashboard, Package};
 
 use pages::*;
 use utils::SidebarContext;
@@ -45,6 +45,13 @@ pub fn App() -> impl IntoView {
                                 <FlaskConical size=20 />
                             </div>
                             <span class="font-medium">"Experiments"</span>
+                        </A>
+
+                        <A href="/projects" attr:class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-all duration-200 text-slate-400 hover:text-white group">
+                            <div class="group-hover:text-blue-400 transition-colors">
+                                <FolderKanban size=20 />
+                            </div>
+                            <span class="font-medium">"Projects"</span>
                         </A>
 
                         <div class="pt-4 mt-4 border-t border-slate-800 empty:hidden">
@@ -82,6 +89,8 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/") view=|| view! { <Dashboard /> } />
                         <Route path=path!("/experiments") view=|| view! { <Experiments /> } />
                         <Route path=path!("/experiments/:id") view=|| view! { <ExperimentDetail /> } />
+                        <Route path=path!("/projects") view=|| view! { <Projects /> } />
+                        <Route path=path!("/projects/:id") view=|| view! { <ProjectDetail /> } />
                         <Route path=path!("/settings") view=|| view! { <SettingsPage /> } />
                     </Routes>
                 </main>

@@ -231,3 +231,160 @@ async fn test_get_metrics() {
     assert_eq!(metrics[0]["step"], 1);
     assert_eq!(metrics[0]["accuracy"], 0.85);
 }
+
+#[tokio::test]
+async fn test_projects_crud() {
+    let (_tmp, state) = setup_test_env();
+    let app = build_router(state.clone());
+
+    // 1. Create a project
+    let create_payload = serde_json::json!({
+        "name": "proj1",
+        "display_name": "Project One",
+        "description": "First test project",
+        "tags": ["ml", "nlp"]
+    });
+
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/projects")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&create_payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::CREATED);
+
+    // 2. List projects
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/projects")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    let projects = json.as_array().unwrap();
+    assert_eq!(projects.len(), 1);
+    assert_eq!(projects[0]["id"], "proj1");
+    assert_eq!(projects[0]["display_name"], "Project One");
+
+    // 3. Assign experiment to project
+    let exp_update = serde_json::json!({
+        "project": "proj1"
+    });
+
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/experiments/test_exp/metadata")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&exp_update).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::OK);
+
+    // 4. Get project detail (should include assigned experiment)
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/projects/proj1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["display_name"], "Project One");
+    let exps = json["experiments"].as_array().unwrap();
+    assert_eq!(exps.len(), 1);
+    assert_eq!(exps[0]["id"], "test_exp");
+
+    // 5. Update README
+    let readme_payload = serde_json::json!({
+        "content": "# Project One\n\nWelcome to project one."
+    });
+
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/projects/proj1/readme")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&readme_payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::OK);
+
+    // 6. Get README
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/projects/proj1/readme")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert!(json["content"].as_str().unwrap().contains("Welcome to project one"));
+
+    // 7. Delete project
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/projects/proj1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::NO_CONTENT);
+
+    // 8. Verify project deleted and experiment unassigned
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/projects")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json.as_array().unwrap().len(), 0);
+}
+

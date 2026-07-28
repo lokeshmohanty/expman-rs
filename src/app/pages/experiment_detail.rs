@@ -2,8 +2,9 @@
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
-use lucide_leptos::{Cog as SettingsIcon, FlaskConical, LayoutDashboard};
+use lucide_leptos::{Cog as SettingsIcon, FlaskConical, FolderKanban, LayoutDashboard};
 use std::rc::Rc;
 
 use crate::app::components::*;
@@ -42,14 +43,28 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
         async move { fetch_experiment_metadata(eid).await }
     });
 
+    let all_projects = LocalResource::new(fetch_projects);
+
     let (selected_runs, set_selected_runs) = signal(std::collections::HashSet::<String>::new());
     let (active_tab, set_active_tab) = signal("metrics".to_string());
+
+    // Auto-select first run by default when runs load
+    Effect::new(move |_| {
+        if let Some(Ok(run_list)) = runs.get() {
+            if !run_list.is_empty() && selected_runs.with(|set| set.is_empty()) {
+                let mut set = std::collections::HashSet::new();
+                set.insert(run_list[0].id.clone());
+                set_selected_runs.set(set);
+            }
+        }
+    });
 
     // Experiment Edit
     let (show_edit, set_show_edit) = signal(false);
     let (edit_name, set_edit_name) = signal("".to_string());
     let (edit_desc, set_edit_desc) = signal("".to_string());
     let (edit_tags, set_edit_tags) = signal("".to_string());
+    let (edit_project, set_edit_project) = signal("none".to_string());
 
     // Run Edit
     let (show_run_edit, set_show_run_edit) = signal(false);
@@ -78,9 +93,15 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
+        let proj_val = edit_project.get();
+        let proj_opt = if proj_val == "none" || proj_val.is_empty() {
+            Some(None)
+        } else {
+            Some(Some(proj_val))
+        };
 
         spawn_local(async move {
-            let _ = update_experiment_metadata(eid, Some(name), Some(desc), Some(tags)).await;
+            let _ = update_experiment_metadata(eid, Some(name), Some(desc), Some(tags), proj_opt).await;
             set_show_edit.set(false);
             exp_metadata.refetch();
         });
@@ -312,6 +333,29 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
                                         placeholder="research, mnist, baseline"
                                     />
                                 </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">"Project"</label>
+                                    <select
+                                        on:change=move |ev| set_edit_project.set(event_target_value(&ev))
+                                        prop:value=edit_project
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none"
+                                    >
+                                        <option value="none">"None (Unassigned)"</option>
+                                        {move || {
+                                            if let Some(Ok(list)) = all_projects.get() {
+                                                list.into_iter().map(|p| {
+                                                    let pid = p.id.clone();
+                                                    let pname = p.display_name;
+                                                    view! {
+                                                        <option value=pid>{pname}</option>
+                                                    }
+                                                }).collect_view().into_any()
+                                            } else {
+                                                view! {}.into_any()
+                                            }
+                                        }}
+                                    </select>
+                                </div>
                             </div>
                             <div class="flex justify-end space-x-3 pt-4">
                                 <button on:click=move |_| set_show_edit.set(false) class="px-4 py-2 text-slate-400 hover:text-white transition-colors">"Cancel"</button>
@@ -354,6 +398,15 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
                                                 <LayoutDashboard size=12 />
                                                 <span>{count} " Runs"</span>
                                             </div>
+                                            {meta.project.as_ref().map(|proj| {
+                                                let p_clone = proj.clone();
+                                                view! {
+                                                    <A href=format!("/projects/{}", p_clone) attr:class="px-2 py-0.5 bg-purple-500/10 text-purple-400 hover:underline rounded-md text-xs border border-purple-500/20 flex items-center space-x-1">
+                                                        <FolderKanban size=12 />
+                                                        <span>{p_clone}</span>
+                                                    </A>
+                                                }
+                                            })}
                                             {meta.tags.into_iter().map(|tag| view! {
                                                 <div class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md text-xs border border-slate-700">
                                                     {tag}
@@ -374,10 +427,12 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
                             set_edit_name.set(meta.display_name.clone().unwrap_or_else(id));
                             set_edit_desc.set(meta.description.clone().unwrap_or_default());
                             set_edit_tags.set(meta.tags.join(", "));
+                            set_edit_project.set(meta.project.clone().unwrap_or_else(|| "none".to_string()));
                         } else {
                             set_edit_name.set(id());
                             set_edit_desc.set(String::new());
                             set_edit_tags.set(String::new());
+                            set_edit_project.set("none".to_string());
                         }
                         set_show_edit.set(true);
                     } class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">

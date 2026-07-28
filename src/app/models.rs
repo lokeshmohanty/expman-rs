@@ -7,6 +7,7 @@ pub struct ExperimentMetadata {
     pub display_name: Option<String>,
     pub description: Option<String>,
     pub tags: Vec<String>,
+    pub project: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
@@ -16,6 +17,28 @@ pub struct Experiment {
     pub description: Option<String>,
     pub tags: Vec<String>,
     pub runs_count: usize,
+    pub project: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+pub struct Project {
+    pub id: String,
+    pub display_name: String,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+    pub experiments_count: usize,
+    pub created_at: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Default)]
+pub struct ProjectDetail {
+    pub id: String,
+    pub display_name: String,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+    pub created_at: Option<String>,
+    pub readme: Option<String>,
+    pub experiments: Vec<Experiment>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

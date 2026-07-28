@@ -2,7 +2,7 @@
 
 use leptos::prelude::*;
 use leptos_router::components::A;
-use lucide_leptos::{ChevronRight, FlaskConical, LayoutDashboard, Package};
+use lucide_leptos::{ChevronRight, FlaskConical, FolderKanban, LayoutDashboard, Package};
 
 use crate::app::components::ErrorState;
 use crate::app::fetch::*;
@@ -11,6 +11,7 @@ use crate::app::fetch::*;
 pub(crate) fn Dashboard() -> impl IntoView {
     let experiments = LocalResource::new(fetch_experiments);
     let stats = LocalResource::new(fetch_global_stats);
+    let projects = LocalResource::new(fetch_projects);
 
     view! {
         <div class="space-y-6">
@@ -20,11 +21,12 @@ pub(crate) fn Dashboard() -> impl IntoView {
                 {move || Suspend::new(async move {
                     let exps_res = experiments.await;
                     let stats_res = stats.await;
+                    let projs_res = projects.await;
 
-                    match (exps_res, stats_res) {
-                        (Ok(exps), Ok(s)) => {
+                    match (exps_res, stats_res, projs_res) {
+                        (Ok(exps), Ok(s), Ok(projs)) => {
                             view! {
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                                     <StatCard label="Total Experiments" value=s.total_experiments.to_string()>
                                         <FlaskConical size=24 />
                                     </StatCard>
@@ -36,6 +38,9 @@ pub(crate) fn Dashboard() -> impl IntoView {
                                     </StatCard>
                                     <StatCard label="Total Storage" value="0 MB".to_string() >
                                         <Package size=24 />
+                                    </StatCard>
+                                    <StatCard label="Projects" value=projs.len().to_string()>
+                                        <FolderKanban size=24 />
                                     </StatCard>
                                 </div>
 
@@ -69,9 +74,40 @@ pub(crate) fn Dashboard() -> impl IntoView {
                                         }}
                                     </div>
                                 </div>
+
+                                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 mt-6">
+                                    <h2 class="text-xl font-semibold mb-4 text-white">"Recent Projects"</h2>
+                                    <div class="divide-y divide-slate-800">
+                                        {if projs.is_empty() {
+                                            view! {
+                                                <div class="py-6 text-center text-slate-500 text-sm italic">
+                                                    "No projects yet."
+                                                </div>
+                                            }.into_any()
+                                        } else {
+                                            projs.into_iter().take(5).map(|p| {
+                                                let id = p.id.clone();
+                                                view! {
+                                                    <A href=format!("/projects/{}", id) attr:class="flex items-center justify-between py-3 hover:bg-slate-800/30 transition-colors px-2 rounded-lg group text-slate-300">
+                                                        <div>
+                                                            <p class="font-medium text-slate-100">{p.display_name}</p>
+                                                            <p class="text-sm text-slate-500">{p.description.unwrap_or_default()}</p>
+                                                        </div>
+                                                        <div class="flex items-center space-x-4">
+                                                            <span class="text-xs text-slate-600 font-mono">{p.experiments_count} " experiments"</span>
+                                                            <div class="text-slate-600 group-hover:text-blue-400 transition-colors">
+                                                                <ChevronRight size=18 />
+                                                            </div>
+                                                        </div>
+                                                    </A>
+                                                }
+                                            }).collect_view().into_any()
+                                        }}
+                                    </div>
+                                </div>
                             }.into_any()
                         },
-                        (Err(err), _) | (_, Err(err)) => {
+                        (Err(err), _, _) | (_, Err(err), _) | (_, _, Err(err)) => {
                             view! {
                                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-8">
                                     <ErrorState
@@ -81,6 +117,7 @@ pub(crate) fn Dashboard() -> impl IntoView {
                                         on_action=Callback::new(move |_| {
                                             experiments.refetch();
                                             stats.refetch();
+                                            projects.refetch();
                                         })
                                     />
                                 </div>

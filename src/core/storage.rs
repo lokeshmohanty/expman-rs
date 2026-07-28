@@ -15,7 +15,7 @@ use parquet::file::properties::WriterProperties;
 use serde_yaml;
 
 use crate::core::error::Result;
-use crate::core::models::{ExperimentMetadata, MetricValue, RunMetadata, RunStatus, VectorRow};
+use crate::core::models::{ExperimentMetadata, MetricValue, ProjectMetadata, RunMetadata, RunStatus, VectorRow};
 
 // ─── Directory helpers ────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ pub fn list_experiments(base_dir: &Path) -> Result<Vec<String>> {
         let entry = entry?;
         if entry.file_type()?.is_dir() {
             if let Some(name) = entry.file_name().to_str() {
-                if name != ".ipynb_checkpoints" {
+                if !name.starts_with('.') {
                     names.push(name.to_string());
                 }
             }
@@ -217,6 +217,73 @@ pub fn save_experiment_metadata(exp_dir: &Path, meta: &ExperimentMetadata) -> Re
 
 pub fn load_experiment_metadata(exp_dir: &Path) -> Result<ExperimentMetadata> {
     load_yaml(&exp_dir.join("experiment.yaml"))
+}
+
+// ─── Project helpers ─────────────────────────────────────────────────────────
+
+fn projects_dir(base_dir: &Path) -> std::path::PathBuf {
+    base_dir.join(".projects")
+}
+
+pub fn list_projects(base_dir: &Path) -> Result<Vec<String>> {
+    let dir = projects_dir(base_dir);
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut names = vec![];
+    for entry in fs::read_dir(&dir)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            if let Some(name) = entry.file_name().to_str() {
+                names.push(name.to_string());
+            }
+        }
+    }
+    names.sort();
+    Ok(names)
+}
+
+pub fn load_project_metadata(base_dir: &Path, name: &str) -> Result<ProjectMetadata> {
+    load_yaml(&projects_dir(base_dir).join(name).join("project.yaml"))
+}
+
+pub fn save_project_metadata(base_dir: &Path, name: &str, meta: &ProjectMetadata) -> Result<()> {
+    let dir = projects_dir(base_dir).join(name);
+    ensure_dir(&dir)?;
+    save_yaml(&dir.join("project.yaml"), meta)
+}
+
+pub fn load_project_readme(base_dir: &Path, name: &str) -> Result<Option<String>> {
+    let path = projects_dir(base_dir).join(name).join("README.md");
+    if !path.exists() {
+        return Ok(None);
+    }
+    Ok(Some(fs::read_to_string(&path)?))
+}
+
+pub fn save_project_readme(base_dir: &Path, name: &str, content: &str) -> Result<()> {
+    let dir = projects_dir(base_dir).join(name);
+    ensure_dir(&dir)?;
+    fs::write(dir.join("README.md"), content)?;
+    Ok(())
+}
+
+pub fn delete_project(base_dir: &Path, name: &str) -> Result<()> {
+    let dir = projects_dir(base_dir).join(name);
+    if dir.exists() {
+        fs::remove_dir_all(&dir)?;
+    }
+    // Unassign all experiments from this project
+    let experiments = list_experiments(base_dir)?;
+    for exp_name in &experiments {
+        let exp_dir = base_dir.join(exp_name);
+        let mut meta = load_experiment_metadata(&exp_dir)?;
+        if meta.project.as_deref() == Some(name) {
+            meta.project = None;
+            save_experiment_metadata(&exp_dir, &meta)?;
+        }
+    }
+    Ok(())
 }
 
 // ─── Parquet metrics I/O ─────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ pub async fn list_experiments(State(state): State<AppState>) -> impl IntoRespons
                     "display_name": meta.display_name.unwrap_or_else(|| name.to_string()),
                     "description": meta.description,
                     "tags": meta.tags,
+                    "project": meta.project,
                     "runs_count": runs.len(),
                 }));
             }
@@ -52,6 +53,8 @@ pub struct MetadataUpdate {
     pub display_name: Option<String>,
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
+    #[serde(default)]
+    pub project: Option<Option<String>>,
 }
 
 pub async fn update_experiment_metadata(
@@ -69,6 +72,9 @@ pub async fn update_experiment_metadata(
     }
     if let Some(tags) = update.tags {
         meta.tags = tags;
+    }
+    if let Some(project) = update.project {
+        meta.project = project;
     }
     match storage::save_experiment_metadata(&dir, &meta) {
         Ok(_) => Json(meta).into_response(),

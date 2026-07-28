@@ -166,6 +166,16 @@ frontend. Consumers building with `--features server` then hit `build.rs`'s hard
 
 ---
 
+## 2026-07 — Virtual projects layer via `.projects` metadata
+
+**Decision.** Experiments can be assigned to a project via a `project` field in `experiment.yaml`. Projects are stored as metadata in `<base_dir>/.projects/<project_name>/project.yaml` and `README.md` (markdown frontpage). `list_experiments` ignores all dot-directories (such as `.projects` and `.ipynb_checkpoints`).
+
+**Why.** Avoids altering the flat directory layout of existing experiments (`<base_dir>/<experiment>/<run>`), maintaining full backwards compatibility. Experiments without a project remain unassigned in the main listing by default.
+
+**Consequences.** Non-breaking file layout. Project deletion unassigns member experiments without touching their directory contents or runs. Client-side Markdown rendering via `pulldown-cmark` in WASM provides project frontpages with live browser editing.
+
+---
+
 ## Open questions
 
 - Should the version live in one place? It is duplicated across `Cargo.toml:3`,

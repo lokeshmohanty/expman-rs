@@ -203,4 +203,15 @@ pub struct ExperimentMetadata {
     pub display_name: Option<String>,
     pub description: Option<String>,
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub project: Option<String>,
+}
+
+/// Metadata stored for a project.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ProjectMetadata {
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+    pub created_at: Option<DateTime<Utc>>,
 }
