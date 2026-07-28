@@ -160,7 +160,7 @@ pub fn build_router(state: AppState) -> Router {
 /// Start the server on the given address.
 pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
     let state = AppState::new(config.base_dir.clone());
-    
+
     let cancel_token = state.shutdown_token.clone();
     let jupyter_manager = state.jupyter.clone();
     let tensorboard_manager = state.tensorboard.clone();
@@ -172,14 +172,13 @@ pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    let server = axum::serve(listener, app)
-        .with_graceful_shutdown(async move {
-            tokio::signal::ctrl_c()
-                .await
-                .expect("failed to install CTRL+C handler");
-            info!("Shutting down ExpMan server...");
-            cancel_token.cancel();
-        });
+    let server = axum::serve(listener, app).with_graceful_shutdown(async move {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install CTRL+C handler");
+        info!("Shutting down ExpMan server...");
+        cancel_token.cancel();
+    });
 
     let _ = server.await;
     info!("Server shutting down, cleaning up processes...");

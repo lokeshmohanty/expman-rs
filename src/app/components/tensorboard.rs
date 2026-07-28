@@ -3,8 +3,7 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use lucide_leptos::{
-    Activity, Cpu, ExternalLink, Image as ImageIcon, Layers, Play, Square,
-    TriangleAlert,
+    Activity, Cpu, ExternalLink, Image as ImageIcon, Layers, Play, Square, TriangleAlert,
 };
 use web_sys::RequestMode;
 

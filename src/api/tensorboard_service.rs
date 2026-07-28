@@ -60,7 +60,7 @@ impl TensorBoardManager {
 
         // Just check if there's any file in the tensorboard directory
         if let Ok(mut entries) = tokio::fs::read_dir(tb_dir).await {
-            while let Ok(Some(_)) = entries.next_entry().await {
+            if let Ok(Some(_)) = entries.next_entry().await {
                 return true; // found at least one file/dir
             }
         }
@@ -68,12 +68,7 @@ impl TensorBoardManager {
     }
 
     /// Spawns TensorBoard for a given run directory.
-    pub async fn spawn(
-        &self,
-        exp: &str,
-        run: &str,
-        run_dir: PathBuf,
-    ) -> Result<u16, String> {
+    pub async fn spawn(&self, exp: &str, run: &str, run_dir: PathBuf) -> Result<u16, String> {
         let key = format!("{}:{}", exp, run);
 
         // Already running?

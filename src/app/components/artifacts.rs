@@ -1,5 +1,6 @@
 //! Artifact browsing and preview components.
 
+use super::error_state::ErrorState;
 use crate::app::components::zoom::ZoomControls;
 use crate::app::fetch::*;
 use leptos::prelude::*;

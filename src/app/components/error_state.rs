@@ -28,7 +28,7 @@ pub(crate) fn ErrorState(
                         on:click=move |_| cb.run(())
                         class="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-colors shadow-sm"
                     >
-                        <RefreshCw size=12 class="text-slate-400" />
+                        <span class="text-slate-400"><RefreshCw size=12 /></span>
                         <span>{action_text}</span>
                     </button>
                 }.into_any()
