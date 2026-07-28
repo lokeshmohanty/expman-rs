@@ -355,7 +355,10 @@ async fn test_projects_crud() {
     assert_eq!(res.status(), StatusCode::OK);
     let body = res.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
-    assert!(json["content"].as_str().unwrap().contains("Welcome to project one"));
+    assert!(json["content"]
+        .as_str()
+        .unwrap()
+        .contains("Welcome to project one"));
 
     // 7. Delete project
     let res = app
@@ -387,4 +390,3 @@ async fn test_projects_crud() {
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json.as_array().unwrap().len(), 0);
 }
-

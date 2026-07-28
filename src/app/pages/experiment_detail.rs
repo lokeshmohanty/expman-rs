@@ -101,7 +101,8 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
         };
 
         spawn_local(async move {
-            let _ = update_experiment_metadata(eid, Some(name), Some(desc), Some(tags), proj_opt).await;
+            let _ =
+                update_experiment_metadata(eid, Some(name), Some(desc), Some(tags), proj_opt).await;
             set_show_edit.set(false);
             exp_metadata.refetch();
         });

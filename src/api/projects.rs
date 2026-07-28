@@ -19,14 +19,18 @@ pub async fn list_projects(State(state): State<AppState>) -> impl IntoResponse {
             // Also count experiments per project
             let all_experiments = storage::list_experiments(&state.base_dir).unwrap_or_default();
             for name in &names {
-                let meta = storage::load_project_metadata(&state.base_dir, name).unwrap_or_default();
+                let meta =
+                    storage::load_project_metadata(&state.base_dir, name).unwrap_or_default();
                 // Count experiments assigned to this project
-                let exp_count = all_experiments.iter().filter(|exp_name| {
-                    let exp_dir = state.base_dir.join(exp_name);
-                    storage::load_experiment_metadata(&exp_dir)
-                        .map(|m| m.project.as_deref() == Some(name.as_str()))
-                        .unwrap_or(false)
-                }).count();
+                let exp_count = all_experiments
+                    .iter()
+                    .filter(|exp_name| {
+                        let exp_dir = state.base_dir.join(exp_name);
+                        storage::load_experiment_metadata(&exp_dir)
+                            .map(|m| m.project.as_deref() == Some(name.as_str()))
+                            .unwrap_or(false)
+                    })
+                    .count();
                 result.push(serde_json::json!({
                     "id": name,
                     "display_name": meta.display_name.unwrap_or_else(|| name.to_string()),
@@ -61,14 +65,18 @@ pub async fn create_project(
         created_at: Some(chrono::Utc::now()),
     };
     match storage::save_project_metadata(&state.base_dir, &body.name, &meta) {
-        Ok(_) => (StatusCode::CREATED, Json(serde_json::json!({
-            "id": body.name,
-            "display_name": meta.display_name.unwrap_or_else(|| body.name.clone()),
-            "description": meta.description,
-            "tags": meta.tags,
-            "experiments_count": 0,
-            "created_at": meta.created_at,
-        }))).into_response(),
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(serde_json::json!({
+                "id": body.name,
+                "display_name": meta.display_name.unwrap_or_else(|| body.name.clone()),
+                "description": meta.description,
+                "tags": meta.tags,
+                "experiments_count": 0,
+                "created_at": meta.created_at,
+            })),
+        )
+            .into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
@@ -107,7 +115,8 @@ pub async fn get_project(
                 "created_at": meta.created_at,
                 "readme": readme,
                 "experiments": project_experiments,
-            })).into_response()
+            }))
+            .into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
@@ -120,7 +129,8 @@ pub async fn get_project_readme(
     match storage::load_project_readme(&state.base_dir, &project) {
         Ok(content) => Json(serde_json::json!({
             "content": content.unwrap_or_default(),
-        })).into_response(),
+        }))
+        .into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
@@ -170,7 +180,8 @@ pub async fn update_project(
             "description": meta.description,
             "tags": meta.tags,
             "created_at": meta.created_at,
-        })).into_response(),
+        }))
+        .into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
