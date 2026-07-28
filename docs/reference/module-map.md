@@ -50,7 +50,7 @@ exists purely to inline `src/app/README.md` into rustdoc.
 |---|---|
 | `mod.rs` | router, CORS, `serve()`, graceful shutdown |
 | `state.rs` | `AppState` (base_dir, jupyter, tensorboard, shutdown token), `ServerConfig` |
-| `experiments.rs` · `runs.rs` · `metrics.rs` · `artifacts.rs` · `stats.rs` | handlers — see [http-api.md](http-api.md) |
+| `projects.rs` · `experiments.rs` · `runs.rs` · `metrics.rs` · `artifacts.rs` · `stats.rs` | handlers — see [http-api.md](http-api.md) |
 | `frontend.rs` | `rust-embed` of `dist/`, SPA fallback |
 | `jupyter_service.rs` | 537 lines: backend detection, port scan 8888–9999, `.ipynb` generation, spawn/status/stop. Has unit tests at `:449-537`. |
 | `jupyter_handlers.rs` | per-run and `__multi__` handlers |
@@ -66,9 +66,11 @@ exists purely to inline `src/app/README.md` into rustdoc.
 | `models.rs` | **hand-mirrored** JSON types — deliberately not shared with `core::models`; drift is a known hazard |
 | `fetch.rs` | 411 lines of `gloo_net` calls returning `Result<T, String>` |
 | `utils.rs` | `SidebarContext`, `CHART_COLORS`, Liang–Barsky clipping, canvas→PNG download |
-| `pages/dashboard.rs` | `/` — global stats + 5 recent experiments |
+| `pages/dashboard.rs` | `/` — global stats + recent experiments + recent projects |
+| `pages/projects.rs` | `/projects` — project grid and creation modal |
+| `pages/project_detail.rs` | `/projects/:id` — overview with markdown README and experiments list |
 | `pages/experiments.rs` | `/experiments` |
-| `pages/experiment_detail.rs` | `/experiments/:id` — tabs + run-selection sidebar |
+| `pages/experiment_detail.rs` | `/experiments/:id` — tabs + run-selection sidebar + metadata editing |
 | `pages/settings.rs` | `/settings` — one `debug_enabled` toggle in localStorage |
 | `pages/not_found.rs` | fallback |
 | `components/charts.rs` | ~1013 lines: `MetricsView`, `LineChart`, `ScalarChart`. Hand-rolled pan/zoom over `plotters-canvas`. |

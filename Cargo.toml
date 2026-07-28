@@ -96,6 +96,7 @@ console_log = "1.0"
 plotters = { version = "0.3", default-features = false, features = ["svg_backend", "line_series"] }
 plotters-canvas = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
+pulldown-cmark = "0.12"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util"] }

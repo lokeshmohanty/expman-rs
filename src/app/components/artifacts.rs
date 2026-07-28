@@ -98,13 +98,18 @@ pub(crate) fn ArtifactView(
     }
 
     let selected_runs: Vec<String> = selected.into_iter().collect();
+    let is_single = selected_runs.len() == 1;
 
     view! {
         <div class="flex-grow flex flex-col overflow-auto h-full space-y-6 p-6">
             {selected_runs.into_iter().map(|run_id| {
                  view! {
-                     <div class="flex flex-col h-96 border border-slate-800 rounded-xl overflow-hidden mb-6 flex-shrink-0">
-                         <div class="bg-slate-900 border-b border-slate-800 p-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                     <div class=if is_single {
+                         "flex flex-col border border-slate-800 rounded-xl overflow-hidden flex-1 min-h-0"
+                     } else {
+                         "flex flex-col h-96 border border-slate-800 rounded-xl overflow-hidden flex-shrink-0"
+                     }>
+                         <div class="bg-slate-900 border-b border-slate-800 p-2 text-xs font-bold text-slate-400 uppercase tracking-wider flex-shrink-0">
                              "Run: " {run_id.clone()}
                          </div>
                          <SingleArtifactView exp_id=exp_id.clone() run_id=run_id />
@@ -200,7 +205,7 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
     });
 
     view! {
-        <div class="flex h-full divide-x divide-slate-800">
+        <div class="flex flex-1 min-h-0 divide-x divide-slate-800">
             // Left: List
             <div class="w-1/3 overflow-auto bg-slate-900/30 p-2 space-y-1">
                 <div class="p-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">"Files"</div>
@@ -303,7 +308,7 @@ pub(crate) fn SingleArtifactView(exp_id: String, run_id: String) -> impl IntoVie
             </div>
             // Right: Preview
             <div class="w-2/3 flex flex-col h-full bg-slate-950">
-                <div class="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
+                <div class="p-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between flex-shrink-0">
                     <span class="text-xs font-mono text-slate-400">
                         {move || {
                             let p = selected_path.get();

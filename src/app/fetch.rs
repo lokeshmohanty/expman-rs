@@ -35,11 +35,13 @@ pub(crate) async fn update_experiment_metadata(
     display_name: Option<String>,
     description: Option<String>,
     tags: Option<Vec<String>>,
+    project: Option<Option<String>>,
 ) -> Result<(), String> {
     let payload = serde_json::json!({
         "display_name": display_name,
         "description": description,
         "tags": tags,
+        "project": project,
     });
     let resp = gloo_net::http::Request::patch(&format!("/api/experiments/{}/metadata", exp_id))
         .json(&payload)
@@ -411,5 +413,150 @@ pub(crate) async fn stop_tensorboard(exp: String, run: String) -> Result<(), Str
     .send()
     .await
     .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ─── Project API ─────────────────────────────────────────────────────────
+
+pub(crate) async fn fetch_projects() -> Result<Vec<Project>, String> {
+    let resp = gloo_net::http::Request::get("/api/projects")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error fetching projects: {}", resp.status()));
+    }
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+pub(crate) async fn fetch_project_detail(id: String) -> Result<ProjectDetail, String> {
+    let resp = gloo_net::http::Request::get(&format!("/api/projects/{}", id))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error fetching project: {}", resp.status()));
+    }
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+pub(crate) async fn create_project(
+    name: String,
+    display_name: Option<String>,
+    description: Option<String>,
+) -> Result<Project, String> {
+    let payload = serde_json::json!({
+        "name": name,
+        "display_name": display_name,
+        "description": description,
+    });
+    let resp = gloo_net::http::Request::post("/api/projects")
+        .json(&payload)
+        .map_err(|e| e.to_string())?
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error creating project: {}", resp.status()));
+    }
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+#[allow(dead_code)]
+pub(crate) async fn update_project(
+    id: String,
+    display_name: Option<String>,
+    description: Option<String>,
+    tags: Option<Vec<String>>,
+) -> Result<(), String> {
+    let payload = serde_json::json!({
+        "display_name": display_name,
+        "description": description,
+        "tags": tags,
+    });
+    let resp = gloo_net::http::Request::patch(&format!("/api/projects/{}", id))
+        .json(&payload)
+        .map_err(|e| e.to_string())?
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error updating project: {}", resp.status()));
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub(crate) async fn delete_project(id: String) -> Result<(), String> {
+    let resp = gloo_net::http::Request::delete(&format!("/api/projects/{}", id))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error deleting project: {}", resp.status()));
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub(crate) async fn fetch_project_readme(id: String) -> Result<String, String> {
+    let resp = gloo_net::http::Request::get(&format!("/api/projects/{}/readme", id))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error fetching readme: {}", resp.status()));
+    }
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(parsed["content"].as_str().unwrap_or("").to_string())
+}
+
+pub(crate) async fn save_project_readme(id: String, content: String) -> Result<(), String> {
+    let payload = serde_json::json!({ "content": content });
+    let resp = gloo_net::http::Request::put(&format!("/api/projects/{}/readme", id))
+        .json(&payload)
+        .map_err(|e| e.to_string())?
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error saving readme: {}", resp.status()));
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub(crate) async fn assign_experiment_to_project(
+    exp_id: String,
+    project: Option<String>,
+) -> Result<(), String> {
+    let payload = serde_json::json!({
+        "project": project,
+    });
+    let resp = gloo_net::http::Request::patch(&format!("/api/experiments/{}/metadata", exp_id))
+        .json(&payload)
+        .map_err(|e| e.to_string())?
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error assigning project: {}", resp.status()));
+    }
     Ok(())
 }

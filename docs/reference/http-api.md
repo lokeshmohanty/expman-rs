@@ -11,13 +11,25 @@ Router: `src/api/mod.rs:42-140`. All routes below are prefixed with `/api`
 
 Rows marked **NEW** are from the uncommitted TensorBoard work.
 
+## Projects
+
+| Method | Path | Handler | Response |
+|---|---|---|---|
+| GET | `/projects` | `projects.rs:15` | `[{id, display_name, description, tags, experiments_count, created_at}]` |
+| POST | `/projects` | `projects.rs:53` | `ProjectMetadata` |
+| GET | `/projects/{project}` | `projects.rs:76` | `{id, display_name, description, tags, created_at, readme, experiments: [...]}` |
+| PATCH | `/projects/{project}` | `projects.rs:151` | updated `ProjectMetadata`. Body: `{display_name?, description?, tags?}` |
+| DELETE | `/projects/{project}` | `projects.rs:178` | `204 No Content` (unassigns experiments) |
+| GET | `/projects/{project}/readme` | `projects.rs:116` | `{content}` |
+| PUT | `/projects/{project}/readme` | `projects.rs:133` | `{content}`. Body: `{content}` |
+
 ## Experiments
 
 | Method | Path | Handler | Response |
 |---|---|---|---|
-| GET | `/experiments` | `experiments.rs:17` | `[{id, display_name, description, tags, runs_count}]` (ad-hoc `json!`) |
+| GET | `/experiments` | `experiments.rs:17` | `[{id, display_name, description, tags, project, runs_count}]` (ad-hoc `json!`) |
 | GET | `/experiments/{exp}/metadata` | `experiments.rs:39` | `ExperimentMetadata` |
-| PATCH | `/experiments/{exp}/metadata` | `experiments.rs:57` | merged `ExperimentMetadata`. Body: `{display_name?, description?, tags?}` |
+| PATCH | `/experiments/{exp}/metadata` | `experiments.rs:60` | merged `ExperimentMetadata`. Body: `{display_name?, description?, tags?, project?}` |
 | GET | `/experiments/{exp}/stats` | `stats.rs:16` | `[{run, status, started_at, finished_at, duration_secs, last_metrics}]` |
 
 ## Runs

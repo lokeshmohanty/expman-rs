@@ -6,6 +6,10 @@
 
 ```
 <base_dir>/                              default "./experiments"
+├── .projects/                           Project storage directory
+│   └── <project_name>/                  Project directory
+│       ├── project.yaml                 ProjectMetadata
+│       └── README.md                    Markdown frontpage
 └── <experiment_name>/                   ExperimentConfig::experiment_dir()
     ├── experiment.yaml                  ExperimentMetadata (created if absent)
     └── <run_name>/                      ExperimentConfig::run_dir()
@@ -24,7 +28,8 @@
 **Run discovery is directory-name based**, not index-driven. `list_runs`
 (`storage.rs:59`) returns every subdirectory except literal `artifacts` and
 `.ipynb_checkpoints`, sorted **descending** — which is newest-first only because
-of the timestamp naming convention. `list_experiments` (`:42`) sorts ascending.
+of the timestamp naming convention. `list_experiments` (`:27`) ignores all dot-directories
+(e.g., `.projects`, `.ipynb_checkpoints`) and sorts ascending.
 
 ## Types
 
@@ -80,9 +85,13 @@ missing or unparseable `run.yaml` degrades to `minimal_run_metadata`
 (`storage.rs:193-212`), which infers name/experiment from the path and reports
 `CRASHED`.
 
-### `ExperimentMetadata` → `experiment.yaml` (`models.rs:202-206`)
+### `ExperimentMetadata` → `experiment.yaml` (`models.rs:202-208`)
 
-`display_name: Option<String>`, `description: Option<String>`, `tags: Vec<String>`.
+`display_name: Option<String>`, `description: Option<String>`, `tags: Vec<String>`, `project: Option<String>`.
+
+### `ProjectMetadata` → `project.yaml` (`models.rs:210-217`)
+
+`display_name: Option<String>`, `description: Option<String>`, `tags: Vec<String>`, `created_at: Option<DateTime<Utc>>`.
 
 ### `ArtifactInfo` (`storage.rs:144-150`)
 
