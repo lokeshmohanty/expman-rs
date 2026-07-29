@@ -87,6 +87,24 @@ nothing else gates a release. See the `expman-release` skill.
   The two toolchains must be `combine`d — `nix shell` with both as separate
   packages gives "can't find crate for `core`", because cargo sees one toolchain
   without the other's std.
+
+  *Closed 2026-07-29 by `nix flake update`* — local is now 1.97, same as CI. The
+  gap will reopen as CI's stable advances, so the check above stays useful.
+- **`wasm-bindgen-cli` must equal the `wasm-bindgen` crate version exactly.**
+  `flake.nix` pins `pkgs.wasm-bindgen-cli_0_2_108`, not `pkgs.wasm-bindgen-cli`,
+  because the latter tracks nixpkgs and drifts ahead. trunk normally downloads
+  the matching binary itself; the Nix package build sets `TRUNK_OFFLINE=true` and
+  so uses the one from `nativeBuildInputs`, where a mismatch fails with *"linked
+  against version X … this binary is version Y"*.
+
+  The `nix flake update` on 2026-07-29 moved nixpkgs' `wasm-bindgen-cli` 0.2.108
+  → 0.2.121 and would have broken `nix build .#expman` had it not been pinned.
+  **When you change the `wasm-bindgen` crate, change the attribute in step**:
+
+  ```bash
+  grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | grep version   # crate
+  grep wasm-bindgen-cli flake.nix                                 # must match
+  ```
 - **`ruff format` is not in CI**, only `ruff check`. Formatting drift is invisible
   to CI.
 - **Python tests only run on Linux** in CI despite the code implying an OS matrix.

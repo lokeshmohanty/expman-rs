@@ -67,8 +67,15 @@
             pkgs.pkg-config
             pkgs.openssl
             pkgs.just
+            # Must match the `wasm-bindgen` crate version in Cargo.lock exactly.
+            # trunk normally downloads the matching binary itself, but the package
+            # build below runs with TRUNK_OFFLINE=true and so uses this one; a
+            # mismatch fails with "linked against version X ... this binary is
+            # version Y". `pkgs.wasm-bindgen-cli` tracks nixpkgs, which drifts
+            # ahead of us, so pin the versioned attribute and bump it in step with
+            # Cargo.lock.
             pkgs.trunk
-            pkgs.wasm-bindgen-cli
+            pkgs.wasm-bindgen-cli_0_2_108
             # Matches the Trunk.toml [tools] pin, so a dev-shell build and a
             # network build produce the same stylesheet.
             pkgs.tailwindcss_3
@@ -99,8 +106,15 @@
             nativeBuildInputs = [
               pkgs.pkg-config
               pkgs.lld
+              # Must match the `wasm-bindgen` crate version in Cargo.lock exactly.
+              # trunk normally downloads the matching binary itself, but the package
+              # build below runs with TRUNK_OFFLINE=true and so uses this one; a
+              # mismatch fails with "linked against version X ... this binary is
+              # version Y". `pkgs.wasm-bindgen-cli` tracks nixpkgs, which drifts
+              # ahead of us, so pin the versioned attribute and bump it in step with
+              # Cargo.lock.
               pkgs.trunk
-              pkgs.wasm-bindgen-cli
+              pkgs.wasm-bindgen-cli_0_2_108
               # Trunk builds the stylesheet with tailwindcss. Offline it will not
               # download the pinned binary, so it must come from here — and the
               # version must match Trunk.toml's [tools] pin or the two builds

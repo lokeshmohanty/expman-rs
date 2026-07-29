@@ -647,6 +647,35 @@ blocked every contributor, the second blocks only a genuinely broken release.
 
 ---
 
+## 2026-07-29 — Toolchain moved to 1.97; wasm-bindgen-cli pinned
+
+**Decision.** `nix flake update` (fenix and nixpkgs, Feb → Jul 2026), plus
+`flake.nix` now takes `pkgs.wasm-bindgen-cli_0_2_108` rather than
+`pkgs.wasm-bindgen-cli`.
+
+**Why the update.** Local clippy was 1.93 while CI ran 1.97, and 1.97's
+`unnecessary_sort_by` failed the 1.1.0 release while everything was green
+locally. Local and CI now both report `clippy 0.1.97 (8bab26f4f6 2026-07-14)`.
+
+**Why the pin.** The same update moved nixpkgs' `wasm-bindgen-cli` from 0.2.108
+to 0.2.121 while the `wasm-bindgen` *crate* stayed at 0.2.108 — `js-sys 0.3.85`
+pins it exactly, so the crate cannot move alone, and the family can only reach
+0.2.126, still not 0.2.121. That mismatch breaks `nix build .#expman`, which
+runs `TRUNK_OFFLINE=true` and therefore uses the Nix-provided binary rather than
+letting trunk fetch the matching one.
+
+nixpkgs publishes versioned attributes for exactly this, so the fix is one word.
+Pinning couples `flake.nix` to `Cargo.lock` rather than to nixpkgs' packaging
+cadence, which is the right direction: the crate is ours to choose, nixpkgs'
+default is not.
+
+**Consequences.** Changing the `wasm-bindgen` crate now requires changing the
+attribute in step; the check is two greps and is written down in the
+`expman-build` skill. Caught before it reached CI — which is the argument for
+doing a flake update as its own change rather than inside a release.
+
+---
+
 ## Open questions
 
 *The four questions that stood here on 2026-07-27 — version single-sourcing,
