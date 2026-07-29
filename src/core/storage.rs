@@ -602,7 +602,8 @@ pub fn query_runs(base_dir: &Path, query: &RunQuery) -> Result<Vec<RunEntry>> {
         }
     }
 
-    out.sort_by(|a, b| b.started_at.cmp(&a.started_at));
+    // Newest first.
+    out.sort_by_key(|entry| std::cmp::Reverse(entry.started_at));
     Ok(out)
 }
 

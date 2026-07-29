@@ -64,6 +64,29 @@ nothing else gates a release. See the `expman-release` skill.
 - **`just lint-rust` runs clippy twice** — once against wasm32 (`lint-frontend`)
   and once native. The pre-commit hook only does the native pass, so **frontend
   clippy failures surface in CI, not locally.** Always use the just recipe.
+- **CI's clippy is newer than the flake's, and new lints fail the build.** CI uses
+  `dtolnay/rust-toolchain@stable`; the flake pins fenix via `flake.lock`. On
+  2026-07-29 that was clippy **1.93 locally vs 1.97 in CI**, and 1.97's
+  `unnecessary_sort_by` failed a release that was green locally.
+
+  Before any release, lint with CI's actual toolchain:
+
+  ```bash
+  cat > /tmp/ci-toolchain.nix <<'NIX'
+  let fenix = (builtins.getFlake "github:nix-community/fenix").packages.x86_64-linux;
+  in fenix.combine [
+    fenix.stable.toolchain
+    fenix.targets.wasm32-unknown-unknown.stable.rust-std
+  ]
+  NIX
+  nix shell --impure --file /tmp/ci-toolchain.nix --command bash -c '
+    cargo clippy --all-features --all-targets -- -D warnings
+    cargo clippy -p expman --lib --target wasm32-unknown-unknown -- -D warnings'
+  ```
+
+  The two toolchains must be `combine`d — `nix shell` with both as separate
+  packages gives "can't find crate for `core`", because cargo sees one toolchain
+  without the other's std.
 - **`ruff format` is not in CI**, only `ruff check`. Formatting drift is invisible
   to CI.
 - **Python tests only run on Linux** in CI despite the code implying an OS matrix.
