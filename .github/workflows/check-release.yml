@@ -21,8 +21,18 @@ jobs:
       - name: Check for release commit
         id: check
         shell: bash
+        # The commit message is passed through `env`, never interpolated into
+        # the script body. `${{ github.event.head_commit.message }}` written
+        # inline becomes part of the script *text*, so a message containing
+        # backticks or $(...) executes on the runner — script injection, and it
+        # is reachable by anyone who can land a commit.
+        #
+        # It fired for real on 2026-07-29: a commit body mentioning
+        # `nix build .#expman` in backticks ran it, and the step died with
+        # "nix: command not found". Benign only because nix is not installed.
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
           if [[ "$COMMIT_MESSAGE" =~ ^release:\ bump\ version\ to\ ([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
               echo "should_release=true" >> $GITHUB_OUTPUT
               echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT

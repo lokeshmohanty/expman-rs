@@ -32,6 +32,11 @@ Still never hand-edit a version — `just bump` is the only supported path.
 
 ## The rules that bite
 
+0. **A release commit must have no body.** The regex is matched against the
+   *entire* message, so any body at all means no release. And keep shell
+   metacharacters out of every commit message you push to main: the message used
+   to be interpolated into check-release.yml's script and executed (fixed
+   2026-07-29 by passing it through `env:`).
 1. **The commit message is the trigger**, matched by an anchored regex:
    `^release: bump version to (\d+\.\d+\.\d+)$`. No `v`, no suffix, exactly
    three components. A squash-merge or merge commit that rewrites the subject

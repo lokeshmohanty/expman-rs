@@ -676,6 +676,32 @@ doing a flake update as its own change rather than inside a release.
 
 ---
 
+## 2026-07-29 — The release check no longer interpolates the commit message
+
+**Decision.** check-release.yml passes the commit message through `env:` instead
+of interpolating it into the script body.
+
+**Why.** It was written as a bare interpolation inside a run block, which makes
+the message part of the *script text*. A message containing backticks or a
+dollar-paren therefore executes on the runner. That is script injection, and it
+is reachable by anyone who can land a commit on main.
+
+It fired for real: a commit body of mine mentioning a nix build command in
+backticks was executed, and the step died with "nix: command not found". Benign
+only because nix is not installed on the runner — a message invoking curl would
+not have been.
+
+**Consequences.** The whole release chain skipped, so nothing mispublished, but
+the Publish workflow went red on a commit that was never meant to release. The
+fixed version was verified against the injection payloads, the real release
+subject, and the message that broke it. It also confirms that a release commit
+must have **no body**: the anchored regex is matched against the entire message,
+so a multi-line message never matches.
+
+It is the only such interpolation in the eleven workflows; the rest were checked.
+
+---
+
 ## Open questions
 
 *The four questions that stood here on 2026-07-27 — version single-sourcing,
