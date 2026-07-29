@@ -1,0 +1,52 @@
+/* Tailwind input. Built by trunk via `data-trunk rel="tailwind-css"`; the
+   generated stylesheet is what ships in the binary. Config: tailwind.config.js.
+
+   Fonts are declared separately in assets/fonts.css, which is vendored from
+   Fontsource and regenerated wholesale — keeping it out of here means a font
+   refresh never touches hand-written CSS. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Nunito Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "Cascadia Code Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+
+  body {
+    font-family: var(--font-body);
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* Preflight styles these from its own variable, not from the theme's
+     fontFamily.mono — set them directly or every code block silently falls
+     through to the generic monospace fallback while the config looks correct. */
+  code, kbd, samp, pre {
+    font-family: var(--font-mono);
+  }
+
+  /* Uppercase eyebrows and column headers are labels, not sentences, so they
+     take the third role. Done here rather than by tagging each of the ~25
+     sites, which would drift the moment one is added without it. */
+  th,
+  .uppercase {
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  /* Numbers line up as columns rather than drifting by glyph width. */
+  table, .tabular, .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}

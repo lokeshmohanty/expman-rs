@@ -31,7 +31,7 @@ pub fn App() -> impl IntoView {
                         <div class="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-900/20">
                             <Package size=24 />
                         </div>
-                        <span class="text-2xl font-bold tracking-tight text-white">"ExpMan"</span>
+                        <span class="text-2xl font-bold tracking-tight text-white font-display">"ExpMan"</span>
                     </div>
 
                     <div class="space-y-1">

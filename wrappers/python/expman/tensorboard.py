@@ -27,11 +27,17 @@ to expman's ``(base_dir, experiment_name)`` structure:
 - ``SummaryWriter("my_exp")`` → expman ``Experiment("my_exp", base_dir="experiments")``
 
 Fully supported methods: ``add_scalar``, ``add_scalars``, ``add_text``,
-``add_hparams``. Other methods (images, histograms, etc.) are stubbed as
-no-ops so existing code doesn't break.
+``add_hparams``, ``add_image``, ``add_images``, ``add_figure`` and
+``add_histogram`` — all stored natively.
+
+The handful of methods expman genuinely cannot store (``add_graph``,
+``add_embedding``, ``add_pr_curve``, ``add_mesh``) emit a warning once each
+rather than dropping data silently. For those, point a real TensorBoard writer
+at ``exp.tensorboard_dir``; the dashboard renders it in the TensorBoard tab.
 """
 
 import os
+import warnings
 
 import expman
 
@@ -93,6 +99,9 @@ class SummaryWriter:
             flush_interval_ms=500,
             redirect_console=True,
         )
+        # One warning per unsupported method, not per call: a training loop
+        # calling add_graph every epoch should say so once.
+        self._warned: set[str] = set()
         # Ensure files are created immediately
         self._exp.log_params({})
         self._exp.info("SummaryWriter initialized")
@@ -210,50 +219,136 @@ class SummaryWriter:
         """Exit context manager, closing the writer."""
         self.close()
 
-    # ── Stub methods ────────────────────────────────────────────────────
-    # These are no-ops to prevent TypeErrors when replacing TensorBoard's
-    # SummaryWriter. They accept arbitrary arguments silently.
+    # ── TensorBoard compatibility ────────────────────────────────────────
+    #
+    # These used to be silent no-ops. Swapping
+    # `torch.utils.tensorboard.SummaryWriter` for this class therefore threw
+    # away every image, histogram and figure a user logged, with nothing said at
+    # runtime — the worst kind of failure, because the code looks like it works.
+    #
+    # What expman can store natively is now stored. What it genuinely cannot is
+    # warned about **once per method**, so the loss is visible without turning a
+    # training loop into a wall of warnings.
 
-    def add_histogram(self, *args, **kwargs):
-        """Stub: histograms are not supported. No-op."""
-        pass
+    def _dropped(self, method: str, reason: str) -> None:
+        """Warn once that a call could not be stored, without raising.
 
-    def add_image(self, *args, **kwargs):
-        """Stub: images are not supported. No-op."""
-        pass
+        The native API (`exp.log_image`) raises on bad input, because that is new
+        code and a hard error is the fastest way to fix it. This compatibility
+        layer must not: it wraps code written for TensorBoard, often inside a
+        multi-day training run, and killing that run over an unencodable image
+        would be a worse failure than the one being reported.
+        """
+        if method in self._warned:
+            return
+        self._warned.add(method)
+        warnings.warn(
+            f"expman's SummaryWriter dropped a {method}() call: {reason}",
+            stacklevel=3,
+        )
 
-    def add_images(self, *args, **kwargs):
-        """Stub: image batches are not supported. No-op."""
-        pass
+    def _unsupported(self, method: str, alternative: str = "") -> None:
+        if method in self._warned:
+            return
+        self._warned.add(method)
+        suffix = f" {alternative}" if alternative else ""
+        warnings.warn(
+            f"expman's SummaryWriter does not support {method}(); "
+            f"those calls are dropped.{suffix}",
+            stacklevel=3,
+        )
 
-    def add_figure(self, *args, **kwargs):
-        """Stub: matplotlib figures are not supported. No-op."""
-        pass
+    def add_histogram(self, tag=None, values=None, global_step=None, *args, **kwargs):
+        """Record a distribution. Stored natively as binned counts."""
+        if tag is None or values is None:
+            return
+        try:
+            self._exp.log_histogram(tag, values, step=global_step)
+        except (TypeError, ValueError) as e:
+            self._dropped("add_histogram", str(e))
 
-    def add_video(self, *args, **kwargs):
-        """Stub: video data is not supported. No-op."""
-        pass
+    def add_image(self, tag=None, img_tensor=None, global_step=None, *args, **kwargs):
+        """Record an image. Stored natively under the run's media/ directory."""
+        if tag is None or img_tensor is None:
+            return
+        try:
+            self._exp.log_image(tag, img_tensor, step=global_step)
+        except (TypeError, ValueError, OSError) as e:
+            self._dropped("add_image", str(e))
 
-    def add_audio(self, *args, **kwargs):
-        """Stub: audio data is not supported. No-op."""
-        pass
+    def add_images(self, tag=None, img_tensor=None, global_step=None, *args, **kwargs):
+        """Record a batch of images, one media entry per image."""
+        if tag is None or img_tensor is None:
+            return
+        try:
+            batch = list(img_tensor) if not isinstance(img_tensor, (str, bytes)) else [img_tensor]
+        except TypeError:
+            batch = [img_tensor]
+        for index, image in enumerate(batch):
+            try:
+                self._exp.log_image(f"{tag}/{index}", image, step=global_step)
+            except (TypeError, ValueError, OSError) as e:
+                self._dropped("add_images", str(e))
+                return
+
+    def add_figure(self, tag=None, figure=None, global_step=None, *args, **kwargs):
+        """Record a matplotlib figure as a PNG."""
+        if tag is None or figure is None:
+            return
+        figures = figure if isinstance(figure, (list, tuple)) else [figure]
+        for index, item in enumerate(figures):
+            name = tag if len(figures) == 1 else f"{tag}/{index}"
+            try:
+                self._exp.log_figure(name, item, step=global_step)
+            except (TypeError, ValueError, OSError) as e:
+                self._dropped("add_figure", str(e))
+                return
+
+    def add_audio(self, tag=None, snd_tensor=None, global_step=None, *args, **kwargs):
+        """Record audio. Encoded bytes are stored; tensors are not encodable here."""
+        if tag is None or snd_tensor is None:
+            return
+        if isinstance(snd_tensor, (bytes, bytearray, memoryview)):
+            self._exp.log_audio(tag, bytes(snd_tensor), step=global_step)
+        else:
+            self._unsupported(
+                "add_audio",
+                "Pass encoded WAV bytes to log_audio() to store audio.",
+            )
+
+    def add_video(self, tag=None, vid_tensor=None, global_step=None, *args, **kwargs):
+        """Record video. Encoded bytes are stored; tensors are not encodable here."""
+        if tag is None or vid_tensor is None:
+            return
+        if isinstance(vid_tensor, (bytes, bytearray, memoryview)):
+            self._exp.log_video(tag, bytes(vid_tensor), step=global_step)
+        else:
+            self._unsupported(
+                "add_video",
+                "Pass encoded MP4 bytes to log_video() to store video.",
+            )
 
     def add_graph(self, *args, **kwargs):
-        """Stub: model graphs are not supported. No-op."""
-        pass
+        self._unsupported(
+            "add_graph",
+            "Use a real TensorBoard writer against exp.tensorboard_dir; the "
+            "dashboard renders it in the TensorBoard tab.",
+        )
 
     def add_embedding(self, *args, **kwargs):
-        """Stub: embeddings are not supported. No-op."""
-        pass
+        self._unsupported(
+            "add_embedding",
+            "Use a real TensorBoard writer against exp.tensorboard_dir for the "
+            "embedding projector.",
+        )
 
     def add_pr_curve(self, *args, **kwargs):
-        """Stub: PR curves are not supported. No-op."""
-        pass
+        self._unsupported("add_pr_curve")
 
     def add_custom_scalars(self, *args, **kwargs):
-        """Stub: custom scalar layouts are not supported. No-op."""
+        # Purely a dashboard layout hint; dropping it loses no data at all, so
+        # this one stays quiet by design.
         pass
 
     def add_mesh(self, *args, **kwargs):
-        """Stub: 3D mesh data is not supported. No-op."""
-        pass
+        self._unsupported("add_mesh")

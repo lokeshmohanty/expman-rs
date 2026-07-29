@@ -15,12 +15,13 @@ Rows marked **NEW** are from the uncommitted TensorBoard work.
 
 | Method | Path | Handler | Response |
 |---|---|---|---|
-| GET | `/projects` | `projects.rs:15` | `[{id, display_name, description, tags, experiments_count, created_at}]` |
+| GET | `/projects` | `projects.rs` | `[{id, display_name, description, tags, experiments_count, created_at, generated, generated_from, generated_at}]` |
 | POST | `/projects` | `projects.rs:53` | `ProjectMetadata` |
-| GET | `/projects/{project}` | `projects.rs:76` | `{id, display_name, description, tags, created_at, readme, experiments: [...]}` |
+| GET | `/projects/{project}` | `projects.rs` | `{id, display_name, description, tags, created_at, generated, generated_from, generated_at, readme, experiments: [...]}` |
 | PATCH | `/projects/{project}` | `projects.rs:151` | updated `ProjectMetadata`. Body: `{display_name?, description?, tags?}` |
 | DELETE | `/projects/{project}` | `projects.rs:178` | `204 No Content` (unassigns experiments) |
-| GET | `/projects/{project}/readme` | `projects.rs:116` | `{content}` |
+| GET | `/projects/{project}/runs` | `projects.rs` | cross-experiment runs table with facets — see below |
+| GET | `/projects/{project}/readme` | `projects.rs` | `{content}` |
 | PUT | `/projects/{project}/readme` | `projects.rs:133` | `{content}`. Body: `{content}` |
 
 ## Experiments
@@ -66,8 +67,8 @@ convention** — `/run/{exp}/{run}/...` rather than `/experiments/...`
 
 | Method | Path | Handler | Response |
 |---|---|---|---|
-| GET | `/stats` | `stats.rs:54` | `{total_experiments, total_runs, active_runs, total_storage_bytes}` |
-| GET | `/config` | `stats.rs:82` | `{live_mode: true, version}` — `live_mode` is **hardcoded** because `ServerConfig.live_mode` is dropped rather than stored in `AppState` |
+| GET | `/stats` | `stats.rs` | `{total_experiments, total_projects, total_runs, active_runs, stale_runs, total_storage_bytes}` |
+| GET | `/config` | `stats.rs` | `{live_mode, read_only, version}` — both read from `AppState`, so they reflect the flags `exp serve` was actually given |
 
 ## Jupyter
 
@@ -115,3 +116,92 @@ looks like an SPA route (heuristic: the path contains no `.`, `:44`), else 404.
 - Test coverage: `tests/api_test.rs` covers 7 routes in-process via
   `tower::ServiceExt::oneshot`. The Jupyter and TensorBoard routes are
   **untested**.
+
+
+---
+
+## `GET /projects/{project}/runs`
+
+`GET /projects/{project}` returns an experiment list only, which is not a view
+you can work in: with one project per study, the comparison worth living in cuts
+*across* experiments. This returns the flat runs table plus what a filter UI
+needs.
+
+Query parameters (all optional):
+
+| param | meaning |
+|---|---|
+| `tags` | expression, e.g. `arm:tiered AND (study:1 OR study:2)` |
+| `status` | `RUNNING`, `FINISHED`, `FAILED`, `CRASHED` (400 otherwise) |
+| `experiment` | narrow to one experiment |
+| `group` | narrow to one DDP job or sweep cohort |
+
+```json
+{
+  "project": "study-1",
+  "total": 2,
+  "runs": [{ "run": "tiered-s2", "experiment": "...", "project": "study-1",
+             "status": "FINISHED", "started_at": "...", "heartbeat_at": null,
+             "tags": ["arm:tiered"], "scalars": {}, "vectors": {},
+             "path": "experiments/..." }],
+  "facets": {
+    "tags":        { "arm:tiered": 2, "seed:1": 1, "study:1": 2 },
+    "status":      { "FINISHED": 2 },
+    "experiments": { "e1-drift-regret-slope": 2 },
+    "groups":      { "lr-sweep": 6, "job-77001": 4 }
+  },
+  "metrics": ["regret"]
+}
+```
+
+This is `core::dto::ProjectRuns`, so the frontend deserializes the same type the
+handler serializes. It backs the dashboard's **Compare** tab.
+
+Facets are counted over the **returned** runs, so they narrow as filters are
+applied — the behaviour a filter UI needs to avoid offering options that lead to
+empty results. `metrics` is the union of metric names across those runs, so a
+caller knows what is comparable before fetching any series.
+
+## Read-only mode
+
+`exp serve --read-only` rejects every request that is not `GET`/`HEAD`/`OPTIONS`
+with `403 {"error": "read_only", "message": ...}`. It is middleware over the
+whole router (`enforce_read_only` in `api/mod.rs`), not a per-handler check, so
+new routes are covered by default. `/config` reports `read_only` so the frontend
+can hide controls rather than offering writes that will fail.
+
+## Generated projects
+
+A project created by `exp project sync` carries `generated: true`. Writes to it
+— `PATCH /projects/{p}` and `PUT /projects/{p}/readme` — are refused with `409`:
+
+```json
+{
+  "error": "generated_project",
+  "message": "Project 'study-1' is generated from studies.yaml (thesis repo) and is regenerated on each sync. Edit the source and re-run `exp project sync` instead.",
+  "generated_from": "studies.yaml (thesis repo)"
+}
+```
+
+Accepting the write would be worse than refusing it: the dashboard would report
+success and the edit would vanish at the next sync with no trace. `DELETE` is
+refused on the same grounds.
+
+## Downsampling
+
+`GET /experiments/{exp}/runs/{run}/metrics` returns at most **2000 points**.
+
+| param | meaning |
+|---|---|
+| `max_points` | change the cap; `0` disables it |
+| `full=1` | return every row — the escape hatch for export and analysis |
+| `since_step` | only rows past this step (used by the SSE stream) |
+
+The reduction is **Largest-Triangle-Three-Buckets**, not a stride. A stride drops
+the single-row loss spike or divergence, which is exactly what someone opens a
+chart to find; LTTB keeps whichever point in each bucket contributes the most
+visible area, so extremes survive. First and last rows are always kept, so
+endpoints are exact.
+
+Without this, a million-step run serialises to hundreds of MB of JSON and hangs
+the tab before it draws anything.

@@ -8,7 +8,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::core::storage;
+use crate::core::{dto, storage};
 
 use super::state::AppState;
 
@@ -17,19 +17,12 @@ use super::exp_dir;
 pub async fn list_experiments(State(state): State<AppState>) -> impl IntoResponse {
     match storage::list_experiments(&state.base_dir) {
         Ok(names) => {
-            let mut result = vec![];
+            let mut result: Vec<dto::Experiment> = vec![];
             for name in &names {
                 let exp_dir = exp_dir(&state.base_dir, name);
                 let runs = storage::list_runs(&exp_dir).unwrap_or_else(|_| vec![]);
                 let meta = storage::load_experiment_metadata(&exp_dir).unwrap_or_default();
-                result.push(serde_json::json!({
-                    "id": name,
-                    "display_name": meta.display_name.unwrap_or_else(|| name.to_string()),
-                    "description": meta.description,
-                    "tags": meta.tags,
-                    "project": meta.project,
-                    "runs_count": runs.len(),
-                }));
+                result.push(dto::Experiment::new(name, meta, runs.len()));
             }
             Json(result).into_response()
         }

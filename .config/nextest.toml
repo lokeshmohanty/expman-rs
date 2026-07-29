@@ -1,0 +1,16 @@
+# Nextest configuration.
+
+[profile.default]
+# Timing-sensitive tests get the machine to themselves; see the group below.
+retries = 0
+
+# `test_log_vector_is_fast` asserts a wall-clock budget: 10,000 `log_vector`
+# calls in under 100ms. Run in parallel with 70+ other tests — several of which
+# shell out to git — it measures the machine's contention rather than the hot
+# path, and fails spuriously. It has done so twice.
+#
+# `threads-required = "num-test-threads"` makes nextest run it alone, so the number it reports
+# is the number the assertion is about.
+[[profile.default.overrides]]
+filter = 'test(test_log_vector_is_fast)'
+threads-required = "num-test-threads"

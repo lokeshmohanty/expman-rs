@@ -12,11 +12,12 @@ use crate::core::storage;
 use super::state::AppState;
 
 use super::{exp_dir, run_dir};
+use crate::core::dto;
 
 /// Returns the best available interactive backend.
 pub async fn available_jupyter() -> impl IntoResponse {
     let backend = super::jupyter_service::detect_backend().await;
-    Json(serde_json::json!({ "backend": backend }))
+    Json(dto::BackendInfo { backend })
 }
 
 /// Spawn a Jupyter Notebook for a specific run.
@@ -37,7 +38,7 @@ pub async fn start_jupyter(
     };
 
     match state.jupyter.spawn(&exp, &run, dir, is_python).await {
-        Ok(port) => Json(serde_json::json!({ "port": port })).into_response(),
+        Ok(port) => Json(dto::ServiceStartResponse { port }).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
 }
@@ -59,9 +60,15 @@ pub async fn status_jupyter(
     Path((exp, run)): Path<(String, String)>,
 ) -> impl IntoResponse {
     if let Some(port) = state.jupyter.status(&exp, &run) {
-        Json(serde_json::json!({ "running": true, "port": port }))
+        Json(dto::ServiceStatus {
+            running: true,
+            port: Some(port),
+        })
     } else {
-        Json(serde_json::json!({ "running": false, "port": null }))
+        Json(dto::ServiceStatus {
+            running: false,
+            port: None,
+        })
     }
 }
 
@@ -73,13 +80,19 @@ pub async fn get_jupyter_notebook(
     let notebook_path = run_dir(&state.base_dir, &exp, &run).join("interactive.ipynb");
     if notebook_path.exists() {
         match tokio::fs::read_to_string(&notebook_path).await {
-            Ok(content) => {
-                Json(serde_json::json!({ "exists": true, "content": content })).into_response()
-            }
+            Ok(content) => Json(dto::NotebookInfo {
+                exists: true,
+                content: Some(content),
+            })
+            .into_response(),
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         }
     } else {
-        Json(serde_json::json!({ "exists": false, "content": null })).into_response()
+        Json(dto::NotebookInfo {
+            exists: false,
+            content: None,
+        })
+        .into_response()
     }
 }
 
@@ -146,7 +159,7 @@ pub async fn start_multi_jupyter(
         .spawn_multi(&exp, dir, is_python, &payload.runs)
         .await
     {
-        Ok(port) => Json(serde_json::json!({ "port": port })).into_response(),
+        Ok(port) => Json(dto::ServiceStartResponse { port }).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
 }
@@ -168,9 +181,15 @@ pub async fn status_multi_jupyter(
     Path(exp): Path<String>,
 ) -> impl IntoResponse {
     if let Some(port) = state.jupyter.status(&exp, "__multi__") {
-        Json(serde_json::json!({ "running": true, "port": port }))
+        Json(dto::ServiceStatus {
+            running: true,
+            port: Some(port),
+        })
     } else {
-        Json(serde_json::json!({ "running": false, "port": null }))
+        Json(dto::ServiceStatus {
+            running: false,
+            port: None,
+        })
     }
 }
 
@@ -182,13 +201,19 @@ pub async fn get_multi_jupyter_notebook(
     let notebook_path = exp_dir(&state.base_dir, &exp).join("interactive.ipynb");
     if notebook_path.exists() {
         match tokio::fs::read_to_string(&notebook_path).await {
-            Ok(content) => {
-                Json(serde_json::json!({ "exists": true, "content": content })).into_response()
-            }
+            Ok(content) => Json(dto::NotebookInfo {
+                exists: true,
+                content: Some(content),
+            })
+            .into_response(),
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
         }
     } else {
-        Json(serde_json::json!({ "exists": false, "content": null })).into_response()
+        Json(dto::NotebookInfo {
+            exists: false,
+            content: None,
+        })
+        .into_response()
     }
 }
 

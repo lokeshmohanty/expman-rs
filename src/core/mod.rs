@@ -6,12 +6,21 @@
 //! all I/O asynchronously.
 //!
 
+pub mod dto;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod engine;
 pub mod error;
 pub mod models;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod projects;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod provenance;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod storage;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sweep;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sysmetrics;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use engine::{LogLevel, LoggingEngine};

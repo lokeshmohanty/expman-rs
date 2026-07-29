@@ -137,8 +137,49 @@ example-py: dev-py
 check: fmt-check lint-rust lint-py
     cargo check --all-features
 
+# Verify every version site still resolves to Cargo.toml's version.
+#
+# The version is single-sourced, so this should be impossible to fail — which is
+# exactly why it is worth asserting. It catches someone re-introducing a literal
+# into pyproject.toml or flake.nix, which nothing else in the build would notice
+# until a wheel shipped with metadata disagreeing with expman.__version__.
+# Deliberately POSIX-only (no sd/rg) so it runs in CI without extra tooling.
+check-versions:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CARGO=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+    echo "Cargo.toml: $CARGO"
+    STATUS=0
+
+    if grep -qE '^version = ' wrappers/python/pyproject.toml; then
+        echo "  FAIL pyproject.toml pins a literal version; it must use dynamic = [\"version\"]"
+        STATUS=1
+    else
+        echo "  ok   pyproject.toml is dynamic"
+    fi
+
+    if grep -qE '^[[:space:]]+version = "[0-9]' flake.nix; then
+        echo "  FAIL flake.nix pins a literal version; it must read Cargo.toml"
+        STATUS=1
+    else
+        echo "  ok   flake.nix reads Cargo.toml"
+    fi
+
+    # The authoritative check where nix is available: ask it what it resolved.
+    if command -v nix >/dev/null 2>&1; then
+        NIX=$(nix eval --raw .#expman.version 2>/dev/null || echo "")
+        if [ -n "$NIX" ] && [ "$NIX" != "$CARGO" ]; then
+            echo "  FAIL nix resolves $NIX, expected $CARGO"
+            STATUS=1
+        elif [ -n "$NIX" ]; then
+            echo "  ok   nix resolves $NIX"
+        fi
+    fi
+
+    exit $STATUS
+
 # Full CI check
-ci: fmt-check lint test lint-py test-py
+ci: fmt-check lint test lint-py test-py check-versions
 
 # Clean build artifacts
 clean:
@@ -175,10 +216,12 @@ bump PART:
     esac
     VERSION="$MAJOR.$MINOR.$PATCH"
     echo "Bumping version $CURRENT → $VERSION..."
+    # Cargo.toml is the single source of truth. pyproject.toml takes the version
+    # from it via maturin's `dynamic = ["version"]`, and flake.nix reads it with
+    # builtins.fromTOML — so this is the only file to edit.
     sd '^version = ".*"' "version = \"$VERSION\"" Cargo.toml
-    sd '^version = ".*"' "version = \"$VERSION\"" wrappers/python/pyproject.toml
-    sd 'version = ".*";' "version = \"$VERSION\";" flake.nix
     cargo update -p expman
-    git add Cargo.toml Cargo.lock wrappers/python/pyproject.toml flake.nix
+    just check-versions
+    git add Cargo.toml Cargo.lock
     git commit -m "release: bump version to $VERSION"
     echo "Bumped version to $VERSION"

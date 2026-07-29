@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use crate::app::components::*;
 use crate::app::fetch::*;
+use crate::app::models::RunStatus;
 use crate::app::models::*;
 use crate::app::utils::SidebarContext;
 
@@ -185,7 +186,7 @@ pub(crate) fn ExperimentDetail() -> impl IntoView {
                                         {run_list.into_iter().map(|run| {
                                             let rid_inner = run.id.clone();
                                             let is_selected = Signal::derive(move || selected_runs.with(|set| set.contains(&rid_inner)));
-                                            let is_running = run.status == "RUNNING";
+                                            let is_running = run.status == RunStatus::Running;
                                             let run_clone = run.clone();
                                             let rid_click = run.id.clone();
 

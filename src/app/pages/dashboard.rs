@@ -139,7 +139,9 @@ pub(crate) fn StatCard(label: &'static str, value: String, children: Children) -
             </div>
             <div>
                 <p class="text-sm text-slate-400">{label}</p>
-                <p class="text-2xl font-bold text-white">{value}</p>
+                // A count is a value, not a sentence — mono keeps the tiles' digits
+                // on a common width so the row reads as a set of figures.
+                <p class="text-2xl font-bold text-white font-mono">{value}</p>
             </div>
         </div>
     }

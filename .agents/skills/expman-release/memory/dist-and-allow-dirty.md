@@ -48,9 +48,28 @@ Do not remove any of these in isolation:
 | CI downloading `frontend-dist` into `dist/` | every Rust job invokes trunk, or fails |
 | `EXPMAN_SKIP_FRONTEND_BUILD=1` in CI | same |
 
-## The clean fix, if anyone wants it
+## The clean fix — **done 2026-07-29**
 
-Make `build.rs` degrade gracefully instead of `exit(1)` — emit a
-`cargo:warning` and a placeholder `dist/`, letting `frontend.rs` serve a "run
-`just build-frontend`" page. Every hack above collapses into that one change.
-Not done as of 2026-07-27.
+`build.rs` now degrades instead of `exit(1)`: on a missing or failing `trunk` it
+emits a `cargo:warning` naming the actual cause and writes a placeholder
+`dist/index.html` that tells the reader to run `just build-frontend`. The binary
+builds and the API works; only the web UI is a placeholder.
+
+Verified by building `--features cli,server` with `trunk` removed from PATH and
+no `dist/`: it warns, succeeds, and the resulting server answers `/api/stats`
+normally while serving the placeholder page.
+
+**What this means for the hacks above.** They are no longer load-bearing for
+*correctness*, only for *output quality*:
+
+| hack | still needed? |
+|---|---|
+| `include = [... "dist/**/*"]` | **yes** — a published crate should ship the real UI |
+| `--allow-dirty` in `publish-cargo.yml` | **yes** — same reason; CI's downloaded `dist/` is uncommitted |
+| the `CARGO_DOC` branch | **no** — removed; the general placeholder path covers it |
+| `EXPMAN_SKIP_FRONTEND_BUILD=1` in CI | **yes**, as a speed-up — but it no longer *has* to be set |
+| CI downloading `frontend-dist` | **yes** — otherwise releases ship the placeholder |
+
+The failure mode that remains: a release built without `trunk` would silently
+publish the placeholder UI. That is why `build-assets.yml` still builds the
+frontend and every publish job consumes its artifact.

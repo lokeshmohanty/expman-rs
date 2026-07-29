@@ -27,10 +27,15 @@ pub mod core;                                             // always
 
 | file | gate | what |
 |---|---|---|
-| `models.rs` | — | `ExperimentConfig`, `MetricValue`, `VectorRow`, `RunStatus`, `RunMetadata`, `ExperimentMetadata` |
+| `models.rs` | — | `ExperimentConfig`, `MetricValue`, `VectorRow`, `RunStatus`, `RunMetadata`, `ExperimentMetadata`, `ProjectMetadata` — the **storage** models |
+| `dto.rs` | — | the **wire** types: `Experiment`, `Project`, `ProjectDetail`, `Run`, `Artifact`, `GlobalStats`, `ServerConfig`, `ReadmeContent`, `InteractiveBackend`, … Compiled for native *and* wasm32 so the server and the frontend share one definition; `src/app/models.rs` only re-exports them |
 | `error.rs` | — | `ExpmanError` (`Arrow`/`Parquet` variants are non-wasm only) |
 | `engine.rs` | **not** wasm32 | `LoggingEngine`, `LogLevel`, `LogCommand`, `background_task` |
-| `storage.rs` | **not** wasm32 | Parquet read/write, YAML helpers, `list_runs`/`list_experiments`/`list_artifacts`, `ArtifactInfo` |
+| `storage.rs` | **not** wasm32 | Parquet read/write, YAML helpers, `list_runs`/`list_experiments`/`list_artifacts`, `ArtifactInfo`, the project helpers (`set_experiment_project`, `list_project_experiments`), and the shared run index (`RunEntry`, `RunQuery`, `query_runs`, `parse_tag_expr`, `is_run_stale`, `looks_alive`) |
+| `projects.rs` | **not** wasm32 | one-way project sync from a YAML manifest: `ProjectManifest`, `sync_project`, README rendering, the `generated` marker |
+| `sweep.rs` | **not** wasm32 | sweep expansion (grid/random, seeded SplitMix64), trial command/env rendering, sbatch emission |
+| `sysmetrics.rs` | **not** wasm32 | subprocess probes for GPU/CPU/RAM: `ProbeSpec`, `SystemSampler`, the nvidia-CSV and generic-JSON parsers |
+| `provenance.rs` | **not** wasm32 | git/command/hostname/scheduler capture written to `provenance.yaml` |
 
 **The wasm boundary is here**: `models` and `error` are the only core modules the
 frontend sees. It reuses the data types but gets no engine, no storage, and no
@@ -63,11 +68,12 @@ exists purely to inline `src/app/README.md` into rustdoc.
 |---|---|
 | `mod.rs` | `App`, sidebar shell, routes |
 | `main.rs` | wasm entry |
-| `models.rs` | **hand-mirrored** JSON types — deliberately not shared with `core::models`; drift is a known hazard |
+| `models.rs` | thin re-export of `core::dto` (since 2026-07-28). Previously hand-mirrored JSON types, which drifted; add fields to `core::dto` instead |
 | `fetch.rs` | 411 lines of `gloo_net` calls returning `Result<T, String>` |
 | `utils.rs` | `SidebarContext`, `CHART_COLORS`, Liang–Barsky clipping, canvas→PNG download |
 | `pages/dashboard.rs` | `/` — global stats + recent experiments + recent projects |
 | `pages/projects.rs` | `/projects` — project grid and creation modal |
+| `components/hparams.rs` | the Compare tab: params × final-metrics table plus an SVG scatter, fed by `/projects/{p}/runs` |
 | `pages/project_detail.rs` | `/projects/:id` — overview with markdown README and experiments list |
 | `pages/experiments.rs` | `/experiments` |
 | `pages/experiment_detail.rs` | `/experiments/:id` — tabs + run-selection sidebar + metadata editing |

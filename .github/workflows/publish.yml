@@ -4,6 +4,11 @@ on:
   push:
     branches: ["main"]
 
+# A release commit touches Cargo.toml and Cargo.lock, so ci.yml fires on the same
+# push. That run is independent of this one and cannot gate it — so this workflow
+# runs the same reusable test workflows itself and makes both publish jobs depend
+# on them. Before that, `cargo publish` and `uv publish` ran in parallel with the
+# test suite and a red build published anyway, with no job failing to say so.
 jobs:
   check-release:
     uses: ./.github/workflows/check-release.yml
@@ -13,8 +18,23 @@ jobs:
     if: needs.check-release.outputs.should_release == 'true'
     uses: ./.github/workflows/build-assets.yml
 
-  publish-cargo:
+  # ─── Gate ────────────────────────────────────────────────────────────────
+  # Nothing below publishes unless both of these pass.
+
+  rust:
     needs: [check-release, build-assets]
+    if: needs.check-release.outputs.should_release == 'true'
+    uses: ./.github/workflows/rust.yml
+
+  python:
+    needs: [check-release, build-assets]
+    if: needs.check-release.outputs.should_release == 'true'
+    uses: ./.github/workflows/python.yml
+
+  # ─── Publish ─────────────────────────────────────────────────────────────
+
+  publish-cargo:
+    needs: [check-release, build-assets, rust, python]
     if: needs.check-release.outputs.should_release == 'true'
     uses: ./.github/workflows/publish-cargo.yml
     with:
@@ -22,7 +42,7 @@ jobs:
     secrets: inherit
 
   publish-pypi:
-    needs: [check-release, build-assets]
+    needs: [check-release, build-assets, rust, python]
     if: needs.check-release.outputs.should_release == 'true'
     uses: ./.github/workflows/publish-pypi.yml
     with:

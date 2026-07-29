@@ -52,6 +52,11 @@
         # Base Python for uv
         pythonBase = pkgs.python312;
 
+        # Single source of truth for the version. Everything else — the Python
+        # wheel (via maturin's dynamic version) and both packages below — reads
+        # it from Cargo.toml, so `just bump` edits one file and nothing can drift.
+        version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
+
       in
       {
         devShells.default = pkgs.mkShell {
@@ -64,6 +69,9 @@
             pkgs.just
             pkgs.trunk
             pkgs.wasm-bindgen-cli
+            # Matches the Trunk.toml [tools] pin, so a dev-shell build and a
+            # network build produce the same stylesheet.
+            pkgs.tailwindcss_3
             pkgs.uv
             pkgs.maturin
             pkgs.protobuf
@@ -83,7 +91,7 @@
           # Rust CLI package (Backend + Integrated Frontend build)
           expman = pkgs.rustPlatform.buildRustPackage {
             pname = "expman";
-            version = "1.0.1";
+            inherit version;
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
 
@@ -93,6 +101,11 @@
               pkgs.lld
               pkgs.trunk
               pkgs.wasm-bindgen-cli
+              # Trunk builds the stylesheet with tailwindcss. Offline it will not
+              # download the pinned binary, so it must come from here — and the
+              # version must match Trunk.toml's [tools] pin or the two builds
+              # generate different CSS.
+              pkgs.tailwindcss_3
               pkgs.binaryen
               pkgs.protobuf
               fullToolchain
@@ -104,6 +117,7 @@
               export HOME=$TMPDIR
               export TRUNK_OFFLINE=true
               export TRUNK_BUILD_WASM_OPT=false
+              export TRUNK_TOOLS_TAILWINDCSS=${pkgs.tailwindcss_3.version}
               trunk build --release
             '';
 
@@ -124,7 +138,7 @@
           python3Packages = {
             expman-rs = pkgs.python3.pkgs.buildPythonPackage {
               pname = "expman-rs";
-              version = "1.0.1";
+              inherit version;
               format = "pyproject";
               src = ./.;
               postPatch = "cp ../../Cargo.lock .";

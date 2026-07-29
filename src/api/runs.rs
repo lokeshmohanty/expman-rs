@@ -10,7 +10,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::core::storage;
+use crate::core::{dto, storage};
 
 use super::state::AppState;
 
@@ -39,10 +39,10 @@ pub async fn list_runs(
     let exp_dir = exp_dir(&state.base_dir, &exp);
     match storage::list_runs(&exp_dir) {
         Ok(run_names) => {
-            let mut result: Vec<serde_json::Value> = vec![];
+            let mut result: Vec<dto::Run> = vec![];
             for name in &run_names {
                 let dir = run_dir(&state.base_dir, &exp, name.as_str());
-                let mut meta = storage::load_run_metadata(&dir).unwrap_or_else(|_| {
+                let mut meta = storage::load_run_metadata_cached(&dir).unwrap_or_else(|_| {
                     crate::core::models::RunMetadata {
                         name: name.to_string(),
                         experiment: exp.to_string(),
@@ -53,9 +53,8 @@ pub async fn list_runs(
                 });
 
                 // Attach latest vectors, backfilled from parquet if missing in metadata
-                let vectors_path = dir.join("vectors.parquet");
                 if meta.vectors.is_none() || meta.vectors.as_ref().unwrap().is_empty() {
-                    if let Ok(scalars) = storage::read_latest_scalar_metrics(&vectors_path) {
+                    if let Ok(scalars) = storage::read_run_latest_scalars(&dir) {
                         if !scalars.is_empty() {
                             let converted: HashMap<String, crate::core::models::MetricValue> =
                                 scalars
@@ -73,11 +72,7 @@ pub async fn list_runs(
                     }
                 }
 
-                let mut json = serde_json::to_value(meta).unwrap();
-                json.as_object_mut()
-                    .unwrap()
-                    .insert("id".to_string(), serde_json::json!(name.as_str()));
-                result.push(json);
+                result.push(dto::Run::new(name.as_str(), meta));
             }
             Json(result).into_response()
         }
@@ -92,8 +87,7 @@ pub async fn get_run_metadata(
     let dir = run_dir(&state.base_dir, &exp, &run);
     match storage::load_run_metadata(&dir) {
         Ok(mut meta) => {
-            let vectors_path = dir.join("vectors.parquet");
-            if let Ok(scalars_map) = storage::read_latest_scalar_metrics(&vectors_path) {
+            if let Ok(scalars_map) = storage::read_run_latest_scalars(&dir) {
                 if !scalars_map.is_empty() {
                     let converted: HashMap<String, crate::core::models::MetricValue> = scalars_map
                         .into_iter()
@@ -102,7 +96,7 @@ pub async fn get_run_metadata(
                     meta.vectors = Some(converted);
                 }
             }
-            Json(meta).into_response()
+            Json(dto::Run::new(run.as_str(), meta)).into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }

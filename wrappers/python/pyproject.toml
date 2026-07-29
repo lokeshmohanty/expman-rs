@@ -4,7 +4,10 @@ build-backend = "maturin"
 
 [project]
 name = "expman-rs"
-version = "1.0.1"
+# Single-sourced from ../../Cargo.toml by maturin. Do not hard-code a version
+# here: `expman.__version__` comes from CARGO_PKG_VERSION, so a literal that
+# drifted would ship a wheel whose metadata disagreed with the module itself.
+dynamic = ["version"]
 description = "High-performance experiment manager with Rust backend"
 authors = [{ name = "Lokesh Mohanty", email = "lokesh1197@gmail.com" }]
 license = { text = "MIT" }

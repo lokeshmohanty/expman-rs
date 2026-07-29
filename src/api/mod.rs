@@ -5,6 +5,8 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use axum::{
+    extract::State,
+    response::IntoResponse,
     routing::{get, post},
     Router,
 };
@@ -34,6 +36,36 @@ fn run_dir(base: &std::path::Path, exp: &str, run: &str) -> PathBuf {
     base.join(exp).join(run)
 }
 
+/// Refuse every request that is not a read, when the server is read-only.
+///
+/// Enforced as middleware rather than per handler: read-only has to hold for
+/// routes added later too, and a guard that must be remembered in each new
+/// handler is a guard that will eventually be forgotten. Jupyter and TensorBoard
+/// start/stop are POSTs, so they are covered by the same rule — which is right,
+/// since both spawn processes on the host.
+async fn enforce_read_only(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::http::Method;
+    let is_read = matches!(
+        *request.method(),
+        Method::GET | Method::HEAD | Method::OPTIONS
+    );
+    if state.read_only && !is_read {
+        return (
+            axum::http::StatusCode::FORBIDDEN,
+            axum::Json(serde_json::json!({
+                "error": "read_only",
+                "message": "This server is running in read-only mode (exp serve --read-only).",
+            })),
+        )
+            .into_response();
+    }
+    next.run(request).await
+}
+
 fn exp_dir(base: &std::path::Path, exp: &str) -> PathBuf {
     base.join(exp)
 }
@@ -56,6 +88,7 @@ fn api_router() -> Router<AppState> {
             "/projects/{project}/readme",
             get(projects::get_project_readme).put(projects::update_project_readme),
         )
+        .route("/projects/{project}/runs", get(projects::get_project_runs))
         .route("/experiments", get(experiments::list_experiments))
         .route("/experiments/{exp}/runs", get(runs::list_runs))
         .route(
@@ -168,13 +201,17 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/api", api_router())
         // Frontend: serve embedded static files
         .fallback(frontend::serve_frontend)
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            enforce_read_only,
+        ))
         .with_state(state)
         .layer(cors)
 }
 
 /// Start the server on the given address.
 pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {
-    let state = AppState::new(config.base_dir.clone());
+    let state = AppState::from_config(&config);
 
     let cancel_token = state.shutdown_token.clone();
     let jupyter_manager = state.jupyter.clone();

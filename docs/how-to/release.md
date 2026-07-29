@@ -11,14 +11,15 @@ git push
 
 That is the whole thing. **The commit message is the release trigger.**
 
-`just bump` (`Justfile:163-184`):
+`just bump`:
 
 1. reads the current version from `Cargo.toml`
-2. rewrites it in **three files** — `Cargo.toml`,
-   `wrappers/python/pyproject.toml`, `flake.nix` (the pattern `version = ".*";`
-   with a semicolon matches both `flake.nix:86` and `:127`)
+2. rewrites it **there and nowhere else** — `pyproject.toml` takes it via
+   maturin's `dynamic = ["version"]`, and `flake.nix` reads it with
+   `builtins.fromTOML`
 3. `cargo update -p expman` to refresh `Cargo.lock`
-4. commits those four files as `release: bump version to X.Y.Z`
+4. runs `just check-versions`, which fails if a literal has been reintroduced
+5. commits `Cargo.toml` + `Cargo.lock` as `release: bump version to X.Y.Z`
 
 It does **not** tag and does **not** push. The tag `v<version>` is created later
 by the GitHub Release action.
@@ -31,13 +32,14 @@ by the GitHub Release action.
 ^release: bump version to (\d+\.\d+\.\d+)$
 ```
 
-Because a bump commit touches `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, and
-`flake.nix`, **four workflows fire simultaneously**: `publish.yml` (no path
-filter), `nix.yml` (matches the changed paths), `docs.yml` (no path filter), and
-`ci.yml`.
+Because a bump commit touches `Cargo.toml` and `Cargo.lock`, **four workflows
+fire simultaneously**: `publish.yml` (no path filter), `nix.yml` (matches the
+changed paths), `docs.yml` (no path filter), and `ci.yml`.
 
-`publish.yml` orchestrates: `check-release` → `build-assets` →
-`publish-cargo` + `publish-pypi` in parallel → `github-release`.
+`publish.yml` orchestrates: `check-release` → `build-assets` → **`rust` +
+`python`** → `publish-cargo` + `publish-pypi` in parallel → `github-release`.
+The `rust` and `python` jobs are the release gate: nothing publishes unless both
+pass.
 
 | target | workflow | secret / environment |
 |---|---|---|
@@ -60,12 +62,16 @@ happen, check the commit subject first.
 Related: `head_commit.message` is only the **last** commit of the push. Pushing
 several commits where the bump is not last releases nothing.
 
-### 2. Releases do not wait for tests
+### 2. Releases wait for tests — but not the ones in `ci.yml`
 
-`publish-cargo.yml` has no `needs` on any test job, and `ci.yml` is a *separate
-workflow* with no dependency relationship to `publish.yml`. A release commit
-publishes to crates.io and PyPI **in parallel with** its own test run. **A test
-failure does not block publication.** Run `just ci` locally before bumping.
+Fixed 2026-07-28. `publish.yml` calls `rust.yml` and `python.yml` itself, and
+both publish jobs `need` them, so a failing test blocks publication.
+
+The subtlety worth keeping in mind: the `ci.yml` run you see on the same commit
+is **still** a separate workflow and still gates nothing. The gate is the `rust`
+and `python` jobs *inside* the publish run. A release commit therefore runs the
+suite twice, in parallel. Run `just ci` locally anyway — it is faster than
+discovering it in CI.
 
 ### 3. Two workflows race to create the same GitHub Release
 
@@ -95,16 +101,18 @@ Read commits `49c24ca` and `d423ff8` together:
 If you touch `Cargo.toml`'s `include`, `build.rs`, or `publish-cargo.yml`,
 re-read all three together.
 
-### 5. The version lives in four places
+### 5. The version lives in exactly one place
 
-`Cargo.toml:3`, `wrappers/python/pyproject.toml:7`, `flake.nix:86`,
-`flake.nix:127` — plus `Cargo.lock`. Only `just bump` keeps them aligned, and
-**nothing in CI validates alignment**. Note that Python's `__version__` comes
-from `CARGO_PKG_VERSION` (`src/wrappers/python/mod.rs:295`), not
-`pyproject.toml`, so a desync surfaces as a wheel whose metadata version differs
-from `expman.__version__`.
+Fixed 2026-07-28. `Cargo.toml` is the source; `pyproject.toml` is
+`dynamic = ["version"]` and `flake.nix` reads `builtins.fromTOML ./Cargo.toml`.
+`just check-versions` asserts no literal has crept back and runs in CI's lint
+job.
 
-Never hand-edit a version. Always `just bump`.
+Why it mattered: Python's `__version__` comes from `CARGO_PKG_VERSION`, not
+`pyproject.toml`, so a desync shipped a wheel whose metadata disagreed with
+`expman.__version__` — a discrepancy nothing would have caught.
+
+Still never hand-edit a version. Always `just bump`.
 
 ### 6. Never commit `wrappers/python/expman/bin/`
 

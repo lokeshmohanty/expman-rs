@@ -5,7 +5,7 @@
 
 ## What this is
 
-`expman` — a high-performance ML experiment manager in Rust (v0.5.3, MIT). One
+`expman` — a high-performance ML experiment manager in Rust (v1.0.1, MIT). One
 crate ships three faces: an `exp` CLI, an axum dashboard server with an embedded
 Leptos/WASM frontend, and a PyO3 Python extension whose `log_vector()` is a
 non-blocking channel send. Metrics land in per-run Parquet; metadata in YAML.
@@ -20,7 +20,7 @@ Entry points: `src/main.rs` (CLI), `src/api/mod.rs` (server), `src/app/main.rs`
 | `STATUS.md` | volatile: current focus, next actions, obligations |
 | `docs/` | full documentation — answer questions from here first |
 | `.agents/skills/` | project skills + memories (invoke on demand) |
-| `src/core/` | engine, storage, models — only `models`+`error` are wasm-visible |
+| `src/core/` | engine, storage, models, dto, sweep, sysmetrics, provenance — `models`, `error` and `dto` are wasm-visible |
 | `src/api/`, `src/app/` | server (`server` feature) and Leptos frontend (wasm32) |
 | `wrappers/python/` | the `expman-rs` PyPI package (import name `expman`) |
 | `Justfile` | every build/test/lint/release command — prefer it over raw cargo |

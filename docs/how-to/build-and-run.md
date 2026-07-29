@@ -78,6 +78,85 @@ permissive, so cross-origin from the trunk dev server works).
 Note the WASM bundle is built with `data-wasm-opt="0"` — the current
 `expman-app_bg.wasm` is ~2.6 MB.
 
+## Styling
+
+Tailwind is **built**, not fetched. `src/app/index.html` declares
+`data-trunk rel="tailwind-css" href="../../assets/tailwind.css"`; trunk runs the
+standalone Tailwind CLI, pinned in `Trunk.toml`:
+
+```toml
+[tools]
+tailwindcss = "3.4.17"
+```
+
+Trunk downloads that version on a normal build. The Nix build runs with
+`TRUNK_OFFLINE=true`, so it takes `pkgs.tailwindcss_3` from `nativeBuildInputs`
+instead — the two must stay the same version. They currently emit byte-identical
+CSS; if you bump one, bump the other.
+
+Config is `tailwind.config.js`. Two things to know:
+
+- **Classes are scanned out of the Rust source** (`content: ["./src/**/*.rs"]`).
+  A class assembled at runtime — `format!("text-{}", colour)` — will not be
+  generated and the element renders unstyled. Build such classes from a `match`
+  that returns whole literals.
+- **`@tailwindcss/typography` needs no npm.** The standalone CLI bundles it, so
+  the `prose` classes used for project READMEs work. They did *not* work under
+  the old `cdn.tailwindcss.com` script, which ships no plugins — that markdown
+  had been silently unstyled.
+
+## Fonts
+
+Three type roles, self-hosted:
+
+| role | face | carries |
+|---|---|---|
+| display | Space Grotesk | headings, the wordmark |
+| body | Nunito | prose, descriptions, list items |
+| mono | Cascadia Code | run IDs, metrics, counts, timestamps, tags, uppercase labels, code |
+
+The woff2 files are vendored into `assets/fonts/` (latin + latin-ext only,
+~273 KB) with `@font-face` rules in `assets/fonts.css`. `index.html` copies them
+via `data-trunk rel="copy-dir"` and links the CSS; `api/frontend.rs` embeds
+`*.woff2` into the binary.
+
+> Two ways this breaks silently. If `frontend.rs` loses its `#[include =
+> "*.woff2"]`, the faces 404 and the page falls back to system fonts — which
+> looks like a CSS bug. And `code`/`pre` are styled by Tailwind preflight from
+> its own variable, not from the font config, so the mono role is set directly
+> in the `<style>` block; drop that rule and every code block silently reverts.
+
+To regenerate after a Fontsource release, unpack the three
+`@fontsource-variable/*` tarballs and copy the latin subsets, taking the
+`unicode-range` values from each package's own `unicode.json` rather than
+transcribing them:
+
+```bash
+for pkg in space-grotesk nunito cascadia-code; do
+  curl -sL "https://registry.npmjs.org/@fontsource-variable/$pkg/-/$pkg-<VERSION>.tgz" \
+    | tar xz -C "$pkg" --strip-components=1
+done
+# then copy files/*-latin{,-ext}-wght-{normal,italic}.woff2 into assets/fonts/
+# and rebuild assets/fonts.css from each package's unicode.json
+```
+
+Verify from a loaded page, not from the stylesheet:
+
+```js
+getComputedStyle(document.querySelector("h1")).fontFamily    // Space Grotesk Variable
+getComputedStyle(document.querySelector("code")).fontFamily  // Cascadia Code Variable
+[...document.fonts].filter(f => f.status === "loaded").map(f => f.family)
+// Should be empty — the dashboard makes no third-party requests:
+performance.getEntriesByType("resource").map(r => r.name).filter(n => !n.startsWith(location.origin))
+```
+
+## New asset? `git add` it before `nix build`
+
+A flake's `src = ./.` sees only **git-tracked** files. An untracked
+`assets/whatever.css` builds fine with `trunk` and then fails under
+`nix build .#expman` with a confusing "No such file or directory" for a path that
+plainly exists. Stage new assets before testing the Nix build.
+
 ## Nix builds
 
 ```bash

@@ -21,6 +21,10 @@ jobs:
           path: dist
       - name: Check formatting
         run: just fmt-check
+      # Cheap, and the only thing that would catch a hard-coded version being
+      # reintroduced into pyproject.toml or flake.nix before it ships.
+      - name: Check version single-sourcing
+        run: just check-versions
       - name: Install protobuf compiler
         run: sudo apt-get install -y protobuf-compiler
       - name: Run clippy

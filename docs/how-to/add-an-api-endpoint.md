@@ -41,11 +41,24 @@ across await points, that is a design change, not a local one.
 If the endpoint spawns a process, register cleanup in `serve()`'s shutdown path
 (`mod.rs:186-187`) and honour `state.shutdown_token`.
 
-## 4. Frontend model — `src/app/models.rs`
+## 4. Response type — `src/core/dto.rs`
 
-Add a `Deserialize` struct mirroring the response. These are **hand-mirrored,
-not shared** with `core::models` — the wasm boundary keeps them separate. Match
-the wire format exactly; there is no compiler check tying the two together.
+**Define the response shape here, once.** `core/dto.rs` is compiled for native
+*and* wasm32, so the handler serializes exactly the type the frontend
+deserializes, and the compiler ties them together.
+
+Do **not** return `serde_json::json!({...})` from a handler and add a matching
+struct in `src/app/models.rs`. That is how these drifted for a long time: the two
+were hand-mirrored with nothing checking them, which silently shipped a status
+colour keyed on a `"COMPLETED"` value the API never emitted.
+
+`src/app/models.rs` is a re-export list — add your type to the `pub use` there
+and nothing else.
+
+Wire types stay distinct from the storage models in `core/models.rs`: a DTO may
+expose less than `RunMetadata`, but it does so through a constructor
+(`dto::Run::new`), so changing a storage field is a build error rather than a
+quietly changed endpoint.
 
 ## 5. Frontend fetch — `src/app/fetch.rs`
 

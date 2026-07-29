@@ -73,25 +73,89 @@ enum MetricValue { Float(f64), Int(i64), Bool(bool), Text(String) }
 
 `#[serde(rename_all = "UPPERCASE")]` → `RUNNING | FINISHED | FAILED | CRASHED`.
 
-### `RunMetadata` → `run.yaml` (`models.rs:158-179`)
+### Files in a run directory
+
+| file | what |
+|---|---|
+| `vectors.parquet` | compacted metrics, written at close |
+| `vectors-NNNN.arrow` | **live** append-only segments; folded into the Parquet at close |
+| `system.parquet` / `system-NNNN.arrow` | sampled hardware metrics |
+| `histograms.parquet` / `histograms-NNNN.arrow` | one row per (tag, step): JSON `edges`, `counts`, `total` |
+| `media/` + `media.jsonl` | logged images/audio/video and their manifest |
+| `provenance.yaml` | git commit/branch/dirty, command, hostname, scheduler ids |
+| `run.yaml`, `config.yaml`, `run.log`, `console.log` | as before |
+| `.run.lock` | advisory lock file for `run.yaml` updates |
+
+**Metrics are append-only while a run is live.** Each flush appends an Arrow IPC
+batch rather than rewriting the Parquet, so cost is proportional to the rows
+flushed rather than to the run's history. Rewriting made total write volume grow
+with the *square* of the step count; measured on 10k steps, the old path took
+**48s** and the new one **0.4s**.
+
+A metric first logged mid-run rolls a new segment, because one IPC stream carries
+one schema. Readers union the segments with the Parquet and merge rows sharing a
+step, so `read_run_vectors` sees a live run's data — a reader that opened only
+the Parquet would see nothing until the run closed.
+
+A segment truncated by a hard kill yields every batch completely written and
+stops. Compaction writes the Parquet *before* deleting segments, so an
+interruption leaves both and readers union them to the same result.
+
+### `RunMetadata` → `run.yaml`
 
 `name`, `experiment`, `status`, `started_at`, `finished_at`, `duration_secs`,
-`description`, `tags`, plus four `#[serde(default)]` fields: `scalars`
-(latest scalar value per key), `vectors` (latest value per vector key — a
-summary, not the series), `language`, `env_path`.
+`description`, `tags`, plus `#[serde(default)]` fields: `heartbeat_at`,
+`scalars` (latest scalar value per key), `vectors` (latest value per vector key
+— a summary, not the series), `language`, `env_path`.
+
+`heartbeat_at` is refreshed by the engine every `heartbeat_interval_secs`
+(default 30s) for as long as the run is `RUNNING`. It exists so a hard-killed
+run — which stays `RUNNING` forever — is distinguishable from a legitimately
+long one. `None` on runs written before heartbeats existed; readers fall back to
+`started_at`, which is the conservative direction. See `exp reap`,
+`storage::is_run_stale`, and `storage::looks_alive`.
+
+`description` and `tags` are now written **at creation** when supplied to
+`Experiment(...)`, rather than requiring a hand-patch after `close()`.
+
+`group` and `rank` place a run in a cohort — the N ranks of a DDP job, or the
+trials of a sweep. Both are auto-detected from the launcher's environment.
+
+**All mutations go through `storage::update_run_metadata`**, which takes an
+exclusive advisory lock on `.run.lock`. Under DDP every rank ticks its own
+metadata update; a bare load-mutate-save races and silently drops the loser's
+fields. `save_yaml` also writes atomically (temp file + rename), so a reader
+never sees a half-written `run.yaml` and misreports the run as CRASHED.
 
 `Default` sets `status: Crashed` (`models.rs:181`). That is deliberate: a
 missing or unparseable `run.yaml` degrades to `minimal_run_metadata`
 (`storage.rs:193-212`), which infers name/experiment from the path and reports
 `CRASHED`.
 
-### `ExperimentMetadata` → `experiment.yaml` (`models.rs:202-208`)
+### `ExperimentMetadata` → `experiment.yaml`
 
-`display_name: Option<String>`, `description: Option<String>`, `tags: Vec<String>`, `project: Option<String>`.
+`display_name: Option<String>`, `description: Option<String>`,
+`tags: Vec<String>`, `project: Option<String>`.
 
-### `ProjectMetadata` → `project.yaml` (`models.rs:210-217`)
+`project` is the whole projects hierarchy: a run's project is resolved through
+its experiment, so no run data ever moves when a project is created or
+reassigned. It can be written offline — `storage::set_experiment_project`
+rewrites only that field — via `Experiment(project=...)`,
+`Experiment.set_project()`, `expman.assign_project()`, `exp project assign`, or
+`exp project sync`.
 
-`display_name: Option<String>`, `description: Option<String>`, `tags: Vec<String>`, `created_at: Option<DateTime<Utc>>`.
+### `ProjectMetadata` → `project.yaml`
+
+`display_name: Option<String>`, `description: Option<String>`,
+`tags: Vec<String>`, `created_at: Option<DateTime<Utc>>`, plus the
+generated-projection marker: `generated: bool`,
+`generated_from: Option<String>`, `generated_at: Option<DateTime<Utc>>`.
+
+A project with `generated: true` is a **one-way projection** of a source outside
+expman (see `core/projects.rs`). It is overwritten wholesale by the next
+`exp project sync`, so the HTTP API refuses writes to it with `409` and the
+dashboard hides its edit affordances. Its `README.md` carries a matching
+`<!-- expman:generated ... -->` marker on the first line.
 
 ### `ArtifactInfo` (`storage.rs:144-150`)
 

@@ -1,6 +1,6 @@
 //! Shared utility functions for the frontend.
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc};
 use leptos::prelude::*;
 use std::rc::Rc;
 
@@ -111,11 +111,13 @@ pub(crate) fn download_canvas_as_png(canvas: &web_sys::HtmlCanvasElement, filena
     a.click();
 }
 
-pub(crate) fn format_date(iso: &str) -> String {
-    if let Ok(dt) = DateTime::parse_from_rfc3339(iso) {
-        let local = dt.with_timezone(&Local);
-        local.format("%H:%M, %d %b, %Y").to_string()
-    } else {
-        iso.to_string()
-    }
+/// Format a timestamp in the viewer's local timezone.
+///
+/// Takes a `DateTime` rather than a string: the wire type is typed now
+/// (`core::dto`), so there is no parse to fail and no unparsed-string fallback
+/// that would silently render a raw ISO timestamp in the UI.
+pub(crate) fn format_date(dt: &DateTime<Utc>) -> String {
+    dt.with_timezone(&Local)
+        .format("%H:%M, %d %b, %Y")
+        .to_string()
 }

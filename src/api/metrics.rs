@@ -20,9 +20,21 @@ use super::state::AppState;
 
 use super::run_dir;
 
+/// How many points a chart gets by default.
+///
+/// Comfortably more than a wide chart has pixels, so downsampling is invisible,
+/// while bounding the JSON payload regardless of run length.
+const DEFAULT_MAX_POINTS: usize = 2000;
+
 #[derive(Deserialize)]
 pub struct MetricsQuery {
     pub since_step: Option<u64>,
+    /// Cap on returned rows. Defaults to 2000; `0` means no cap.
+    pub max_points: Option<usize>,
+    /// Return every row. The escape hatch for export and analysis, where the
+    /// exact series matters and the caller is not a browser.
+    #[serde(default)]
+    pub full: bool,
 }
 
 pub async fn get_metrics(
@@ -30,9 +42,23 @@ pub async fn get_metrics(
     Path((exp, run)): Path<(String, String)>,
     Query(q): Query<MetricsQuery>,
 ) -> impl IntoResponse {
-    let path = run_dir(&state.base_dir, &exp, &run).join("vectors.parquet");
-    match storage::read_vectors_since(&path, q.since_step) {
-        Ok(rows) => Json::<Vec<HashMap<String, serde_json::Value>>>(rows).into_response(),
+    let dir = run_dir(&state.base_dir, &exp, &run);
+    match storage::read_run_vectors_since(&dir, q.since_step) {
+        Ok(rows) => {
+            // A million-step run serialises to hundreds of MB of JSON and hangs
+            // the tab before it draws. Bound it unless the caller says otherwise.
+            let limit = if q.full {
+                0
+            } else {
+                q.max_points.unwrap_or(DEFAULT_MAX_POINTS)
+            };
+            let rows = if limit == 0 {
+                rows
+            } else {
+                storage::downsample_rows(rows, limit)
+            };
+            Json::<Vec<HashMap<String, serde_json::Value>>>(rows).into_response()
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
@@ -42,7 +68,7 @@ pub async fn stream_vectors(
     State(state): State<AppState>,
     Path((exp, run)): Path<(String, String)>,
 ) -> Sse<impl tokio_stream::Stream<Item = Result<axum::response::sse::Event, Infallible>>> {
-    let path = run_dir(&state.base_dir, &exp, &run).join("vectors.parquet");
+    let dir = run_dir(&state.base_dir, &exp, &run);
     let mut last_step: Option<u64> = None;
 
     let interval = tokio::time::interval(Duration::from_millis(500));
@@ -51,7 +77,7 @@ pub async fn stream_vectors(
         .take_until(async move { shutdown.cancelled().await })
         .map(move |_| {
             let rows: Vec<HashMap<String, serde_json::Value>> =
-                storage::read_vectors_since(&path, last_step).unwrap_or_default();
+                storage::read_run_vectors_since(&dir, last_step).unwrap_or_default();
             if let Some(row) = rows.last() {
                 let row: &HashMap<String, serde_json::Value> = row;
                 if let Some(step) = row.get("step").and_then(|v: &serde_json::Value| v.as_u64()) {

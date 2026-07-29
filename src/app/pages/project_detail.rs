@@ -3,9 +3,9 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
-use lucide_leptos::{ChevronRight, Eye, FlaskConical, FolderKanban, Pencil, Save};
+use lucide_leptos::{ChevronRight, Eye, FlaskConical, FolderKanban, Lock, Pencil, Save};
 
-use crate::app::components::ErrorState;
+use crate::app::components::{ErrorState, HParams};
 use crate::app::fetch;
 
 fn render_markdown(md: &str) -> String {
@@ -53,6 +53,12 @@ pub(crate) fn ProjectDetail() -> impl IntoView {
                         let experiments = p.experiments.clone();
                         let display_name = p.display_name.clone();
                         let description = p.description.clone();
+                        // A generated project is overwritten wholesale by the next
+                        // sync. Offering an Edit button here would take the user's
+                        // work and lose it, so the affordance is removed entirely
+                        // rather than left to fail on save.
+                        let generated = p.generated;
+                        let generated_from = p.generated_from.clone();
 
                         view! {
                             <div class="space-y-6">
@@ -67,10 +73,28 @@ pub(crate) fn ProjectDetail() -> impl IntoView {
                                 {description.map(|d| view! {
                                     <p class="text-slate-400 -mt-2">{d}</p>
                                 })}
+                                {generated.then(|| {
+                                    let source = generated_from.clone()
+                                        .unwrap_or_else(|| "an external source".to_string());
+                                    view! {
+                                        <div class="flex items-start space-x-3 bg-amber-950/30 border border-amber-900/50 rounded-lg px-4 py-3">
+                                            <span class="text-amber-500 mt-0.5"><Lock size=16 /></span>
+                                            <div class="text-sm">
+                                                <p class="text-amber-300 font-medium">"Generated project — read-only"</p>
+                                                <p class="text-amber-200/60 mt-0.5">
+                                                    "Projected from " <span class="font-mono">{source}</span>
+                                                    " and regenerated on each sync. Edit the source and re-run "
+                                                    <span class="font-mono">"exp project sync"</span> "."
+                                                </p>
+                                            </div>
+                                        </div>
+                                    }
+                                })}
 
                                 // Tab bar
                                 <div class="flex space-x-1 bg-slate-900/50 p-1 rounded-lg w-fit border border-slate-800">
                                     <TabButton label="Overview" tab="overview" active_tab=active_tab />
+                                    <TabButton label="Compare" tab="compare" active_tab=active_tab />
                                     <TabButton label="Experiments" tab="experiments" active_tab=active_tab />
                                 </div>
 
@@ -91,18 +115,20 @@ pub(crate) fn ProjectDetail() -> impl IntoView {
                                                             {move || save_status.get().map(|s| view! {
                                                                 <span class="text-xs text-green-400">{s}</span>
                                                             })}
-                                                            <button
-                                                                on:click=move |_| editing_readme.update(|v| *v = !*v)
-                                                                class="flex items-center space-x-1 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-                                                            >
-                                                                {move || if editing_readme.get() {
-                                                                    view! { <Eye size=14 /> }.into_any()
-                                                                } else {
-                                                                    view! { <Pencil size=14 /> }.into_any()
-                                                                }}
-                                                                <span>{move || if editing_readme.get() { "Preview" } else { "Edit" }}</span>
-                                                            </button>
-                                                            {move || editing_readme.get().then(|| {
+                                                            {(!generated).then(|| view! {
+                                                                <button
+                                                                    on:click=move |_| editing_readme.update(|v| *v = !*v)
+                                                                    class="flex items-center space-x-1 px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                                                                >
+                                                                    {move || if editing_readme.get() {
+                                                                        view! { <Eye size=14 /> }.into_any()
+                                                                    } else {
+                                                                        view! { <Pencil size=14 /> }.into_any()
+                                                                    }}
+                                                                    <span>{move || if editing_readme.get() { "Preview" } else { "Edit" }}</span>
+                                                                </button>
+                                                            })}
+                                                            {move || (!generated && editing_readme.get()).then(|| {
                                                                 let pid_inner = pid_save.clone();
                                                                 view! {
                                                                     <button
@@ -152,6 +178,11 @@ pub(crate) fn ProjectDetail() -> impl IntoView {
                                                     </div>
                                                 </div>
                                             }.into_any()
+                                        } else if tab == "compare" {
+                                            // The view a sweep exists for: params
+                                            // against final metrics, across every
+                                            // experiment in the project.
+                                            view! { <HParams project=pid.clone() /> }.into_any()
                                         } else {
                                             let exps = experiments.clone();
                                             if exps.is_empty() {

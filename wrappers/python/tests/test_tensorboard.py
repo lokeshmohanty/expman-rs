@@ -1,9 +1,12 @@
 """Comprehensive tests for the expman TensorBoard SummaryWriter drop-in replacement."""
 
 import os
+import warnings
+from pathlib import Path
 
 import pytest
 
+import expman
 from expman.tensorboard import SummaryWriter
 
 # ── Basic Creation & Cleanup ────────────────────────────────────────────────
@@ -156,15 +159,71 @@ def test_add_hparams_none_metrics(tmp_path):
         "add_mesh",
     ],
 )
-def test_stub_methods_do_not_raise(tmp_path, method_name):
-    """All stub methods should accept arbitrary args without raising."""
-    log_dir = str(tmp_path / f"stub_{method_name}")
+def test_compat_methods_never_break_a_training_run(tmp_path, method_name):
+    """Odd arguments must not raise out of the compatibility layer.
+
+    This wraps code written for TensorBoard, often mid-way through a long
+    training run. Reporting a problem is right; killing the run over an
+    unencodable image is not.
+    """
+    log_dir = str(tmp_path / f"compat_{method_name}")
     with SummaryWriter(log_dir=log_dir) as writer:
         method = getattr(writer, method_name)
-        # Call with various argument shapes
-        method("tag", "data", 0)
-        method(some_kwarg="value")
-        method()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            method("tag", "data", 0)
+            method(some_kwarg="value")
+            method()
+
+
+def test_unsupported_methods_warn_instead_of_dropping_silently(tmp_path):
+    """The bug this replaced: these were no-ops, so data vanished unannounced."""
+    log_dir = str(tmp_path / "warns")
+    with SummaryWriter(log_dir=log_dir) as writer:
+        with pytest.warns(UserWarning, match="add_graph"):
+            writer.add_graph(object())
+        with pytest.warns(UserWarning, match="add_embedding"):
+            writer.add_embedding(object())
+
+
+def test_unsupported_methods_warn_only_once(tmp_path):
+    """A per-epoch call must not turn the log into a wall of warnings."""
+    log_dir = str(tmp_path / "warn_once")
+    with SummaryWriter(log_dir=log_dir) as writer:
+        with pytest.warns(UserWarning):
+            writer.add_graph(object())
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            for _ in range(5):
+                writer.add_graph(object())
+        assert caught == [], f"expected no repeat warnings, got {len(caught)}"
+
+
+def test_images_and_histograms_are_actually_stored(tmp_path):
+    """The other half of the fix: supported calls must persist, not just not-raise."""
+    log_dir = str(tmp_path / "stored")
+    png = _tiny_png()
+    with SummaryWriter(log_dir=log_dir) as writer:
+        writer.add_image("samples", png, 0)
+        writer.add_histogram("weights", [0.1, 0.2, 0.3, 0.9, 1.0], 0)
+        run_dir = writer._exp.run_dir
+
+    media = expman.read_media(run_dir)
+    assert [m["tag"] for m in media] == ["samples"]
+    assert (Path(run_dir) / media[0]["file"]).exists()
+
+    hists = expman.read_histograms(run_dir)
+    assert [h["tag"] for h in hists] == ["weights"]
+    assert hists[0]["total"] == 5
+
+
+def _tiny_png() -> bytes:
+    """A 1x1 PNG, so these tests need no image library."""
+    import base64
+
+    return base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
 
 
 # ── Flush ───────────────────────────────────────────────────────────────────

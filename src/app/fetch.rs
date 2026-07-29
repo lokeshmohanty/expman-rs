@@ -260,8 +260,9 @@ pub(crate) async fn create_default_notebook(exp: String, run: String) -> Result<
     .map_err(|e| e.to_string())?;
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
-    let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-    Ok(parsed["content"].as_str().unwrap_or("").to_string())
+    let parsed: crate::core::dto::ReadmeContent =
+        serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(parsed.content)
 }
 
 pub(crate) async fn fetch_multi_jupyter_status(exp: String) -> Result<JupyterStatus, String> {
@@ -317,8 +318,9 @@ pub(crate) async fn create_multi_notebook(
         .map_err(|e| e.to_string())?;
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
-    let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-    Ok(parsed["content"].as_str().unwrap_or("").to_string())
+    let parsed: crate::core::dto::ReadmeContent =
+        serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(parsed.content)
 }
 
 /// Extract human-readable source code from ipynb JSON cells.
@@ -510,6 +512,30 @@ pub(crate) async fn delete_project(id: String) -> Result<(), String> {
 }
 
 #[allow(dead_code)]
+/// Every run in a project, with facets and the metric union.
+///
+/// One request rather than one per experiment: the server already walks the
+/// tree, and the hparams view needs the whole set to build its columns.
+pub(crate) async fn fetch_project_runs(id: String) -> Result<ProjectRuns, String> {
+    let resp = gloo_net::http::Request::get(&format!("/api/projects/{}/runs", id))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !resp.ok() {
+        return Err(format!("Error fetching project runs: {}", resp.status()));
+    }
+
+    let text = resp.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+/// Fetch a project's README on its own.
+///
+/// `fetch_project_detail` already embeds the README, so nothing calls this
+/// today; it is the counterpart to `save_project_readme` and the endpoint
+/// exists, so it stays rather than leaving the API half-covered.
+#[allow(dead_code)]
 pub(crate) async fn fetch_project_readme(id: String) -> Result<String, String> {
     let resp = gloo_net::http::Request::get(&format!("/api/projects/{}/readme", id))
         .send()
@@ -521,8 +547,9 @@ pub(crate) async fn fetch_project_readme(id: String) -> Result<String, String> {
     }
 
     let text = resp.text().await.map_err(|e| e.to_string())?;
-    let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-    Ok(parsed["content"].as_str().unwrap_or("").to_string())
+    let parsed: crate::core::dto::ReadmeContent =
+        serde_json::from_str(&text).map_err(|e| e.to_string())?;
+    Ok(parsed.content)
 }
 
 pub(crate) async fn save_project_readme(id: String, content: String) -> Result<(), String> {

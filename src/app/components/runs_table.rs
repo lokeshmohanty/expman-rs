@@ -3,6 +3,7 @@
 use leptos::prelude::*;
 use lucide_leptos::Cog as SettingsIcon;
 
+use crate::app::models::RunStatus;
 use crate::app::models::*;
 use crate::app::utils::format_date;
 
@@ -72,13 +73,18 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
     }
 
     let runs_for_filter = runs.clone();
-    let filtered_runs = move || {
+    // Groups a user has chosen to expand into their individual ranks.
+    let expanded_groups = RwSignal::new(std::collections::HashSet::<String>::new());
+
+    // Shared by several closures, so it is stored rather than captured.
+    let all_runs = StoredValue::new(runs_for_filter.clone());
+    let tag_filtered = move || {
         let active_tags = selected_tags.get();
+        let source = all_runs.get_value();
         if active_tags.is_empty() {
-            runs_for_filter.clone()
+            source
         } else {
-            runs_for_filter
-                .clone()
+            source
                 .into_iter()
                 .filter(|r| {
                     let current_run_tags: std::collections::HashSet<String> =
@@ -87,6 +93,42 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
                 })
                 .collect::<Vec<_>>()
         }
+    };
+
+    // How many runs share each group, so a rolled-up row can say so.
+    let group_sizes = move || {
+        let mut sizes: std::collections::HashMap<String, usize> = Default::default();
+        for run in tag_filtered() {
+            if let Some(g) = &run.group {
+                *sizes.entry(g.clone()).or_default() += 1;
+            }
+        }
+        sizes
+    };
+
+    // Roll a DDP job up to one row. A 4-GPU job is one thing you ran, not four
+    // rows of near-identical metrics; rank 0 stands for it, and the ranks are
+    // one click away when a straggler needs finding.
+    let filtered_runs = move || {
+        let expanded = expanded_groups.get();
+        let mut seen: std::collections::HashSet<String> = Default::default();
+        tag_filtered()
+            .into_iter()
+            .filter(|run| match &run.group {
+                None => true,
+                Some(group) if expanded.contains(group) => true,
+                Some(group) => {
+                    // Keep the first of each group. `list_runs` is newest-first
+                    // and ranks share a timestamp, so prefer rank 0 explicitly
+                    // rather than relying on ordering.
+                    if run.rank.unwrap_or(0) == 0 {
+                        seen.insert(group.clone())
+                    } else {
+                        false
+                    }
+                }
+            })
+            .collect::<Vec<_>>()
     };
 
     let keys_for_filter = all_scalar_keys.clone();
@@ -146,10 +188,17 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
                 let v = scalars.get(*k).map(|v| v.to_string()).unwrap_or("-".into());
                 csv.push_str(&format!("{},", v));
             }
-            let finished = run.finished_at.as_deref().unwrap_or("-");
+            let finished = run
+                .finished_at
+                .map(|f| f.to_rfc3339())
+                .unwrap_or_else(|| "-".to_string());
             csv.push_str(&format!(
                 "{},{},{},{},{}\n",
-                dur, run.started_at, finished, desc, tags
+                dur,
+                run.started_at.to_rfc3339(),
+                finished,
+                desc,
+                tags
             ));
         }
         trigger_download(&csv, "runs.csv", "text/csv");
@@ -181,7 +230,7 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
             let finished = run
                 .finished_at
                 .as_ref()
-                .map(|f| format_date(f))
+                .map(format_date)
                 .unwrap_or_else(|| "-".into());
             tex.push_str(&format!(
                 " & {} & {} & {} & {} \\\\\n",
@@ -222,7 +271,7 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
             let finished = run
                 .finished_at
                 .as_ref()
-                .map(|f| format_date(f))
+                .map(format_date)
                 .unwrap_or_else(|| "-".into());
             typ.push_str(&format!(
                 ", [{}], [{}], [{}], [{}],\n",
@@ -370,18 +419,31 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
                         {move || filtered_runs().into_iter().map(|run| {
                             let run = run.clone();
                             let duration = run.duration_secs.map(|d| format!("{:.1}s", d)).unwrap_or("-".to_string());
-                            let (status_color, status_bg, status_border) = match run.status.as_str() {
-                                "RUNNING"   => ("text-blue-400",   "bg-blue-500",   "border-blue-500"),
-                                "COMPLETED" => ("text-emerald-400", "bg-emerald-500", "border-emerald-500"),
-                                "FAILED"    => ("text-red-400",     "bg-red-500",     "border-red-500"),
-                                _           => ("text-slate-400",   "bg-slate-600",   "border-slate-500"),
+                            let (status_color, status_bg, status_border) = match run.status {
+                                RunStatus::Running  => ("text-blue-400",    "bg-blue-500",    "border-blue-500"),
+                                RunStatus::Finished => ("text-emerald-400", "bg-emerald-500", "border-emerald-500"),
+                                RunStatus::Failed   => ("text-red-400",     "bg-red-500",     "border-red-500"),
+                                RunStatus::Crashed  => ("text-slate-400",   "bg-slate-600",   "border-slate-500"),
                             };
-                            let dot_class = if run.status == "RUNNING" { "animate-pulse" } else { "" };
+                            let dot_class = if run.status == RunStatus::Running { "animate-pulse" } else { "" };
                             let run_scalars = run.scalars.clone().unwrap_or_default();
                             let scalar_cols: Vec<String> = keys_for_table.iter()
                                 .filter(|k| selected_metrics.with(|s| s.contains(*k)))
                                 .cloned()
                                 .collect();
+
+                            // A rolled-up row gets an expander; an expanded rank
+                            // gets a rank chip instead.
+                            let sizes = group_sizes();
+                            let is_expanded = run.group.as_ref()
+                                .map(|g| expanded_groups.get().contains(g))
+                                .unwrap_or(false);
+                            let group_badge = run.group.clone().and_then(|g| {
+                                let size = sizes.get(&g).copied().unwrap_or(1);
+                                (size > 1 && (!is_expanded || run.rank.unwrap_or(0) == 0))
+                                    .then_some((g, size))
+                            });
+                            let rank_badge = if is_expanded { run.rank } else { None };
 
                             let run_for_edit = run.clone();
                             let name = run.name.clone();
@@ -394,9 +456,34 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
                                     <td class="p-4 font-mono text-white flex items-center space-x-2">
                                         <div class=format!("w-2 h-2 rounded-full {} {}", status_bg, dot_class)></div>
                                         <span>{name}</span>
+                                        {group_badge.map(|(group, size)| {
+                                            let key = group.clone();
+                                            let for_check = group.clone();
+                                            let title = format!("{size} ranks in group {group}");
+                                            view! {
+                                                <button
+                                                    on:click=move |_| expanded_groups.update(|set| {
+                                                        if !set.remove(&key) { set.insert(key.clone()); }
+                                                    })
+                                                    title=title
+                                                    class="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"
+                                                >
+                                                    {move || if expanded_groups.get().contains(&for_check) {
+                                                        "▾ ranks".to_string()
+                                                    } else {
+                                                        format!("▸ {size} ranks")
+                                                    }}
+                                                </button>
+                                            }
+                                        })}
+                                        {rank_badge.map(|r| view! {
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-800/60 text-slate-500">
+                                                "rank " {r}
+                                            </span>
+                                        })}
                                     </td>
                                     {if selected_meta.with(|s| s.contains("Status")) {
-                                        let my_status = status.clone();
+                                        let my_status = status.to_string();
                                         view! {
                                             <td class="p-4">
                                                 <span class=format!("px-2 py-1 rounded text-xs font-medium bg-opacity-10 border border-opacity-20 {} {} {}", status_bg, status_color, status_border)>
@@ -423,7 +510,7 @@ pub(crate) fn RunsTableView(runs: Vec<Run>, #[prop(into)] on_edit: Callback<Run>
                                     } else { view!{<td class="hidden"></td>}.into_any() }}
 
                                     {if selected_meta.with(|s| s.contains("Finished")) {
-                                        let finished = run.finished_at.as_ref().map(|f| format_date(f)).unwrap_or_else(|| "-".to_string());
+                                        let finished = run.finished_at.as_ref().map(format_date).unwrap_or_else(|| "-".to_string());
                                         view! { <td class="p-4 text-slate-400 whitespace-nowrap">{finished}</td> }.into_any()
                                     } else { view!{<td class="hidden"></td>}.into_any() }}
 

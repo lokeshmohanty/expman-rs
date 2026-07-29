@@ -30,6 +30,20 @@ enum LogCommand {
     Params(HashMap<String, serde_yaml::Value>),
     /// Copy an artifact file into the run's artifacts directory.
     Artifact(PathBuf),
+    /// Write raw bytes as a media file and record it in the media manifest.
+    Media {
+        tag: String,
+        step: Option<u64>,
+        extension: String,
+        bytes: Vec<u8>,
+    },
+    /// Record a histogram: bin edges and counts for one tag at one step.
+    Histogram {
+        tag: String,
+        step: Option<u64>,
+        edges: Vec<f64>,
+        counts: Vec<u64>,
+    },
     /// Log a message to the run log file.
     Log { level: LogLevel, message: String },
     /// Force flush the current buffer to disk.
@@ -71,13 +85,23 @@ impl LoggingEngine {
         storage::ensure_dir(&run_dir.join("artifacts"))?;
 
         // Write initial run metadata
+        let now = Utc::now();
         let meta = RunMetadata {
             name: config.run_name.clone(),
             experiment: config.name.clone(),
             status: RunStatus::Running,
-            started_at: Utc::now(),
+            started_at: now,
+            heartbeat_at: Some(now),
             language: Some(config.language.clone()),
             env_path: config.env_path.clone(),
+            description: config.description.clone(),
+            group: config.group.clone(),
+            rank: config.rank,
+            tags: if config.tags.is_empty() {
+                None
+            } else {
+                Some(config.tags.clone())
+            },
             ..Default::default()
         };
         storage::save_run_metadata(&run_dir, &meta)?;
@@ -89,8 +113,31 @@ impl LoggingEngine {
         if !exp_meta_path.exists() {
             storage::save_experiment_metadata(
                 &exp_dir,
-                &crate::core::models::ExperimentMetadata::default(),
+                &crate::core::models::ExperimentMetadata {
+                    project: config.project.clone(),
+                    ..Default::default()
+                },
             )?;
+        } else if let Some(project) = &config.project {
+            // experiment.yaml is only written when absent, so an explicit
+            // `project=` from a later run would otherwise be silently ignored.
+            // Update just that field and leave the rest of the file alone.
+            let mut existing = storage::load_experiment_metadata(&exp_dir)?;
+            if existing.project.as_deref() != Some(project.as_str()) {
+                existing.project = Some(project.clone());
+                storage::save_experiment_metadata(&exp_dir, &existing)?;
+            }
+        }
+
+        // Capture provenance once, at creation. Cheap enough to be default-on;
+        // the diff stays opt-in (see core::provenance).
+        if config.capture_provenance {
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let provenance =
+                crate::core::provenance::Provenance::capture(&cwd, config.capture_diff);
+            if let Err(e) = storage::save_yaml(&run_dir.join("provenance.yaml"), &provenance) {
+                error!("Failed to write provenance: {}", e);
+            }
         }
 
         // Set up log file
@@ -111,6 +158,8 @@ impl LoggingEngine {
         // Spawn background task
         let flush_rows = config.flush_interval_rows;
         let flush_ms = config.flush_interval_ms;
+        let heartbeat_secs = config.heartbeat_interval_secs;
+        let system_secs = config.system_metrics_interval_secs;
         let run_dir_clone = run_dir.clone();
         runtime.spawn(background_task(
             receiver,
@@ -118,6 +167,8 @@ impl LoggingEngine {
             log_path,
             flush_rows,
             flush_ms,
+            heartbeat_secs,
+            system_secs,
         ));
 
         info!(
@@ -162,6 +213,26 @@ impl LoggingEngine {
     /// Log a message to the run log. Non-blocking.
     pub fn log_message(&self, level: LogLevel, message: String) {
         let _ = self.sender.send(LogCommand::Log { level, message });
+    }
+
+    /// Save an image/audio/video blob under `media/`, indexed by tag and step.
+    pub fn log_media(&self, tag: String, step: Option<u64>, extension: String, bytes: Vec<u8>) {
+        let _ = self.sender.send(LogCommand::Media {
+            tag,
+            step,
+            extension,
+            bytes,
+        });
+    }
+
+    /// Record a pre-binned histogram.
+    pub fn log_histogram(&self, tag: String, step: Option<u64>, edges: Vec<f64>, counts: Vec<u64>) {
+        let _ = self.sender.send(LogCommand::Histogram {
+            tag,
+            step,
+            edges,
+            counts,
+        });
     }
 
     /// Force flush the metric buffer to disk. Async — awaits completion.
@@ -221,8 +292,10 @@ async fn background_task(
     log_path: PathBuf,
     flush_interval_rows: usize,
     flush_interval_ms: u64,
+    heartbeat_interval_secs: u64,
+    system_interval_secs: u64,
 ) {
-    let vectors_path = run_dir.join("vectors.parquet");
+    let mut vector_writer = storage::MetricWriter::new(&run_dir, storage::VECTORS_STEM);
     let config_path = run_dir.join("config.yaml");
     let _meta_path = run_dir.join("run.yaml");
     let artifacts_dir = run_dir.join("artifacts");
@@ -233,6 +306,26 @@ async fn background_task(
     let mut log_lines: Vec<String> = Vec::new();
     let mut flush_ticker = interval(Duration::from_millis(flush_interval_ms));
     flush_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+    // `interval` panics on a zero duration, so clamp and gate the select branch
+    // on the original value instead — 0 means "no heartbeat".
+    let heartbeat_enabled = heartbeat_interval_secs > 0;
+    let mut heartbeat_ticker = interval(Duration::from_secs(heartbeat_interval_secs.max(1)));
+    heartbeat_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+    // System metrics go to their own file so a `gpu.0.util_pct` column never
+    // shows up mixed into the user's own metric namespace.
+    let system_enabled = system_interval_secs > 0;
+    let mut system_sampler = system_enabled.then(|| {
+        crate::core::sysmetrics::SystemSampler::new(crate::core::sysmetrics::ProbeSpec::defaults())
+    });
+    let mut system_writer = storage::MetricWriter::new(&run_dir, storage::SYSTEM_STEM);
+    // Histograms are their own family: they are one row per (tag, step) with a
+    // variable number of bins, which does not belong in the scalar schema.
+    let mut histogram_writer = storage::MetricWriter::new(&run_dir, storage::HISTOGRAM_STEM);
+    let mut system_step: u64 = 0;
+    let mut system_ticker = interval(Duration::from_secs(system_interval_secs.max(1)));
+    system_ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     let started_at = Utc::now();
 
@@ -245,7 +338,7 @@ async fn background_task(
                 match cmd {
                     None => {
                         // Channel closed — flush and exit
-                        flush_vectors(&vectors_path, &mut vector_buffer);
+                        flush_vectors(&mut vector_writer, &mut vector_buffer);
                         flush_logs(&log_path, &mut log_lines);
                         break;
                     }
@@ -256,7 +349,7 @@ async fn background_task(
                         }
                         vector_buffer.push(row);
                         if vector_buffer.len() >= flush_interval_rows {
-                            flush_vectors(&vectors_path, &mut vector_buffer);
+                            flush_vectors(&mut vector_writer, &mut vector_buffer);
                         }
                     }
                     Some(LogCommand::Scalar(scalars)) => {
@@ -267,6 +360,12 @@ async fn background_task(
                     }
                     Some(LogCommand::Artifact(path)) => {
                         handle_artifact(&artifacts_dir, path);
+                    }
+                    Some(LogCommand::Media { tag, step, extension, bytes }) => {
+                        handle_media(&run_dir, &tag, step, &extension, &bytes);
+                    }
+                    Some(LogCommand::Histogram { tag, step, edges, counts }) => {
+                        handle_histogram(&mut histogram_writer, &tag, step, &edges, &counts);
                     }
                     Some(LogCommand::Log { level, message }) => {
                         let ts = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ");
@@ -281,20 +380,33 @@ async fn background_task(
                         }
                     }
                     Some(LogCommand::Flush(reply)) => {
-                        flush_vectors(&vectors_path, &mut vector_buffer);
+                        flush_vectors(&mut vector_writer, &mut vector_buffer);
                         flush_logs(&log_path, &mut log_lines);
                         let _ = reply.send(Ok(()));
                     }
                     Some(LogCommand::Shutdown { status, reply }) => {
-                        // Final flush
-                        flush_vectors(&vectors_path, &mut vector_buffer);
+                        // Final flush, then fold the append-only segments into
+                        // a single Parquet so readers see one tidy file.
+                        flush_vectors(&mut vector_writer, &mut vector_buffer);
                         flush_logs(&log_path, &mut log_lines);
+                        let _ = vector_writer.finish();
+                        let _ = system_writer.finish();
+                        let _ = histogram_writer.finish();
+                        if let Err(e) = storage::compact_metrics(&run_dir, storage::VECTORS_STEM) {
+                            error!("Failed to compact vectors: {}", e);
+                        }
+                        if let Err(e) = storage::compact_metrics(&run_dir, storage::SYSTEM_STEM) {
+                            error!("Failed to compact system metrics: {}", e);
+                        }
+                        if let Err(e) = storage::compact_metrics(&run_dir, storage::HISTOGRAM_STEM) {
+                            error!("Failed to compact histograms: {}", e);
+                        }
 
                         // Update run metadata with final status and latest scalars
                         let finished_at = Utc::now();
                         let duration = (finished_at - started_at).num_milliseconds() as f64 / 1000.0;
 
-                        if let Ok(mut meta) = storage::load_run_metadata(&run_dir) {
+                        let _ = storage::update_run_metadata(&run_dir, |meta| {
                             meta.status = status;
                             meta.finished_at = Some(finished_at);
                             meta.duration_secs = Some(duration);
@@ -304,8 +416,7 @@ async fn background_task(
                             if !current_vectors.is_empty() {
                                 meta.vectors = Some(current_vectors.clone());
                             }
-                            let _ = storage::save_run_metadata(&run_dir, &meta);
-                        }
+                        });
 
                         let _ = reply.send(());
                         break;
@@ -316,7 +427,7 @@ async fn background_task(
             // Periodic flush
             _ = flush_ticker.tick() => {
                 if !vector_buffer.is_empty() {
-                    flush_vectors(&vectors_path, &mut vector_buffer);
+                    flush_vectors(&mut vector_writer, &mut vector_buffer);
                 }
                 if !log_lines.is_empty() {
                     flush_logs(&log_path, &mut log_lines);
@@ -324,22 +435,46 @@ async fn background_task(
 
                 // Update metadata with current scalars periodically
                 if !current_scalars.is_empty() || !current_vectors.is_empty() {
-                    if let Ok(mut meta) = storage::load_run_metadata(&run_dir) {
+                    let _ = storage::update_run_metadata(&run_dir, |meta| {
                         meta.scalars = Some(current_scalars.clone());
                         meta.vectors = Some(current_vectors.clone());
-                        let _ = storage::save_run_metadata(&run_dir, &meta);
+                    });
+                }
+            }
+
+            // Sample hardware utilisation. Subprocess probes take a few ms, so
+            // this runs on the I/O task and never touches the training loop.
+            _ = system_ticker.tick(), if system_enabled => {
+                if let Some(sampler) = system_sampler.as_mut() {
+                    let values = sampler.sample();
+                    if !values.is_empty() {
+                        let row = VectorRow::new(values, Some(system_step));
+                        system_step += 1;
+                        if let Err(e) = system_writer.append(std::slice::from_ref(&row)) {
+                            error!("Failed to write system metrics: {}", e);
+                        }
                     }
                 }
+            }
+
+            // Heartbeat: prove the run is still alive so a hard kill is
+            // distinguishable from a legitimately long job. `exp reap` reads this.
+            _ = heartbeat_ticker.tick(), if heartbeat_enabled => {
+                let _ = storage::update_run_metadata(&run_dir, |meta| {
+                    if meta.status == RunStatus::Running {
+                        meta.heartbeat_at = Some(Utc::now());
+                    }
+                });
             }
         }
     }
 }
 
-fn flush_vectors(path: &std::path::Path, buffer: &mut Vec<VectorRow>) {
+fn flush_vectors(writer: &mut storage::MetricWriter, buffer: &mut Vec<VectorRow>) {
     if buffer.is_empty() {
         return;
     }
-    if let Err(e) = storage::append_vectors(path, buffer) {
+    if let Err(e) = writer.append(buffer) {
         error!("Failed to flush vectors: {}", e);
     }
     buffer.clear();
@@ -368,6 +503,98 @@ fn handle_params(config_path: &std::path::Path, new_params: HashMap<String, serd
     existing.extend(new_params);
     if let Err(e) = storage::save_yaml(config_path, &existing) {
         error!("Failed to save params: {}", e);
+    }
+}
+
+/// Write a media blob and append a line to the media manifest.
+///
+/// Bytes go to a file rather than into Parquet: a Parquet column of image blobs
+/// makes the metrics file unreadable for its actual purpose, and the dashboard
+/// needs a URL it can hand to an `<img>` anyway.
+fn handle_media(
+    run_dir: &std::path::Path,
+    tag: &str,
+    step: Option<u64>,
+    extension: &str,
+    bytes: &[u8],
+) {
+    let media_dir = run_dir.join("media");
+    if let Err(e) = fs::create_dir_all(&media_dir) {
+        error!("Failed to create media dir: {}", e);
+        return;
+    }
+    // Tags are user-supplied and routinely contain '/' ("train/samples"), which
+    // would silently create directories or escape the run.
+    let safe_tag: String = tag
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let filename = match step {
+        Some(s) => format!("{safe_tag}-{s:08}.{extension}"),
+        None => format!("{safe_tag}.{extension}"),
+    };
+    let path = media_dir.join(&filename);
+    if let Err(e) = fs::write(&path, bytes) {
+        error!("Failed to write media {}: {}", path.display(), e);
+        return;
+    }
+
+    // A JSONL manifest, appended to: it survives a hard kill mid-run, which a
+    // rewritten index would not.
+    let entry = serde_json::json!({
+        "tag": tag,
+        "step": step,
+        "file": format!("media/{filename}"),
+        "bytes": bytes.len(),
+        "logged_at": Utc::now().to_rfc3339(),
+    });
+    use std::io::Write;
+    match fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(run_dir.join("media.jsonl"))
+    {
+        Ok(mut f) => {
+            let _ = writeln!(f, "{entry}");
+        }
+        Err(e) => error!("Failed to update media manifest: {}", e),
+    }
+}
+
+/// Store one histogram as a row: edges and counts as JSON-encoded strings.
+///
+/// Bin counts vary per tag and per step, so a column-per-bin schema would churn
+/// the Parquet schema on every call.
+fn handle_histogram(
+    writer: &mut storage::MetricWriter,
+    tag: &str,
+    step: Option<u64>,
+    edges: &[f64],
+    counts: &[u64],
+) {
+    let mut values: HashMap<String, MetricValue> = HashMap::new();
+    values.insert("tag".to_string(), MetricValue::Text(tag.to_string()));
+    values.insert(
+        "edges".to_string(),
+        MetricValue::Text(serde_json::to_string(edges).unwrap_or_default()),
+    );
+    values.insert(
+        "counts".to_string(),
+        MetricValue::Text(serde_json::to_string(counts).unwrap_or_default()),
+    );
+    values.insert(
+        "total".to_string(),
+        MetricValue::Int(counts.iter().sum::<u64>() as i64),
+    );
+    let row = VectorRow::new(values, step);
+    if let Err(e) = writer.append(std::slice::from_ref(&row)) {
+        error!("Failed to write histogram: {}", e);
     }
 }
 

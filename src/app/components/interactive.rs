@@ -7,6 +7,7 @@ use web_sys::RequestMode;
 
 use super::error_state::ErrorState;
 use crate::app::fetch::*;
+use crate::app::models::InteractiveBackend;
 
 #[component]
 pub(crate) fn InteractiveView(
@@ -169,7 +170,7 @@ pub(crate) fn InteractiveView(
                         let notebook_info = notebook_resource.await;
 
                         let backend = backend_info.await;
-                        let backend_str = backend.as_ref().map(|b| b.backend.clone()).unwrap_or_else(|_| "none".to_string());
+                        let backend_kind = backend.as_ref().map(|b| b.backend.clone()).unwrap_or_default();
 
                         let view_result: leptos::prelude::AnyView = match run {
                             Ok(run_info) => {
@@ -250,7 +251,7 @@ pub(crate) fn InteractiveView(
                                             </div>
                                         </div>
                                     }.into_any()
-                                } else if backend_str == "jupyter" {
+                                } else if backend_kind == InteractiveBackend::Jupyter {
                                     // Jupyter available but not running — launch button + notebook preview/create
                                     view! {
                                         <div class="max-w-4xl mx-auto w-full space-y-6">

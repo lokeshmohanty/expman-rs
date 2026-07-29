@@ -23,6 +23,19 @@ jobs:
         with:
           name: ${{ inputs.frontend-artifact }}
           path: dist
+      # build.rs no longer fails when the frontend is missing — it warns and
+      # writes a placeholder. That is right for a developer build and wrong for
+      # a release, so this is the gate that stops a placeholder UI being
+      # published. Without it nothing would.
+      - name: Verify the frontend is real, not a placeholder
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html missing"; exit 1; }
+          if grep -q "Dashboard frontend not built" dist/index.html; then
+            echo "::error::dist/ holds the build.rs placeholder page, not the built frontend."
+            exit 1
+          fi
+          ls dist/*.wasm >/dev/null 2>&1 || { echo "::error::no .wasm in dist/ — the frontend was not built"; exit 1; }
+          echo "Frontend bundle present: $(ls dist/*.wasm)"
       - name: Install protobuf compiler
         run: sudo apt-get install -y protobuf-compiler
       - name: Publish to crates.io

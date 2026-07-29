@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 
-use crate::core::storage;
+use crate::core::{dto, storage};
 
 use super::state::AppState;
 
@@ -35,8 +35,7 @@ pub async fn get_experiment_stats(
                 ..Default::default()
             });
 
-        let last_metrics =
-            storage::read_latest_scalar_metrics(&dir.join("vectors.parquet")).unwrap_or_default();
+        let last_metrics = storage::read_run_latest_scalars(&dir).unwrap_or_default();
 
         stats.push(serde_json::json!({
             "run": run_name,
@@ -53,8 +52,10 @@ pub async fn get_experiment_stats(
 
 pub async fn get_global_stats(State(state): State<AppState>) -> impl IntoResponse {
     let experiments = storage::list_experiments(&state.base_dir).unwrap_or_default();
+    let now = chrono::Utc::now();
     let mut total_runs = 0;
     let mut active_runs = 0;
+    let mut stale_runs = 0;
 
     for exp in &experiments {
         let exp_dir = exp_dir(&state.base_dir, exp);
@@ -63,22 +64,37 @@ pub async fn get_global_stats(State(state): State<AppState>) -> impl IntoRespons
 
         for run in runs.iter() {
             let dir = run_dir(&state.base_dir, exp, run.as_str());
-            if let Ok(meta) = storage::load_run_metadata(&dir) {
+            if let Ok(meta) = storage::load_run_metadata_cached(&dir) {
                 if meta.status == crate::core::models::RunStatus::Running {
-                    active_runs += 1;
+                    // A hard-killed run stays RUNNING forever. Splitting the
+                    // count keeps active_runs honest instead of letting dead
+                    // runs accumulate in it silently.
+                    if storage::looks_alive(&meta, now) {
+                        active_runs += 1;
+                    } else {
+                        stale_runs += 1;
+                    }
                 }
             }
         }
     }
 
-    Json(serde_json::json!({
-        "total_experiments": experiments.len(),
-        "total_runs": total_runs,
-        "active_runs": active_runs,
-        "total_storage_bytes": 0,
-    }))
+    Json(dto::GlobalStats {
+        total_experiments: experiments.len(),
+        total_projects: storage::list_projects(&state.base_dir)
+            .unwrap_or_default()
+            .len(),
+        total_runs,
+        active_runs,
+        stale_runs,
+        total_storage_bytes: 0,
+    })
 }
 
-pub async fn get_server_config() -> impl IntoResponse {
-    Json(serde_json::json!({"live_mode": true, "version": env!("CARGO_PKG_VERSION")}))
+pub async fn get_server_config(State(state): State<AppState>) -> impl IntoResponse {
+    Json(dto::ServerConfig {
+        live_mode: state.live_mode,
+        read_only: state.read_only,
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    })
 }

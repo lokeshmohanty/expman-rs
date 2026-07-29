@@ -25,11 +25,13 @@ Prefer `just` recipes over raw cargo. Several exist specifically to route around
 | tests / clippy | `--all-features` |
 
 **Any build with `server` on (including `--all-features`) invokes `trunk build
---release` from `build.rs` and hard-exits(1) if trunk fails and `dist/index.html`
-does not exist** (`build.rs:44`). The error does not obviously say "install
-trunk".
+--release` from `build.rs`.** Since 2026-07-29 that **no longer fails the build**:
+a missing or broken `trunk` produces a `cargo:warning` naming the cause and a
+placeholder `dist/index.html`, and the binary still builds and serves the API.
+Only the web UI is a placeholder.
 
-Escape hatches — use one when you are not iterating on the frontend:
+Escape hatches — still worth using to skip the ~2min wasm build when you are not
+iterating on the frontend:
 
 ```bash
 export EXPMAN_SKIP_FRONTEND_BUILD=1    # skip trunk; requires dist/index.html
@@ -54,6 +56,11 @@ nothing else gates a release. See the `expman-release` skill.
 
 ## Traps
 
+- **`test_log_vector_is_fast` runs alone** (`.config/nextest.toml`). It asserts a
+  wall-clock budget, so running it beside 70 other tests measured contention and
+  failed spuriously. If it fails, check machine load before suspecting the code —
+  and do not "fix" it by loosening the budget.
+
 - **`just lint-rust` runs clippy twice** — once against wasm32 (`lint-frontend`)
   and once native. The pre-commit hook only does the native pass, so **frontend
   clippy failures surface in CI, not locally.** Always use the just recipe.
@@ -62,8 +69,16 @@ nothing else gates a release. See the `expman-release` skill.
 - **Python tests only run on Linux** in CI despite the code implying an OS matrix.
 - `cli_test.rs` needs the `cli` feature — that is why the suite is always
   `--all-features`.
-- The dashboard loads **Tailwind from a CDN** (`src/app/index.html:8`). If it
-  renders unstyled, you are offline; the binary is not actually self-contained.
+- **Tailwind and the fonts are self-hosted** (since 2026-07-28) — no CDN, and
+  the dashboard renders correctly offline. The cost is a build-time tool: trunk
+  downloads `tailwindcss` pinned in `Trunk.toml` `[tools]`, and the Nix build
+  takes `pkgs.tailwindcss_3` instead. Keep those two versions equal.
+- **Tailwind only sees classes it can find in `src/**/*.rs`.** A class built at
+  runtime (`format!("text-{}", colour)`) is not generated and renders unstyled.
+  Use a `match` returning whole class literals.
+- **A new asset must be `git add`ed before `nix build` works.** A flake's
+  `src = ./.` sees only tracked files, and the failure reads as a missing file
+  that is plainly present.
 - Jupyter and TensorBoard are **not proxied** — the browser hits
   `http://localhost:{port}` directly, so those tabs only work when the browser
   and server share a machine. A blank iframe is usually this, not a bug in your

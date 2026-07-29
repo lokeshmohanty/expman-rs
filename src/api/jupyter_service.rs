@@ -13,13 +13,10 @@ pub struct JupyterInstance {
 }
 
 /// The interactive backend detected in the user's environment.
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum InteractiveBackend {
-    Jupyter,
-    Python,
-    None,
-}
+///
+/// Defined in `core::dto` because it is part of the HTTP response, and the
+/// frontend matches on it.
+pub use crate::core::dto::InteractiveBackend;
 
 /// Generate the full `.ipynb` JSON content for a default interactive notebook.
 ///

@@ -21,15 +21,14 @@ just bump patch  # or minor / major
 git push         # the bump commit MUST be the last commit of the push
 ```
 
-`just bump` rewrites the version in `Cargo.toml`,
-`wrappers/python/pyproject.toml`, and `flake.nix` (two places), refreshes
-`Cargo.lock`, and commits as `release: bump version to X.Y.Z`. It does not tag
-and does not push.
+`just bump` rewrites the version in **`Cargo.toml` only**, refreshes
+`Cargo.lock`, runs `just check-versions`, and commits as
+`release: bump version to X.Y.Z`. It does not tag and does not push.
 
-**Never hand-edit a version.** It lives in four places plus `Cargo.lock`, and
-nothing in CI validates alignment. Python's `__version__` comes from
-`CARGO_PKG_VERSION`, not `pyproject.toml`, so a desync ships a wheel whose
-metadata disagrees with `expman.__version__`.
+**The version is single-sourced (since 2026-07-28).** `pyproject.toml` is
+`dynamic = ["version"]` and `flake.nix` reads `builtins.fromTOML ./Cargo.toml`.
+`just check-versions` fails if a literal is reintroduced, and runs in CI.
+Still never hand-edit a version — `just bump` is the only supported path.
 
 ## The rules that bite
 
@@ -39,9 +38,11 @@ metadata disagrees with `expman.__version__`.
    publishes nothing — **silently**. No job fails. If a release did not happen,
    check the subject first.
 2. Only the **last** commit of a push is inspected.
-3. **Releases do not wait for tests.** `publish.yml` and `ci.yml` are separate
-   workflows with no dependency. Publication to crates.io and PyPI happens in
-   parallel with the test run. `just ci` locally is the only real gate.
+3. **Releases wait for tests — the ones inside `publish.yml`.** Since
+   2026-07-28 `publish.yml` calls `rust.yml`/`python.yml` itself and both
+   publish jobs `need` them. The `ci.yml` run on the same commit is still a
+   separate workflow and still gates nothing, so a release commit runs the suite
+   twice. `just ci` locally is still faster than finding out in CI.
 4. **Two workflows race to create the same GitHub Release** — `publish.yml`
    (wheels) and `nix.yml` (nix results). Whichever finishes second updates it,
    so the final asset set is race-dependent. This is the cause of "the release

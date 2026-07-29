@@ -12,6 +12,10 @@ use axum::{
 #[include = "*.js"]
 #[include = "*.css"]
 #[include = "*.wasm"]
+// Self-hosted webfonts. Without this the @font-face URLs 404 and the dashboard
+// silently falls back to system faces — which looks like a CSS bug, not a
+// missing asset.
+#[include = "*.woff2"]
 struct Assets;
 
 /// Serve the embedded frontend HTML/JS/CSS.

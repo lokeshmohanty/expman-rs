@@ -1,3 +1,9 @@
 [build]
 target = "src/app/index.html"
 dist = "dist"
+
+[tools]
+# Pinned to the `tailwindcss` in nixpkgs, so the Nix build (which runs with
+# TRUNK_OFFLINE=true and must use the system binary) and a normal `trunk build`
+# (which downloads this exact version) generate the same stylesheet.
+tailwindcss = "3.4.17"

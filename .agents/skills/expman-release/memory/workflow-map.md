@@ -19,14 +19,15 @@
 | workflow | trigger | chain |
 |---|---|---|
 | `ci.yml` | push + PR on `main`, `paths-ignore`: `**.md`, `examples/**`, `docs/**`, `.gitignore`, `LICENSE` | `build-assets` → `rust` ∥ `python` |
-| `publish.yml` | push on `main`, **no path filter** | `check-release` → `build-assets` → (`publish-cargo` ∥ `publish-pypi`) → `github-release` (pattern `wheels-*`) |
+| `publish.yml` | push on `main`, **no path filter** | `check-release` → `build-assets` → (`rust` ∥ `python`) → (`publish-cargo` ∥ `publish-pypi`) → `github-release` (pattern `wheels-*`). The `rust`/`python` jobs are the release gate, added 2026-07-28. |
 | `nix.yml` | push on `main`, paths `src/**`, `wrappers/python/**`, `flake.nix`, `Cargo.toml`, `Cargo.lock`, self | `nix build .#expman` + `.#python3Packages.expman-rs` → push to cachix → on a release commit, `github-release` (pattern `nix-build-results`) |
 | `docs.yml` | push on `main`, **no path filter** | `just build-docs` → gh-pages via `peaceiris/actions-gh-pages@v4` with `force_orphan: true` |
 
 ## What a release commit actually sets off
 
-All four entry points fire at once, because a bump commit touches
-`Cargo.toml`, `Cargo.lock`, `pyproject.toml`, and `flake.nix`.
+All four entry points fire at once. A bump commit now touches only `Cargo.toml`
+and `Cargo.lock` (the version is single-sourced), which is still enough to match
+`nix.yml`'s path filter.
 
 Two consequences that are not obvious from any single file:
 
@@ -35,7 +36,10 @@ Two consequences that are not obvious from any single file:
   creates-or-updates, so the second to finish wins and the final asset set is
   race-dependent. Release notes may regenerate twice.
 - **`publish-cargo` and `publish-pypi` run in parallel and neither depends on
-  `ci.yml`.** `github-release` needs `publish-pypi` (so wheels exist) but *not*
+  `ci.yml`** — but since 2026-07-28 both depend on `rust` and `python` jobs
+  *inside* `publish.yml`, so tests do gate publication. `ci.yml` remains
+  independent and gates nothing; a release commit runs the suite twice.
+  `github-release` needs `publish-pypi` (so wheels exist) but *not*
   `publish-cargo` — if cargo publish fails, PyPI and the GitHub Release still go
   out.
 

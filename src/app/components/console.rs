@@ -6,6 +6,7 @@ use std::rc::Rc;
 use wasm_bindgen::JsCast;
 
 use crate::app::components::zoom::ZoomControls;
+use crate::app::models::RunStatus;
 use crate::app::models::*;
 
 #[component]
@@ -57,7 +58,7 @@ pub(crate) fn SingleConsoleView(
     exp_id: String,
     run_id: String,
     filename: String,
-    status: String,
+    status: RunStatus,
 ) -> impl IntoView {
     let (zoom_scale, set_zoom_scale) = signal(1.0);
     let (logs, set_logs) = signal(Vec::<String>::new());
@@ -142,12 +143,12 @@ pub(crate) fn SingleConsoleView(
             <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between bg-slate-900/30">
                 {
                     let connected = is_connected.get();
-                    if connected && status == "RUNNING" {
+                    if connected && status == RunStatus::Running {
                         view! {
                             <span class="text-slate-600">"Streaming Live"</span>
                             <span class="text-blue-500 animate-pulse">"●"</span>
                         }.into_any()
-                    } else if status == "FAILED" {
+                    } else if status == RunStatus::Failed {
                         view! {
                             <span class="text-slate-600">"Run Failed / Connection Closed"</span>
                             <span class="text-red-500">"●"</span>

@@ -1,7 +1,7 @@
 # expman-rs — Documentation
 
-*Last synced: 2026-07-27, against commit `384c540` (v0.5.3) plus an uncommitted
-TensorBoard integration in the working tree. Refresh with the `docs-sync` skill.*
+*Last synced: 2026-07-29, against v1.0.1 plus the projects/read-API and
+Tier 1+2 work in the working tree. Refresh with the `docs-sync` skill.*
 
 Entry point for all project documentation. Any LLM should be able to answer
 questions about this project from this folder alone.
@@ -11,17 +11,26 @@ questions about this project from this folder alone.
 A high-performance experiment manager for ML training runs, written in Rust.
 One crate (`expman`) ships three faces:
 
-- **`exp` CLI** — list/inspect/clean runs, export to CSV/JSON/TensorBoard,
-  import TensorBoard event files, and serve the dashboard.
+- **`exp` CLI** — list/inspect/clean/reap runs, manage projects (`exp project`),
+  run hyperparameter sweeps locally or as a SLURM array (`exp sweep`), export to
+  CSV/JSON/TensorBoard, import TensorBoard event files, and serve the dashboard
+  (optionally `--read-only`).
 - **Dashboard server** — axum HTTP API plus a Leptos/WASM single-page frontend
   compiled by trunk and embedded into the binary with `rust-embed`.
 - **Python extension** — PyO3 module published to PyPI as `expman-rs`
   (import name `expman`), including a `SummaryWriter` drop-in for
-  `torch.utils.tensorboard`.
+  `torch.utils.tensorboard`, and a dependency-free **read API**
+  (`load_runs`/`read_metrics`/`load_config`) so analysis scripts can treat
+  expman as the durable record rather than reading Parquet directly.
 
 The load-bearing claim is that `log_vector()` never blocks a training loop: it
 is a send on an unbounded channel to a background tokio task that batches writes
-into Parquet.
+into append-only Arrow IPC segments, compacted to Parquet when the run closes.
+
+Alongside the user's own metrics the engine samples **hardware utilisation**
+(GPU/CPU/RAM, via the vendors' own CLIs) and captures **provenance** (git commit,
+command, scheduler job ids) — the two things that make a run diagnosable and
+reproducible months later.
 
 ## Contents
 
@@ -39,6 +48,24 @@ into Parquet.
 | [reference/cli.md](reference/cli.md) | every subcommand and flag |
 | [reference/python-api.md](reference/python-api.md) | the `expman` Python surface |
 | [reference/module-map.md](reference/module-map.md) | file-by-file map with feature/cfg gates |
+
+## The hierarchy
+
+`project → experiment → run`, with runs optionally in a **group**.
+
+A group is the unit a distributed job or a sweep is reasoned about as: the N
+ranks of a DDP job, or the trials of `exp sweep`, share one. It is a field on the
+run, not a directory level, so nothing moves when one is created — and the
+dashboard rolls a group into a single expandable row. A run's project is resolved **through** its
+experiment (`experiment.yaml`'s `project:` field), so creating or reassigning a
+project never moves run data. Every write to that field works offline, without a
+server — which is what makes the layer usable from a cluster node.
+
+A project may instead be a **generated projection** of an authoritative source
+outside expman (`exp project sync`). Such a project carries only general
+information and experiment membership; it is regenerated on each sync, marked
+`generated: true`, and is read-only in the dashboard. See
+[reference/cli.md](reference/cli.md#exp-project-sync).
 
 ## Three names for one project
 
