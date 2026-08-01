@@ -43,6 +43,19 @@ build-docs: prep-dist
     cargo doc --no-deps --all-features
     @echo '<meta http-equiv="refresh" content="0; url=expman/index.html">' > target/doc/index.html
 
+# Serve Zola documentation site
+docs:
+    zola --root docs serve
+
+# Serve Zola documentation site (alias)
+serve-docs: docs
+
+# Build Zola documentation site
+build-zola-docs:
+    zola --root docs build
+
+
+
 # Build the CLI binary and copy it to the Python package (platform-aware)
 build-cli-for-py:
     mkdir -p wrappers/python/expman/bin

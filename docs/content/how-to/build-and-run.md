@@ -1,3 +1,9 @@
++++
+title = "Building and Running"
+description = "How to build components, run the CLI, dashboard, examples, and Nix packages."
+weight = 2
++++
+
 # How-to — build and run
 
 *Verified 2026-07-27. Prefer `just` recipes over raw cargo — several of them

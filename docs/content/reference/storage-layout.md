@@ -1,3 +1,9 @@
++++
+title = "Storage Layout Reference"
+description = "On-disk layout, data formats, YAML metadata schemas, and Parquet specs."
+weight = 4
++++
+
 # Reference — data model and on-disk layout
 
 *Hand-written from `src/core/models.rs` and `src/core/storage.rs`, 2026-07-27.*
@@ -63,7 +69,7 @@ enum MetricValue { Float(f64), Int(i64), Bool(bool), Text(String) }
 
 `From` impls for `f64, f32, i64, i32, usize, bool, String, &str`. **No
 `From<u64>`.** From Python, `Int`/`Bool` are effectively unreachable — see
-[../architecture.md](../architecture.md#python-bridge).
+[architecture](/architecture/#python-bridge).
 
 ### `VectorRow` (`models.rs:119-123`)
 

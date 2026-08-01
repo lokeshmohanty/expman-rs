@@ -1,3 +1,9 @@
++++
+title = "HTTP API Reference"
+description = "Complete route specification for expman-rs axum HTTP server."
+weight = 2
++++
+
 # Reference — HTTP API
 
 *Hand-written from `src/api/*.rs`, 2026-07-27. Authoritative over

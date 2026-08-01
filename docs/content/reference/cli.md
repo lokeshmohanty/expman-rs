@@ -1,3 +1,9 @@
++++
+title = "CLI Reference"
+description = "Every subcommand and flag of the exp CLI tool."
+weight = 1
++++
+
 # Reference — the `exp` CLI
 
 *Hand-written from `src/cli/mod.rs`, updated 2026-07-28.*
@@ -224,7 +230,7 @@ a `Scalar | Value` table from `run.yaml.scalars`, then every artifact as
 > The help text example (`cli/mod.rs:111`) shows
 > `experiments/my_exp/runs/20240101_120000` — the `runs/` segment is **spurious**
 > and does not match the real layout. See
-> [storage-layout.md](storage-layout.md).
+> [storage-layout](/reference/storage-layout/).
 
 ## `exp clean [EXPERIMENT]`
 

@@ -1,3 +1,9 @@
++++
+title = "Architecture"
+description = "Components, data flow, threading, and design rationale of expman-rs."
+weight = 1
++++
+
 # Architecture
 
 *Last verified 2026-07-27 against v0.5.3 + uncommitted TensorBoard work.*
@@ -204,7 +210,7 @@ Every escape hatch in the repo exists to route around that one branch:
 `EXPMAN_SKIP_FRONTEND_BUILD`, the `CARGO_DOC` placeholder path, `just prep-dist`,
 `include = ["dist/**/*"]` in `Cargo.toml`, `cargo publish --allow-dirty`, and CI
 downloading a `frontend-dist` artifact into `dist/` before every Rust job. See
-[how-to/release.md](how-to/release.md).
+[how-to/release](/how-to/release/).
 
 ## Python bridge
 
@@ -236,5 +242,5 @@ Rust panic aborts the whole Python process rather than raising.
 
 ## Related
 
-- Data model and on-disk layout: [reference/storage-layout.md](reference/storage-layout.md)
-- Why each of these choices was made, dated: [decisions.md](decisions.md)
+- Data model and on-disk layout: [reference/storage-layout](/reference/storage-layout/)
+- Why each of these choices was made, dated: [decisions](/decisions/)

@@ -1,3 +1,9 @@
++++
+title = "Python API Reference"
+description = "Complete reference for Experiment class, read API, and TensorBoard SummaryWriter compatibility layer."
+weight = 3
++++
+
 # Reference — Python API
 
 *Hand-written from `wrappers/python/expman/*.py` and
@@ -256,7 +262,7 @@ binary → stderr message and `return 1`.
 - **All write-path errors are swallowed** in the PyO3 layer. Lock poisoning and
   a closed engine both produce `Ok(())`. Only the getters raise.
 - **The GIL is never released.** See
-  [../architecture.md](../architecture.md#python-bridge).
+  [architecture](/architecture/#python-bridge).
 - **`panic = "abort"`** means a Rust panic aborts the whole Python process
   rather than raising a Python exception.
 - `abi3-py39` + `requires-python = ">=3.9"` means one wheel per platform covers

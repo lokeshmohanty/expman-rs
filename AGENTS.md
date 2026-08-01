@@ -1,7 +1,7 @@
 # expman-rs — Agent Index
 
 > Minimal index. `STATUS.md` is on demand, not by default: read it (or grep the section you need) only when the task turns on current state. Full documentation in
-> `docs/` (start at `docs/index.md`). Global harness rules: `~/.agents/AGENTS.md`.
+> `docs/content/` (start at `docs/content/_index.md`). Global harness rules: `~/.agents/AGENTS.md`.
 
 ## What this is
 
@@ -11,7 +11,7 @@ Leptos/WASM frontend, and a PyO3 Python extension whose `log_vector()` is a
 non-blocking channel send. Metrics land in per-run Parquet; metadata in YAML.
 Entry points: `src/main.rs` (CLI), `src/api/mod.rs` (server), `src/app/main.rs`
 (frontend), `src/wrappers/python/mod.rs` (PyO3). Everything is feature-gated —
-`default = []`; see `docs/architecture.md`.
+`default = []`; see `docs/content/architecture.md`.
 
 ## Map
 

@@ -18,6 +18,9 @@ result
 
 # Experiments & Data
 **/experiments/
+test_artifacts/
+test_experiments/
+test_results/
 *.parquet
 *.pt
 model.pt
@@ -37,3 +40,7 @@ notes.txt
 .agents/sessions/
 .gitnexus/
 graphify-out/
+
+# Zola output
+docs/public/
+

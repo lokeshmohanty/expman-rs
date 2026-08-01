@@ -1,3 +1,9 @@
++++
+title = "Module Map Reference"
+description = "File-by-file codebase map with feature gates and target architecture boundaries."
+weight = 5
++++
+
 # Reference — module map
 
 *Hand-written 2026-07-27. ~8,100 lines of Rust in `src/`.*
@@ -55,7 +61,7 @@ exists purely to inline `src/app/README.md` into rustdoc.
 |---|---|
 | `mod.rs` | router, CORS, `serve()`, graceful shutdown |
 | `state.rs` | `AppState` (base_dir, jupyter, tensorboard, shutdown token), `ServerConfig` |
-| `projects.rs` · `experiments.rs` · `runs.rs` · `metrics.rs` · `artifacts.rs` · `stats.rs` | handlers — see [http-api.md](http-api.md) |
+| `projects.rs` · `experiments.rs` · `runs.rs` · `metrics.rs` · `artifacts.rs` · `stats.rs` | handlers — see [http-api](/reference/http-api/) |
 | `frontend.rs` | `rust-embed` of `dist/`, SPA fallback |
 | `jupyter_service.rs` | 537 lines: backend detection, port scan 8888–9999, `.ipynb` generation, spawn/status/stop. Has unit tests at `:449-537`. |
 | `jupyter_handlers.rs` | per-run and `__multi__` handlers |
@@ -93,12 +99,12 @@ Frontend styling is **Tailwind from a CDN** hardcoded in `src/app/index.html:8`.
 ## `src/cli/` — `cli` feature
 
 Single `mod.rs`: clap definitions plus every subcommand implementation. See
-[cli.md](cli.md).
+[cli](/reference/cli/).
 
 ## `src/wrappers/` — `python` feature
 
 `mod.rs` re-gates `pub mod python`; `python/mod.rs` (298 lines) is the
-`#[pymodule]`. See [python-api.md](python-api.md).
+`#[pymodule]`. See [python-api](/reference/python-api/).
 
 ## Outside `src/`
 
@@ -110,7 +116,7 @@ Single `mod.rs`: clap definitions plus every subcommand implementation. See
 | `examples/python/` | `basic_training.py`, `singleton_usage.py`, `tensorboard_migration.py` |
 | `Justfile` | every build/test/lint/release command |
 | `flake.nix` | devShell + `packages.expman` + `packages.python3Packages.expman-rs` |
-| `.github/workflows/` | 11 workflows — see [../how-to/release.md](../how-to/release.md) |
+| `.github/workflows/` | 11 workflows — see [release](/how-to/release/) |
 | `dist/` | trunk output, gitignored but shipped in the crate via `include` |
 
 ## Stale in-tree docs

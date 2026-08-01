@@ -1,0 +1,20 @@
+# Zola configuration for expman-rs documentation
+base_url = "https://lokeshmohanty.github.io/expman-rs"
+title = "expman-rs"
+description = "High-performance ML experiment manager in Rust"
+theme = "reticle"
+compile_sass = true
+build_search_index = true
+generate_feeds = false
+
+[markdown]
+insert_anchor_links = "left"
+
+[markdown.highlighting]
+theme = "catppuccin-mocha"
+
+[extra]
+mode = "docs"
+github = "https://github.com/lokeshmohanty/expman-rs"
+edit_url = "https://github.com/lokeshmohanty/expman-rs/edit/main/docs/content"
+show_theme_toggle = true

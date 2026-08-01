@@ -1,3 +1,9 @@
++++
+title = "Cutting a Release"
+description = "Release procedure, workflow triggers, and release engineering traps."
+weight = 5
++++
+
 # How-to — cut a release
 
 *Verified 2026-07-27 against the 11 workflows in `.github/workflows/`.*
@@ -117,7 +123,7 @@ Still never hand-edit a version. Always `just bump`.
 ### 6. Never commit `wrappers/python/expman/bin/`
 
 13 MB, platform-specific, and it must stay untracked-but-not-gitignored so
-maturin still ships it. See [setup.md](setup.md).
+maturin still ships it. See [setup](/how-to/setup/).
 
 ### 7. `docs.yml` uses `force_orphan: true`
 

@@ -83,6 +83,7 @@
             pkgs.maturin
             pkgs.protobuf
             pkgs.cargo-nextest
+            pkgs.zola
           ];
 
           RUST_LOG = "debug";

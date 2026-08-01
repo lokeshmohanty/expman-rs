@@ -1,7 +1,13 @@
++++
+title = "expman-rs Documentation"
+description = "Official documentation for expman-rs — high-performance ML experiment manager in Rust."
+sort_by = "weight"
+template = "section.html"
++++
+
 # expman-rs — Documentation
 
-*Last synced: 2026-07-29, against v1.0.1 plus the projects/read-API and
-Tier 1+2 work in the working tree. Refresh with the `docs-sync` skill.*
+*Last synced: 2026-07-29, against v1.0.1 plus the projects/read-API work.*
 
 Entry point for all project documentation. Any LLM should be able to answer
 questions about this project from this folder alone.
@@ -36,18 +42,18 @@ reproducible months later.
 
 | page | what it answers |
 |---|---|
-| [architecture.md](architecture.md) | components, data flow, threading, and the *why* behind them |
-| [decisions.md](decisions.md) | dated log of significant decisions and their consequences |
-| [how-to/setup.md](how-to/setup.md) | get a working dev environment |
-| [how-to/build-and-run.md](how-to/build-and-run.md) | build the pieces, run the CLI/server/examples |
-| [how-to/test-and-lint.md](how-to/test-and-lint.md) | the test suites and what each covers |
-| [how-to/release.md](how-to/release.md) | cut a release; the traps that have bitten before |
-| [how-to/add-an-api-endpoint.md](how-to/add-an-api-endpoint.md) | end-to-end recipe, server through frontend |
-| [reference/storage-layout.md](reference/storage-layout.md) | on-disk format, data model, Parquet schema |
-| [reference/http-api.md](reference/http-api.md) | every route, request, and response |
-| [reference/cli.md](reference/cli.md) | every subcommand and flag |
-| [reference/python-api.md](reference/python-api.md) | the `expman` Python surface |
-| [reference/module-map.md](reference/module-map.md) | file-by-file map with feature/cfg gates |
+| [architecture](/architecture/) | components, data flow, threading, and the *why* behind them |
+| [decisions](/decisions/) | dated log of significant decisions and their consequences |
+| [how-to/setup](/how-to/setup/) | get a working dev environment |
+| [how-to/build-and-run](/how-to/build-and-run/) | build the pieces, run the CLI/server/examples |
+| [how-to/test-and-lint](/how-to/test-and-lint/) | the test suites and what each covers |
+| [how-to/release](/how-to/release/) | cut a release; the traps that have bitten before |
+| [how-to/add-an-api-endpoint](/how-to/add-an-api-endpoint/) | end-to-end recipe, server through frontend |
+| [reference/storage-layout](/reference/storage-layout/) | on-disk format, data model, Parquet schema |
+| [reference/http-api](/reference/http-api/) | every route, request, and response |
+| [reference/cli](/reference/cli/) | every subcommand and flag |
+| [reference/python-api](/reference/python-api/) | the `expman` Python surface |
+| [reference/module-map](/reference/module-map/) | file-by-file map with feature/cfg gates |
 
 ## The hierarchy
 
@@ -65,7 +71,7 @@ A project may instead be a **generated projection** of an authoritative source
 outside expman (`exp project sync`). Such a project carries only general
 information and experiment membership; it is regenerated on each sync, marked
 `generated: true`, and is read-only in the dashboard. See
-[reference/cli.md](reference/cli.md#exp-project-sync).
+[reference/cli](/reference/cli/#exp-project-sync).
 
 ## Three names for one project
 
@@ -92,3 +98,21 @@ Do not conflate them:
   `src/app/components/README.md` are rendered into rustdoc and are **stale** —
   `src/api/README.md` documents an `/api/events` endpoint that does not exist.
   Treat `reference/http-api.md` as authoritative over them.
+
+## Credits & Acknowledgments
+
+`expman-rs` stands on the shoulders of incredible tools, platforms, and AI assistants:
+
+- **AI Pair Programming**:
+  - **Antigravity** (Google DeepMind) & **Claude** (Anthropic) for agentic pair programming, codebase architecture, and refactoring assistance.
+- **Experiment Tracking & Ecosystem Inspiration**:
+  - **[TensorBoard](https://github.com/tensorflow/tensorboard)** — For the canonical `SummaryWriter` API design and event file interoperability.
+  - **[ClearML](https://clear.ml)** — For inspiration on unified experiment organization, tracking, and dashboard workflows.
+- **Frontend & Web Engine**:
+  - **[Reticle](https://github.com/lokeshmohanty/reticle)** — The instrument-reading design system and Zola theme powering the documentation site.
+  - **[Zola](https://www.getzola.org/)** — Fast static site generator powering the documentation.
+  - **[Leptos](https://leptos.dev)** & **[Axum](https://github.com/tokio-rs/axum)** — Powering the embedded WASM dashboard and high-throughput async server.
+- **Data & Serialization Core**:
+  - **[Apache Arrow & Parquet](https://arrow.apache.org/)** — Columnar IPC and analytical storage format.
+  - **[PyO3](https://pyo3.rs/)** — Seamless Rust bindings for Python.
+

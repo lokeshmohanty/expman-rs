@@ -1,3 +1,9 @@
++++
+title = "Decisions Log"
+description = "Append-only log of architectural decisions, choices, and consequences in expman-rs."
+weight = 2
++++
+
 # Decisions
 
 *Append-only log of significant decisions. Dates are the date the decision became

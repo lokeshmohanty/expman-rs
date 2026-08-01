@@ -1,3 +1,9 @@
++++
+title = "Development Setup"
+description = "Get a working development environment for expman-rs."
+weight = 1
++++
+
 # How-to — set up a dev environment
 
 *Verified 2026-07-27.*
@@ -81,5 +87,5 @@ It runs whitespace/EOF/yaml/toml checks, `cargo fmt --check`, `cargo clippy
 
 ## Next
 
-- [build-and-run.md](build-and-run.md) — the build graph and how to run things
-- [test-and-lint.md](test-and-lint.md) — what each suite covers
+- [build-and-run](/how-to/build-and-run/) — the build graph and how to run things
+- [test-and-lint](/how-to/test-and-lint/) — what each suite covers

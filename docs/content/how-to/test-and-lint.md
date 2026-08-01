@@ -1,3 +1,9 @@
++++
+title = "Testing and Linting"
+description = "Overview of Rust and Python test suites, linter commands, and CI gates."
+weight = 3
++++
+
 # How-to — test and lint
 
 *Verified 2026-07-27.*
@@ -18,7 +24,7 @@
 
 All Rust test commands use `--all-features`, which enables `server` and so
 triggers the `build.rs` trunk build. Set `EXPMAN_SKIP_FRONTEND_BUILD=1` if you
-already have a `dist/`. See [build-and-run.md](build-and-run.md).
+already have a `dist/`. See [build-and-run](/how-to/build-and-run/).
 
 `cli_test.rs` uses `assert_cmd::cargo::cargo_bin_cmd!("exp")`, which needs the
 `cli` feature — another reason the suite is always run with `--all-features`.
@@ -91,4 +97,4 @@ Two gaps worth knowing:
   matrix that does not exist; the job is always `ubuntu-latest`.
 
 And the big one: **a release does not wait for tests.** See
-[release.md](release.md).
+[release](/how-to/release/).

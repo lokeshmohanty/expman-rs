@@ -1,3 +1,9 @@
++++
+title = "Adding an API Endpoint"
+description = "End-to-end recipe for adding an HTTP route from axum handler down to Leptos component."
+weight = 4
++++
+
 # How-to — add an API endpoint end to end
 
 *Written 2026-07-27 by tracing how the TensorBoard integration was added.*
@@ -109,4 +115,4 @@ per route; the existing 7 tests are the template.
   directly at `http://localhost:{port}`, which is why the dashboard only works
   from the machine running the server. If you are adding a third such service,
   consider building the proxy route instead — see
-  [../decisions.md](../decisions.md).
+  [decisions](/decisions/).

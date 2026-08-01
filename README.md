@@ -209,3 +209,21 @@ experiments/
       run.log              # text log
       artifacts/           # user-saved files
 ```
+
+## Credits & Acknowledgments
+
+`expman-rs` stands on the shoulders of incredible tools, platforms, and AI assistants:
+
+- **AI Pair Programming**:
+  - **Antigravity** (Google DeepMind) & **Claude** (Anthropic) for agentic pair programming, codebase architecture, and refactoring assistance.
+- **Experiment Tracking & Ecosystem Inspiration**:
+  - **[TensorBoard](https://github.com/tensorflow/tensorboard)** — For the canonical `SummaryWriter` API design and event file interoperability.
+  - **[ClearML](https://clear.ml)** — For inspiration on unified experiment organization, tracking, and dashboard workflows.
+- **Frontend & Web Engine**:
+  - **[Reticle](https://github.com/lokeshmohanty/reticle)** — The instrument-reading design system and Zola theme powering the documentation site.
+  - **[Zola](https://www.getzola.org/)** — Fast static site generator powering the documentation.
+  - **[Leptos](https://leptos.dev)** & **[Axum](https://github.com/tokio-rs/axum)** — Powering the embedded WASM dashboard and high-throughput async server.
+- **Data & Serialization Core**:
+  - **[Apache Arrow & Parquet](https://arrow.apache.org/)** — Columnar IPC and analytical storage format.
+  - **[PyO3](https://pyo3.rs/)** — Seamless Rust bindings for Python.
+
