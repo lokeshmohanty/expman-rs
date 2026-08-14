@@ -310,16 +310,21 @@ impl Experiment {
     }
 
     /// Gracefully close the experiment.
+    ///
     /// Args:
-    ///     status: Optional status string ("FINISHED", "FAILED", "CRASHED")
+    ///     status: Terminal status ("FINISHED", "FAILED", "CRASHED"),
+    ///             case-insensitive. `None` means "FINISHED".
+    ///
+    /// Raises:
+    ///     ValueError: on anything else.
     #[pyo3(signature = (status=None))]
     fn close(&self, status: Option<String>) -> PyResult<()> {
-        let run_status = match status.as_deref() {
-            Some("FINISHED") => RunStatus::Finished,
-            Some("FAILED") => RunStatus::Failed,
-            Some("CRASHED") => RunStatus::Crashed,
-            _ => RunStatus::Finished,
-        };
+        // `Option<String>`, not `Option<&str>`: the borrowed form makes PyO3
+        // reach for its PyBytes/PyType_HasFeature extraction path, which drags
+        // symbols into the `--all-features` test binary that the
+        // extension-module build never links (undefined PyBytes_Size,
+        // PyType_GetFlags). Owning the string keeps `cargo test` linkable.
+        let run_status = parse_terminal_status(status.as_deref())?;
         if let Ok(mut guard) = self.engine.lock() {
             if let Some(engine) = guard.take() {
                 engine.close(run_status);
@@ -403,6 +408,29 @@ impl Experiment {
 }
 
 // ─── Type conversion helpers ──────────────────────────────────────────────────
+
+/// Parse the status a caller wants a run closed with.
+///
+/// `None` means `FINISHED` — that is what a bare `close()` has always meant.
+/// Anything unrecognised is an **error**, not a fallback: this crate's write
+/// path swallows failures by design, so a typo that quietly resolved to
+/// `FINISHED` would relabel a dead run as a successful one, and nothing
+/// downstream could tell. `RUNNING` is rejected for the same reason — closing
+/// is the act that makes a status terminal.
+fn parse_terminal_status(status: Option<&str>) -> PyResult<RunStatus> {
+    let Some(raw) = status else {
+        return Ok(RunStatus::Finished);
+    };
+    match raw.trim().to_ascii_uppercase().as_str() {
+        "FINISHED" => Ok(RunStatus::Finished),
+        "FAILED" => Ok(RunStatus::Failed),
+        "CRASHED" => Ok(RunStatus::Crashed),
+        _ => Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "invalid terminal run status {raw:?}; \
+             expected one of FINISHED, FAILED, CRASHED (case-insensitive)"
+        ))),
+    }
+}
 
 fn py_dict_to_map(dict: &Bound<'_, PyDict>) -> PyResult<HashMap<String, MetricValue>> {
     let mut map = HashMap::new();
@@ -711,3 +739,11 @@ fn expman_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }
+
+// No `#[cfg(test)] mod tests` here on purpose. Anything in this module that
+// touches PyO3 — including building a PyErr to assert on — forces the lib test
+// binary to link libpython, which the `extension-module` build deliberately
+// does not do, and `cargo test --all-features` fails with undefined
+// PyGILState_Ensure / PyTuple_Type. The cdylib is fine: Python resolves those
+// on load. `parse_terminal_status` is covered end to end from Python instead —
+// see wrappers/python/tests/test_run_status.py.

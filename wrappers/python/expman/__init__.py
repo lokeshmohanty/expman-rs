@@ -17,6 +17,14 @@ Context manager:
         exp.log_params({"lr": 0.001})
         for i in range(100):
             exp.log_vector({"loss": 1.0 - i * 0.01}, step=i)
+
+Terminal status:
+    A run that died is not a run that finished. `close()` still defaults to
+    FINISHED, but it takes an explicit terminal status, and a process exiting
+    because of an uncaught exception records FAILED without being asked:
+
+        expman.close(status="failed", reason="loss diverged")
+        expman.fail(reason="loss diverged")     # the same thing, spelled shorter
 """
 
 from __future__ import annotations
@@ -29,6 +37,10 @@ from typing import Any
 from .tensorboard import SummaryWriter
 
 _current_exp: Experiment | None = None
+
+# Statuses a run may be *closed* with. RUNNING is deliberately absent: closing
+# is the act that makes a status terminal, so closing to RUNNING is a bug.
+_TERMINAL_STATUSES = ("FINISHED", "FAILED", "CRASHED")
 
 
 class Tee:
@@ -59,6 +71,62 @@ except ImportError as e:
         "Build it with: just dev-py (or uv pip install -e .)\n"
         f"Original error: {e}"
     ) from e
+
+
+def _normalise_status(status: str | None) -> str:
+    """Canonicalise a caller-supplied terminal status, or raise.
+
+    Rejecting a typo matters more here than anywhere else in this package: the
+    write path swallows errors by design, so a status that quietly fell back to
+    FINISHED would turn a dead run into a good-looking one — the exact failure
+    this API exists to prevent.
+    """
+    if status is None:
+        return "FINISHED"
+    normalised = str(status).strip().upper()
+    if normalised not in _TERMINAL_STATUSES:
+        raise ValueError(
+            f"invalid terminal run status {status!r}; "
+            f"expected one of {', '.join(_TERMINAL_STATUSES)} (case-insensitive)"
+        )
+    return normalised
+
+
+def _interpreter_exception() -> BaseException | None:
+    """The uncaught exception the interpreter is dying from, or None.
+
+    CPython's `_PyErr_PrintEx` sets `sys.last_exc` (3.12+) and the legacy
+    `sys.last_value` (all versions) *before* it dispatches to `sys.excepthook`,
+    and `atexit` callbacks run after that during finalisation. So reading it
+    here is strictly more robust than chaining `sys.excepthook`:
+
+    * it does not depend on which excepthook is installed, nor on expman having
+      installed its own before some framework (IPython, absl, sentry) replaced
+      it — a race we would lose silently and never notice;
+    * it needs no second shutdown path. The existing atexit close stays the one
+      place a run is finalised; it merely learns to read the status.
+
+    The cost is that it is process-global state which can be *stale* — a REPL
+    keeps the last traceback around forever. `Experiment` handles that by
+    snapshotting the value at construction and only trusting a change.
+    """
+    exc = getattr(sys, "last_exc", None)  # Python 3.12+
+    if exc is None:
+        exc = getattr(sys, "last_value", None)  # Python <= 3.11
+    return exc if isinstance(exc, BaseException) else None
+
+
+def _describe_exception(exc: BaseException, limit: int = 400) -> str:
+    """One line: the exception type, its message, and where it was raised."""
+    text = f"{type(exc).__name__}: {exc}".strip().rstrip(":")
+    tb = exc.__traceback__
+    if tb is not None:
+        while tb.tb_next is not None:
+            tb = tb.tb_next
+        where = os.path.basename(tb.tb_frame.f_code.co_filename)
+        text += f" (at {where}:{tb.tb_lineno} in {tb.tb_frame.f_code.co_name})"
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 def _detect_rank() -> int | None:
@@ -295,7 +363,22 @@ class Experiment:
             except Exception as e:
                 print(f"Warning: Failed to redirect console output: {e}")
 
-        atexit.register(self.close)
+        # Whatever traceback the interpreter was already sitting on before this
+        # run existed — a stale one from an earlier REPL cell, say. Kept so the
+        # exit hook can tell "the same old exception" from "a new one", by
+        # identity rather than by value.
+        #
+        # A strong reference, because built-in exceptions are not weak-referenceable
+        # (`weakref.ref(ValueError())` raises TypeError), and an id() alone could be
+        # recycled by a later exception — which would read as "same as prior" and
+        # silently restore the FINISHED bug. It is almost always None: it is only
+        # non-None when the process already printed an uncaught traceback and kept
+        # going, in which case `sys.last_exc` is pinning that object anyway.
+        self._prior_exc = _interpreter_exception()
+
+        # The one shutdown path, unchanged in shape: still a single atexit
+        # callback, now one that decides the status instead of assuming it.
+        atexit.register(self._close_at_exit)
 
     def log_params(self, params: dict[str, Any]) -> None:
         """Log hyperparameters/configuration. Non-blocking."""
@@ -478,34 +561,86 @@ class Experiment:
         os.makedirs(tb_dir, exist_ok=True)
         return tb_dir
 
-    def close(self, status: str = "FINISHED") -> None:
+    def close(self, status: str = "FINISHED", reason: str | None = None) -> None:
         """
         Gracefully close the experiment.
         Flushes all pending metrics and writes final metadata.
         Called automatically via atexit and context manager __exit__.
 
         Args:
-            status: Final status of the run ("FINISHED", "FAILED", "CRASHED").
-                    Default: "FINISHED".
-        """
-        if not self._closed:
-            # Restore stdout/stderr
-            if self._old_stdout:
-                sys.stdout = self._old_stdout
-            if self._old_stderr:
-                sys.stderr = self._old_stderr
-            if self._console_file:
-                self._console_file.close()
+            status: Terminal status of the run — "FINISHED", "FAILED" or
+                    "CRASHED", case-insensitive. Default: "FINISHED", so every
+                    existing `close()` call site keeps its meaning.
+            reason: Optional one-line explanation, appended to the run's
+                    `run.log` (which the dashboard console renders). It does
+                    not go into `run.yaml`: that schema has no field for it,
+                    and `description` belongs to the user.
 
-            self._closed = True
-            self._exp.close(status=status)
+        Raises:
+            ValueError: if `status` is not a terminal status.
+        """
+        if self._closed:
+            return
+
+        normalised = _normalise_status(status)
+
+        # Before the shutdown command, not after: the engine drains its command
+        # queue in order and the shutdown handler flushes run.log, so a line
+        # sent here is on disk by the time close() returns.
+        if reason:
+            self._exp.warn(f"run {normalised}: {reason}")
+
+        # Restore stdout/stderr
+        if self._old_stdout:
+            sys.stdout = self._old_stdout
+        if self._old_stderr:
+            sys.stderr = self._old_stderr
+        if self._console_file:
+            self._console_file.close()
+
+        self._closed = True
+        self._exp.close(status=normalised)
+        # Nothing left for the exit hook to do, and dropping it lets this
+        # Experiment be collected instead of living in the atexit registry.
+        atexit.unregister(self._close_at_exit)
+
+    def fail(self, reason: str | None = None) -> None:
+        """Close this run as FAILED, optionally recording why.
+
+        Shorthand for `close(status="FAILED", reason=...)`, for the common
+        `except` block that wants to end the run honestly and re-raise.
+        """
+        self.close(status="FAILED", reason=reason)
+
+    def _close_at_exit(self) -> None:
+        """Close on interpreter shutdown, inferring the status.
+
+        Registered with `atexit` in place of `close` itself. A process that is
+        exiting because of an uncaught exception must not leave a FINISHED run
+        behind — that is indistinguishable from success to everything that
+        later reads the store.
+
+        FAILED rather than CRASHED: the run did reach its own shutdown and said
+        so. CRASHED stays reserved for runs that never got to speak — what
+        `exp reap` writes when a heartbeat goes stale after a SIGKILL or a dead
+        node. Nothing here duplicates that; a hard kill never runs atexit.
+        """
+        if self._closed:
+            return
+        exc = _interpreter_exception()
+        if exc is None or exc is self._prior_exc:
+            self.close()
+        else:
+            self.close(status="FAILED", reason=_describe_exception(exc))
 
     def __enter__(self) -> Experiment:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
-        status = "FAILED" if exc_type is not None else "FINISHED"
-        self.close(status=status)
+        if exc_val is not None:
+            self.close(status="FAILED", reason=_describe_exception(exc_val))
+        else:
+            self.close()
         return False
 
     def __repr__(self) -> str:
@@ -607,12 +742,41 @@ def warn(message: str) -> None:
         _current_exp.warn(message)
 
 
-def close() -> None:
-    """Flush and close the current global experiment."""
+def close(status: str = "FINISHED", reason: str | None = None) -> None:
+    """
+    Flush and close the current global experiment.
+
+    Args:
+        status: Terminal status — "FINISHED", "FAILED" or "CRASHED",
+                case-insensitive. Defaults to "FINISHED", so a bare `close()`
+                means exactly what it always did.
+        reason: Optional one-line explanation, appended to the run's `run.log`.
+
+    **A `try/finally: expman.close()` around a training loop records FINISHED
+    even when the body raised.** The automatic path cannot correct it: this
+    close already ran, marked the run terminal and unregistered the exit hook.
+    Close in the `except` branch instead, or use the context manager:
+
+        try:
+            train()
+        except BaseException as e:
+            expman.fail(reason=str(e))
+            raise
+        else:
+            expman.close()
+
+    `tests/test_run_status.py::test_a_finally_close_still_wins_and_says_finished`
+    pins this behaviour deliberately.
+    """
     global _current_exp
     if _current_exp:
-        _current_exp.close()
+        _current_exp.close(status=status, reason=reason)
         _current_exp = None
+
+
+def fail(reason: str | None = None) -> None:
+    """Close the current global experiment as FAILED, optionally recording why."""
+    close(status="FAILED", reason=reason)
 
 
 # ─── Read API ────────────────────────────────────────────────────────────────
@@ -824,6 +988,7 @@ __all__ = [
     "info",
     "warn",
     "close",
+    "fail",
     "load_runs",
     "read_metrics",
     "load_config",
