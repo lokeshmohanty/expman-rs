@@ -153,6 +153,16 @@ pub(crate) fn SingleConsoleView(
                             <span class="text-slate-600">"Run Failed / Connection Closed"</span>
                             <span class="text-red-500">"●"</span>
                         }.into_any()
+                    } else if status == RunStatus::Crashed {
+                        // A crashed run used to fall through to the "Completed"
+                        // arm below and show a green dot, which is the one
+                        // thing a dead run must never look like. Matches the
+                        // runs-table palette: red is "it failed and told us",
+                        // slate is "it never got to tell us".
+                        view! {
+                            <span class="text-slate-600">"Run Crashed / No Heartbeat"</span>
+                            <span class="text-slate-500">"●"</span>
+                        }.into_any()
                     } else {
                         view! {
                             <span class="text-slate-600">"Run Completed / Connection Closed"</span>
