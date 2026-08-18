@@ -233,6 +233,59 @@ async fn test_get_metrics() {
 }
 
 #[tokio::test]
+async fn test_artifact_content_types() {
+    let (_tmp, state) = setup_test_env();
+    let app = build_router(state.clone());
+
+    let artifact_dir = state
+        .base_dir
+        .join("test_exp")
+        .join("run1")
+        .join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+
+    // Every extension the artifacts panel is willing to render must come back
+    // with a matching content-type; anything else falls back to octet-stream.
+    let cases = [
+        ("frame.png", "image/png"),
+        ("photo.jpg", "image/jpeg"),
+        ("rollout.gif", "image/gif"),
+        ("shot.webp", "image/webp"),
+        ("plot.svg", "image/svg+xml"),
+        ("clip.mp4", "video/mp4"),
+        ("clip.webm", "video/webm"),
+        ("sample.mp3", "audio/mpeg"),
+        ("sample.wav", "audio/wav"),
+        ("sample.flac", "audio/flac"),
+        ("checkpoint.bin", "application/octet-stream"),
+    ];
+
+    for (name, expected) in cases {
+        std::fs::write(artifact_dir.join(name), b"fake").unwrap();
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/api/experiments/test_exp/runs/run1/artifacts/content?path={name}"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK, "{name}");
+        assert_eq!(
+            response.headers()[axum::http::header::CONTENT_TYPE],
+            expected,
+            "{name}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn test_projects_crud() {
     let (_tmp, state) = setup_test_env();
     let app = build_router(state.clone());

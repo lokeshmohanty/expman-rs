@@ -72,10 +72,21 @@ pub async fn get_artifact_content(
         return Json(serde_json::json!({"type": "parquet", "data": preview})).into_response();
     }
 
+    // Keep this in step with the extensions the artifacts panel renders inline
+    // (`src/app/components/artifacts.rs`) — anything it shows as media but the
+    // API serves as octet-stream displays unreliably in the browser.
     let content_type = match ext.as_str() {
-        "png" | "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
         "svg" => "image/svg+xml",
         "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        "ogg" => "video/ogg",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "flac" => "audio/flac",
         "json" => "application/json",
         "yaml" | "yml" => "text/yaml",
         "txt" | "log" => "text/plain",
