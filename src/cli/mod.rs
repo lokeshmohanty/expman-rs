@@ -871,6 +871,16 @@ pub fn cmd_reap(
     }
 
     for (entry, run_dir, mut meta, _) in stale {
+        // Compact BEFORE the status is written, not after. A hard-killed run
+        // never reached the engine's close path, so its metrics are still a
+        // heap of live `.arrow` segments that every read re-parses; marking it
+        // CRASHED without folding them leaves it slow forever. The order
+        // matters because this query only selects RUNNING runs: interrupted
+        // here, the run stays RUNNING and the next `reap` finishes the job,
+        // whereas marking first would strand it — terminal, uncompacted, and
+        // never selected again.
+        storage::compact_run(&run_dir);
+
         meta.status = crate::core::models::RunStatus::Crashed;
         // finished_at is when we last knew it alive, not when we noticed —
         // otherwise a run reaped a week late reports a week-long duration.

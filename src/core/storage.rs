@@ -13,6 +13,7 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::file::properties::WriterProperties;
 use serde_yaml;
+use tracing::error;
 
 use crate::core::error::Result;
 use crate::core::models::{
@@ -922,6 +923,27 @@ pub fn compact_metrics(run_dir: &Path, stem: &str) -> Result<()> {
         let _ = fs::remove_file(path);
     }
     Ok(())
+}
+
+/// Fold **every** metric family of a run into its Parquet files.
+///
+/// Compaction belongs to a run becoming *terminal*, not to the engine closing
+/// it. `exp reap` also ends a run, and for as long as this triple lived only in
+/// the engine's close path, a reaped run kept the live segment layout forever —
+/// hundreds of `.arrow` files that every later read re-parses. Measured on one
+/// store: 14 hard-killed runs holding 6589 orphaned segments, and reading one
+/// of them took 27s against 1.6s for the same run compacted.
+///
+/// Errors are logged per family and never propagated. A family that will not
+/// compact leaves the run slow, not lost — readers union segments with the
+/// Parquet either way — and every caller is in the middle of recording a
+/// terminal status, which matters more than the tidying.
+pub fn compact_run(run_dir: &Path) {
+    for stem in [VECTORS_STEM, SYSTEM_STEM, HISTOGRAM_STEM] {
+        if let Err(e) = compact_metrics(run_dir, stem) {
+            error!("Failed to compact {stem}: {e}");
+        }
+    }
 }
 
 /// Turn read-back JSON rows into `VectorRow`s so they can be re-serialized.

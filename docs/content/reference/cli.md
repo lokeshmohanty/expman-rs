@@ -347,6 +347,15 @@ direction, since such a run is only reaped once it is genuinely old.
 `finished_at` is set to the **last heartbeat**, not to when you noticed;
 otherwise a run reaped a week late would report a week-long duration.
 
+Reaping also **compacts** the run (`storage::compact_run`), folding its live
+`.arrow` segments into Parquet. A hard-killed run never reached the engine's
+close path, so without this it stayed terminal *and* slow — every later read
+re-parses the whole segment heap. Compaction runs **before** the status is
+written: this command only selects `RUNNING` runs, so an interrupted reap leaves
+the run `RUNNING` and the next one finishes the job, whereas marking first would
+strand it terminal and uncompacted forever. Compaction failures are logged, not
+fatal — the status still gets recorded.
+
 ## `exp inspect <RUN_DIR>`
 
 Prints run/experiment/status/started/duration, then `config.yaml` verbatim, then

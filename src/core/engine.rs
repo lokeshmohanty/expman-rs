@@ -392,15 +392,7 @@ async fn background_task(
                         let _ = vector_writer.finish();
                         let _ = system_writer.finish();
                         let _ = histogram_writer.finish();
-                        if let Err(e) = storage::compact_metrics(&run_dir, storage::VECTORS_STEM) {
-                            error!("Failed to compact vectors: {}", e);
-                        }
-                        if let Err(e) = storage::compact_metrics(&run_dir, storage::SYSTEM_STEM) {
-                            error!("Failed to compact system metrics: {}", e);
-                        }
-                        if let Err(e) = storage::compact_metrics(&run_dir, storage::HISTOGRAM_STEM) {
-                            error!("Failed to compact histograms: {}", e);
-                        }
+                        storage::compact_run(&run_dir);
 
                         // Update run metadata with final status and latest scalars
                         let finished_at = Utc::now();

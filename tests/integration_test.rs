@@ -881,3 +881,61 @@ fn cached_metadata_reads_see_writes() {
         "the memo must not serve a stale run.yaml"
     );
 }
+
+#[test]
+#[cfg(feature = "cli")]
+fn test_reap_compacts_the_run_it_marks_crashed() {
+    // A hard-killed run never reaches the engine's close path, so its metrics
+    // stay as live `.arrow` segments that every later read re-parses. Reaping
+    // used to rewrite only the status, leaving the run terminal AND slow — one
+    // real store accumulated 6589 orphaned segments across 14 such runs.
+    let tmp = TempDir::new().unwrap();
+    let engine = make_engine(&tmp, "reap_compacts");
+    let run_dir = engine.config().run_dir();
+
+    for step in 0..20u64 {
+        let mut row = HashMap::new();
+        row.insert("loss".to_string(), MetricValue::Float(step as f64));
+        engine.log_vector(row, Some(step));
+    }
+    tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(engine.flush())
+        .unwrap();
+
+    // Abandon it exactly as a SIGKILL would: no close, no compaction, and the
+    // metadata left saying RUNNING. `forget` is the point — dropping would run
+    // the orderly shutdown this test exists to bypass.
+    std::mem::forget(engine);
+
+    let segments = |dir: &std::path::Path| -> Vec<String> {
+        std::fs::read_dir(dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .filter(|n| n.ends_with(".arrow"))
+            .collect()
+    };
+    assert!(
+        !segments(&run_dir).is_empty(),
+        "the abandoned run should still hold live segments"
+    );
+    let before = expman::core::storage::read_run_vectors(&run_dir).unwrap();
+    assert_eq!(before.len(), 20);
+
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    expman::cli::cmd_reap(tmp.path().to_path_buf(), "0s", None, None, true).unwrap();
+
+    let meta = expman::core::storage::load_run_metadata(&run_dir).unwrap();
+    assert_eq!(meta.status, RunStatus::Crashed);
+    assert!(
+        segments(&run_dir).is_empty(),
+        "reap must fold the segments away, not just relabel the run: {:?}",
+        segments(&run_dir)
+    );
+    assert!(run_dir.join("vectors.parquet").exists());
+
+    // Compaction is a storage change, never a data change.
+    let after = expman::core::storage::read_run_vectors(&run_dir).unwrap();
+    assert_eq!(after.len(), 20, "compaction must not lose a row");
+}
