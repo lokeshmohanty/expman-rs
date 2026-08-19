@@ -34,6 +34,24 @@ into JSON string literals unescaped, so a run directory named with a `"` or `\`
 had always produced an unopenable `.ipynb`. Silent and pre-existing; surfaced
 only because the new code parses what it generates.
 
+**Two further fixes ride in 1.3.0**, both from the same JAX RL lab:
+
+- **Dotted experiment names are deep-linkable again.** The SPA fallback treated
+  any path containing a `.` as an asset request, so every experiment named after
+  a dm_control task — `/experiments/dmc-cartpole.swingup` — 404'd on reload or a
+  pasted link. `is_asset_request` (`api/frontend.rs:45`) now looks only at the
+  **last** path segment and only at a known extension (`ASSET_EXTENSIONS`). The
+  list is deliberately wider than what the bundle embeds: serving `index.html`
+  for a missing `.js` hands the browser HTML where it expected JavaScript, and
+  the syntax error then names the wrong file. `html` is excluded on purpose.
+  Residual, accepted: an experiment literally named `foo.json` would still 404.
+- **`exp reap` now compacts the run it marks CRASHED.** A hard-killed run never
+  reaches the engine's close path, so it kept its live `.arrow` segments
+  forever — terminal *and* slow, since every later read re-parses the heap. The
+  engine's compaction triple is extracted as `storage::compact_run`, and reap
+  calls it **before** writing the status, so an interrupted reap leaves the run
+  `RUNNING` for the next one to finish rather than stranding it uncompacted.
+
 **Multi-run notebooks stay on the built-in default** — no single run, so three of
 the five placeholders have nothing to bind to. Recorded as an open question in
 `docs/content/decisions.md`, not left to be discovered.

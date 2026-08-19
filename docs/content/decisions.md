@@ -782,6 +782,64 @@ escapes its whole snippet with the same helper, replacing a hand-rolled
 
 ---
 
+## 2026-08-19 — An asset is a known extension on the last segment, not any dot
+
+The SPA fallback used to read "the path contains a `.`, and does not end in
+`.html`" as "this is a request for a bundled file". That is wrong the moment a
+route carries a dot, and expman's own users name experiments after their
+environment: every dm_control task id is `domain.task`, so
+`/experiments/dmc-cartpole.swingup` was classified as an asset and answered with
+a 404. The dashboard could not be reloaded or deep-linked on the exact
+experiments it was being used for.
+
+`is_asset_request` now examines **only the last path segment**, and only accepts
+a suffix listed in `ASSET_EXTENSIONS`. A dot in a parent segment is part of a
+name, so `/experiments/dmc-cheetah.run/runs/latest` routes correctly too.
+
+Two asymmetries are deliberate:
+
+- **The list is wider than what the bundle embeds.** The two failure directions
+  are not equally bad. Answering a missing `.js` with `index.html` hands the
+  browser HTML where it expected JavaScript, and the resulting syntax error
+  names a file that was never served — a bug that hides its own cause. Answering
+  a missing route with a 404 costs a reload. So the list errs toward "asset".
+- **`html` is excluded.** Serving the shell to an HTML request is precisely what
+  SPA fallback is for, and it cannot mislead a parser.
+
+The classifier only ever decides *404 vs shell*: `Assets::get()` runs first, so
+anything genuinely in the bundle is served on its own merits regardless.
+
+**Accepted residual:** an experiment named exactly like a file — `foo.json`,
+`bar.css` — would still 404 its detail page. Fixing that properly means the
+server knowing the set of experiment names, which makes a static asset check
+into a store query on every request. Not worth it until someone hits it.
+
+## 2026-08-19 — Compaction belongs to a run going terminal, not to the engine
+
+Compacting the `.arrow` segments into Parquet lived only in the engine's close
+path. But the engine's close path is exactly what a hard-killed run never
+reaches, and `exp reap` — the command whose entire job is to finish such runs —
+only rewrote the status. A reaped run was therefore terminal *and* permanently
+slow: every later read re-parsed the whole segment heap. Measured on one store,
+14 hard-killed runs held 6589 orphaned segments, and reading one took 27s
+against 1.6s once compacted.
+
+The triple is now `storage::compact_run`, called from both the engine and
+`cmd_reap`.
+
+**Reap compacts before it writes the status, not after.** The ordering is the
+crash-safety argument: `cmd_reap` only selects `RUNNING` runs, so a reap
+interrupted mid-compaction leaves the run `RUNNING` and the next reap finishes
+the job. Marking first and compacting second would strand a run that was
+interrupted in between — terminal, uncompacted, and never selected again.
+
+Compaction errors are logged per metric family and never propagated: readers
+union segments with the Parquet either way, so a family that will not compact
+leaves the run slow rather than lost, and recording the terminal status matters
+more than the tidying.
+
+---
+
 ## Open questions
 
 *The four questions that stood here on 2026-07-27 — version single-sourcing,
