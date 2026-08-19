@@ -124,9 +124,17 @@ No multi-run variant exists, unlike Jupyter — see `STATUS.md`.
 
 ## Frontend fallback
 
-`GET /*` → `frontend::serve_frontend` (`frontend.rs:18`). Serves a `rust-embed`
+`GET /*` → `frontend::serve_frontend` (`frontend.rs:57`). Serves a `rust-embed`
 asset if the path matches, else falls back to `index.html` for anything that
-looks like an SPA route (heuristic: the path contains no `.`, `:44`), else 404.
+looks like an SPA route, else 404.
+
+The route/asset split is `is_asset_request` (`frontend.rs:45`): only the **last**
+path segment is examined, and only a suffix in `ASSET_EXTENSIONS` (`:36`) counts
+as an asset. A dot earlier in the path is part of a name, not an extension — so
+`/experiments/dmc-cartpole.swingup` and
+`/experiments/dmc-cheetah.run/runs/latest` are routes. `html` is excluded from
+the list on purpose. See [architecture](/architecture/) for why the list is
+wider than what the bundle embeds.
 
 ## Notes
 
