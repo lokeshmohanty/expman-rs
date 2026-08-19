@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CONVENTIONAL_TEMPLATE","DEFAULT_JUPYTER_COMMAND","NOTEBOOK_PLACEHOLDERS"],"fn":["detect_backend","generate_multi_run_notebook","generate_multi_run_notebook_content","generate_notebook","generate_notebook_content"],"struct":["JupyterCommand","JupyterInstance","JupyterManager","NotebookContext","NotebookTemplateConfig"]};

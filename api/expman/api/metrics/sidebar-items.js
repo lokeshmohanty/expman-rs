@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_config","get_metrics","stream_log","stream_vectors"],"struct":["LogQuery","MetricsQuery"]};

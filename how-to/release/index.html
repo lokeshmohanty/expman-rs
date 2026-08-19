@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+    <script>
+    (function(){var s='auto';try{s=localStorage.getItem('reticle-theme')||localStorage.getItem('ThemeColorScheme')||'auto'}catch(e){}
+    var t=s==='auto'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):s;
+    document.documentElement.setAttribute('data-theme',t);
+    document.documentElement.setAttribute('data-theme-setting',s);
+    document.documentElement.setAttribute('data-user-color-scheme',t)})();
+    </script>
+
+    
+    <title>Cutting a Release | expman-rs</title>
+
+    
+    
+    <meta name="description" content="Release procedure, workflow triggers, and release engineering traps.">
+    
+
+    
+    
+
+    
+    
+
+    
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+    
+    
+    <link rel="canonical" href="https://lokeshmohanty.github.io/expman-rs/how-to/release/">
+    <link rel="alternate" hreflang="en" href="https://lokeshmohanty.github.io/expman-rs/how-to/release/">
+    <link rel="alternate" hreflang="x-default" href="https://lokeshmohanty.github.io/expman-rs/how-to/release/">
+    
+
+    
+    <meta property="og:type" content="article">
+    
+    <meta property="og:url" content="https://lokeshmohanty.github.io/expman-rs/how-to/release/">
+    
+    
+    <meta property="og:title" content="Cutting a Release">
+    
+    
+    <meta property="og:description" content="Release procedure, workflow triggers, and release engineering traps.">
+    
+    
+    <meta property="og:site_name" content="expman-rs">
+    <meta property="og:locale" content="en">
+
+    
+    
+    
+    
+    
+    
+
+    
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <meta name="twitter:url" content="https://lokeshmohanty.github.io/expman-rs/how-to/release/">
+    
+    
+    <meta name="twitter:title" content="Cutting a Release">
+    
+    
+    <meta name="twitter:description" content="Release procedure, workflow triggers, and release engineering traps.">
+    
+    
+    
+
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "https://lokeshmohanty.github.io/expman-rs#website",
+                "url": "https://lokeshmohanty.github.io/expman-rs",
+                "name": "expman-rs",
+                "description": "High-performance ML experiment manager in Rust",
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "inLanguage": "en",
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": "https://lokeshmohanty.github.io/expman-rs?q={search_term_string}"
+                    },
+                    "query-input": "required name=search_term_string"
+                }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://zentinelproxy.io/#organization",
+                "name": "lokeshmohanty",
+                "url": "https://zentinelproxy.io",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://zentinelproxy.io/img/og-image.png",
+                    "width": 1200,
+                    "height": 630
+                }
+            },
+            {
+                "@type": "WebPage",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/how-to/release/#webpage",
+                "url": "https://lokeshmohanty.github.io/expman-rs/how-to/release/",
+                "name": "Cutting a Release",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs#website"
+                },
+                "description": "Release procedure, workflow triggers, and release engineering traps.",
+                "inLanguage": "en"
+                
+                
+            }
+            
+            ,{
+                "@type": "Article",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/how-to/release/#article",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs/how-to/release/#webpage"
+                },
+                "headline": "Cutting a Release",
+                
+                "description": "Release procedure, workflow triggers, and release engineering traps.",
+                
+                
+                
+                "author": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                
+                
+                "wordCount": 749,
+                
+                "inLanguage": "en"
+            }
+            
+        ]
+    }
+    </script>
+
+    
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "expman-rs",
+                "item": "https://lokeshmohanty.github.io/expman-rs"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "expman-rs Documentation",
+                "item": "https://lokeshmohanty.github.io/expman-rs/"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "How-To Guides",
+                "item": "https://lokeshmohanty.github.io/expman-rs/how-to/"
+            }
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Cutting a Release",
+                "item": "https://lokeshmohanty.github.io/expman-rs/how-to/release/"
+            }
+        ]
+    }
+    </script>
+    
+
+    
+    <link rel="stylesheet" href="https://lokeshmohanty.github.io/expman-rs/style.css">
+
+    
+    
+
+    
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/SpaceGrotesk-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/Nunito-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/CascadiaCode-Variable.woff2" as="font" type="font/woff2" crossorigin>
+
+    
+    
+    
+
+    
+    
+
+    
+    
+    
+    
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('reticle-theme') || localStorage.getItem('ThemeColorScheme') || 'auto';
+                var theme = stored === 'auto'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : stored;
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-theme-setting', stored);
+                document.documentElement.setAttribute('data-user-color-scheme', theme);
+            } catch(e) {}
+        })();
+    </script>
+    
+
+    
+</head>
+<body class="page-release">
+    
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    
+    
+
+    
+    
+        
+    
+
+    
+    <div class="layout layout--docs layout--fixed-header" data-mode="docs">
+        
+
+
+<aside id="sidebar" class="sidebar" role="complementary" aria-labelledby="sidebar-title">
+    
+    <div class="sidebar__resize-handle" aria-hidden="true" title="Drag to resize sidebar width"></div>
+
+    <div class="sidebar__header">
+        <span id="sidebar-title" class="sidebar__title">Table of contents</span>
+        <button class="sidebar__close" type="button" aria-label="Close sidebar" title="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18"/>
+                <path d="m6 6 12 12"/>
+            </svg>
+        </button>
+    </div>
+
+    <nav class="sidebar__content" aria-label="Documentation navigation">
+        <div class="toc">
+            
+            
+
+            
+            <div class="toc__section">
+                <ol class="toc__list toc__list--numbered" start="0">
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/architecture/" class="toc__link ">
+                            <span class="toc__number">0.</span>
+                            Architecture
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/decisions/" class="toc__link ">
+                            <span class="toc__number">1.</span>
+                            Decisions Log
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/print/" class="toc__link ">
+                            <span class="toc__number">2.</span>
+                            Print Version
+                        </a>
+                    </li>
+                    
+                    
+                </ol>
+            </div>
+
+            
+            
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/reference/" class="toc__section-title ">Reference</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/cli/" class="toc__link ">
+                            CLI Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/" class="toc__link ">
+                            HTTP API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/" class="toc__link ">
+                            Python API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/storage-layout/" class="toc__link ">
+                            Storage Layout Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/module-map/" class="toc__link ">
+                            Module Map Reference
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/how-to/" class="toc__section-title ">How-To Guides</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/setup/" class="toc__link ">
+                            Development Setup
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/" class="toc__link ">
+                            Building and Running
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/test-and-lint/" class="toc__link ">
+                            Testing and Linting
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/add-an-api-endpoint/" class="toc__link ">
+                            Adding an API Endpoint
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/release/" class="toc__link active">
+                            Cutting a Release
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            
+        </div>
+    </nav>
+
+    <div class="sidebar__footer">
+        
+        <div class="sidebar__actions-mobile">
+            
+            
+
+            
+            
+            <div class="sidebar__action">
+                <span class="sidebar__action-label">Theme</span>
+                
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            </div>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="sidebar__github" target="_blank" rel="noopener noreferrer" aria-label="View project on GitHub (opens in new tab)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+                <span>View on GitHub</span>
+            </a>
+            
+        </div>
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs/print?auto=true" class="print-button" target="_blank" rel="noopener" aria-label="Print all documentation pages (opens print dialog)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+            <span>Print all pages</span>
+        </a>
+    </div>
+</aside>
+
+
+
+
+        <div class="layout__main">
+            
+            
+
+
+
+
+<header class="header" role="banner">
+    <div class="header__left">
+        
+        
+        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar navigation" aria-expanded="true" aria-controls="sidebar" title="Toggle sidebar">
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--open" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--closed" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m14 9 3 3-3 3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+        <button class="toc-toggle toc-toggle--docs" type="button" aria-label="Open table of contents" aria-expanded="false" aria-controls="sidebar" title="Table of contents">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+
+        
+        
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs" class="header__logo" aria-label="expman-rs - Go to homepage">
+            
+            <span>expman-rs</span>
+        </a>
+    </div>
+
+    
+    <nav class="header__nav" role="navigation" aria-label="Main navigation">
+        
+    </nav>
+
+    
+    <div class="header__actions" role="group" aria-label="Site actions">
+        
+        
+        <button class="search-toggle" type="button" aria-label="Open search dialog" aria-keyshortcuts="/" aria-haspopup="dialog" title="Search (press /)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+            </svg>
+        </button>
+        
+
+        
+        <div class="header__actions-desktop">
+            
+            
+
+            
+            
+            
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs&#x2F;edit&#x2F;main&#x2F;docs&#x2F;content/how-to&#x2F;release.md" class="btn btn--icon btn--ghost" aria-label="Edit this page on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="Edit this page">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                    <path d="m15 5 4 4"/>
+                </svg>
+            </a>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="btn btn--icon btn--ghost" aria-label="View project on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+            </a>
+            
+        </div>
+    </div>
+</header>
+
+
+            
+
+            
+            
+            <div class="scroll-progress" aria-hidden="true">
+                <div class="scroll-progress__bar"></div>
+                <span class="scroll-progress__percent">0%</span>
+            </div>
+            
+
+            
+
+
+
+
+
+    
+
+
+
+<nav class="nav-buttons" aria-label="Page navigation">
+    
+    
+    <a href="https://lokeshmohanty.github.io/expman-rs/how-to/add-an-api-endpoint/" class="nav-button nav-button--prev" aria-label="Previous: Adding an API Endpoint">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span class="nav-button__label">
+            Adding an API Endpoint
+            <span class="nav-button__shortcut">←</span>
+        </span>
+    </a>
+    
+
+    
+    
+    <div class="nav-button nav-button--next disabled" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+        </svg>
+    </div>
+    
+</nav>
+
+
+
+
+            <div class="layout__content-area">
+                <main id="main-content" class="main-content" role="main" aria-label="Main content">
+                    
+
+
+<article class="article" itemscope itemtype="https://schema.org/Article" aria-labelledby="article-title">
+    
+    <header class="article__header article__header--docs">
+        <h1 id="article-title" itemprop="headline">Cutting a Release</h1>
+        
+        <p class="article__description" itemprop="description">Release procedure, workflow triggers, and release engineering traps.</p>
+        
+    </header>
+
+    <div class="article__content" itemprop="articleBody">
+        <h1 id="how-to-cut-a-release"><a class="zola-anchor" href="#how-to-cut-a-release" aria-label="Anchor link for: how-to-cut-a-release">🔗</a>How-to — cut a release</h1>
+<p><em>Verified 2026-07-27 against the 11 workflows in <code>.github/workflows/</code>.</em></p>
+<h2 id="the-procedure"><a class="zola-anchor" href="#the-procedure" aria-label="Anchor link for: the-procedure">🔗</a>The procedure</h2>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> bump patch</span><span style="color: #9399B2;font-style: italic;">      # or minor, or major</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">git</span><span style="color: #A6E3A1;"> push</span></span></code></pre>
+<p>That is the whole thing. <strong>The commit message is the release trigger.</strong></p>
+<p><code>just bump</code>:</p>
+<ol>
+<li>reads the current version from <code>Cargo.toml</code></li>
+<li>rewrites it <strong>there and nowhere else</strong> — <code>pyproject.toml</code> takes it via
+maturin's <code>dynamic = ["version"]</code>, and <code>flake.nix</code> reads it with
+<code>builtins.fromTOML</code></li>
+<li><code>cargo update -p expman</code> to refresh <code>Cargo.lock</code></li>
+<li>runs <code>just check-versions</code>, which fails if a literal has been reintroduced</li>
+<li>commits <code>Cargo.toml</code> + <code>Cargo.lock</code> as <code>release: bump version to X.Y.Z</code></li>
+</ol>
+<p>It does <strong>not</strong> tag and does <strong>not</strong> push. The tag <code>v&lt;version&gt;</code> is created later
+by the GitHub Release action.</p>
+<h2 id="what-fires-on-push"><a class="zola-anchor" href="#what-fires-on-push" aria-label="Anchor link for: what-fires-on-push">🔗</a>What fires on push</h2>
+<p><code>check-release.yml:26</code> regex-matches <code>github.event.head_commit.message</code> against:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="plain"><span class="giallo-l"><span>^release: bump version to (\d+\.\d+\.\d+)$</span></span></code></pre>
+<p>Because a bump commit touches <code>Cargo.toml</code> and <code>Cargo.lock</code>, <strong>four workflows
+fire simultaneously</strong>: <code>publish.yml</code> (no path filter), <code>nix.yml</code> (matches the
+changed paths), <code>docs.yml</code> (no path filter), and <code>ci.yml</code>.</p>
+<p><code>publish.yml</code> orchestrates: <code>check-release</code> → <code>build-assets</code> → <strong><code>rust</code> +
+<code>python</code></strong> → <code>publish-cargo</code> + <code>publish-pypi</code> in parallel → <code>github-release</code>.
+The <code>rust</code> and <code>python</code> jobs are the release gate: nothing publishes unless both
+pass.</p>
+<table><thead><tr><th>target</th><th>workflow</th><th>secret / environment</th></tr></thead><tbody>
+<tr><td>crates.io</td><td><code>publish-cargo.yml</code></td><td>env <code>CARGO</code>, <code>CARGO_REGISTRY_TOKEN</code></td></tr>
+<tr><td>PyPI</td><td><code>publish-pypi.yml</code> (3-OS matrix → <code>uv publish</code>)</td><td>env <code>PYPI</code>, <code>PYPI_API_TOKEN</code></td></tr>
+<tr><td>GitHub Releases</td><td><code>github-release.yml</code></td><td>—</td></tr>
+<tr><td>gh-pages (rustdoc)</td><td><code>docs.yml</code>, on <strong>every</strong> push to main</td><td>—</td></tr>
+<tr><td>Cachix</td><td><code>nix.yml</code></td><td><code>lokeshmohanty</code> cache</td></tr>
+</tbody></table>
+<h2 id="the-traps"><a class="zola-anchor" href="#the-traps" aria-label="Anchor link for: the-traps">🔗</a>The traps</h2>
+<h3 id="1-the-regex-is-exact-and-failure-is-silent"><a class="zola-anchor" href="#1-the-regex-is-exact-and-failure-is-silent" aria-label="Anchor link for: 1-the-regex-is-exact-and-failure-is-silent">🔗</a>1. The regex is exact and failure is silent</h3>
+<p>Anchored, single spaces, no <code>v</code> prefix, no trailing period, exactly three
+numeric components. A squash-merge that rewrites the subject, a merge commit, or
+any suffix yields <code>should_release=false</code> — <strong>the push succeeds, nothing
+publishes, and no job fails.</strong> There is no negative signal. If a release did not
+happen, check the commit subject first.</p>
+<p>Related: <code>head_commit.message</code> is only the <strong>last</strong> commit of the push. Pushing
+several commits where the bump is not last releases nothing.</p>
+<h3 id="2-releases-wait-for-tests-but-not-the-ones-in-ci-yml"><a class="zola-anchor" href="#2-releases-wait-for-tests-but-not-the-ones-in-ci-yml" aria-label="Anchor link for: 2-releases-wait-for-tests-but-not-the-ones-in-ci-yml">🔗</a>2. Releases wait for tests — but not the ones in <code>ci.yml</code></h3>
+<p>Fixed 2026-07-28. <code>publish.yml</code> calls <code>rust.yml</code> and <code>python.yml</code> itself, and
+both publish jobs <code>need</code> them, so a failing test blocks publication.</p>
+<p>The subtlety worth keeping in mind: the <code>ci.yml</code> run you see on the same commit
+is <strong>still</strong> a separate workflow and still gates nothing. The gate is the <code>rust</code>
+and <code>python</code> jobs <em>inside</em> the publish run. A release commit therefore runs the
+suite twice, in parallel. Run <code>just ci</code> locally anyway — it is faster than
+discovering it in CI.</p>
+<h3 id="3-two-workflows-race-to-create-the-same-github-release"><a class="zola-anchor" href="#3-two-workflows-race-to-create-the-same-github-release" aria-label="Anchor link for: 3-two-workflows-race-to-create-the-same-github-release">🔗</a>3. Two workflows race to create the same GitHub Release</h3>
+<p>Both <code>publish.yml:33-42</code> (with <code>artifact-pattern: wheels-*</code>) and <code>nix.yml:55-63</code>
+(with <code>artifact-pattern: nix-build-results</code>) invoke <code>github-release.yml</code> for the
+same tag. <code>softprops/action-gh-release</code> creates-or-updates, so whichever
+finishes second updates the release — <strong>the final asset set depends on race
+ordering</strong>, and release notes may be regenerated twice. This is the likely cause
+of any "the release is missing the wheels" or "missing the nix binary"
+flakiness.</p>
+<h3 id="4-the-dist-allow-dirty-knot"><a class="zola-anchor" href="#4-the-dist-allow-dirty-knot" aria-label="Anchor link for: 4-the-dist-allow-dirty-knot">🔗</a>4. The <code>dist/</code> + <code>--allow-dirty</code> knot</h3>
+<p>Read commits <code>49c24ca</code> and <code>d423ff8</code> together:</p>
+<ul>
+<li><code>dist/</code> is gitignored, so <code>cargo package</code> was omitting the built frontend, and
+consumers building with <code>--features server</code> hit <code>build.rs</code>'s <code>exit(1)</code>.
+Fix: <code>Cargo.toml</code> gained <code>include = [... "dist/**/*"]</code>.</li>
+<li>That made things worse for CI: it downloads <code>frontend-dist</code> into <code>dist/</code>,
+which is now both gitignored <em>and</em> in Cargo's <code>include</code>, and cargo refuses to
+package files it will ship but that are not committed. Fix:
+<code>publish-cargo.yml:29</code> gained <strong><code>--allow-dirty</code></strong>.</li>
+<li>The same commit added a <code>CARGO_DOC</code> branch to <code>build.rs</code> (<code>:12</code>, <code>:30-40</code>)
+writing placeholder <code>dist/</code> assets instead of <code>exit(1)</code>, which is what
+unblocked <code>docs.yml</code>.</li>
+</ul>
+<p>If you touch <code>Cargo.toml</code>'s <code>include</code>, <code>build.rs</code>, or <code>publish-cargo.yml</code>,
+re-read all three together.</p>
+<h3 id="5-the-version-lives-in-exactly-one-place"><a class="zola-anchor" href="#5-the-version-lives-in-exactly-one-place" aria-label="Anchor link for: 5-the-version-lives-in-exactly-one-place">🔗</a>5. The version lives in exactly one place</h3>
+<p>Fixed 2026-07-28. <code>Cargo.toml</code> is the source; <code>pyproject.toml</code> is
+<code>dynamic = ["version"]</code> and <code>flake.nix</code> reads <code>builtins.fromTOML ./Cargo.toml</code>.
+<code>just check-versions</code> asserts no literal has crept back and runs in CI's lint
+job.</p>
+<p>Why it mattered: Python's <code>__version__</code> comes from <code>CARGO_PKG_VERSION</code>, not
+<code>pyproject.toml</code>, so a desync shipped a wheel whose metadata disagreed with
+<code>expman.__version__</code> — a discrepancy nothing would have caught.</p>
+<p>Still never hand-edit a version. Always <code>just bump</code>.</p>
+<h3 id="6-never-commit-wrappers-python-expman-bin"><a class="zola-anchor" href="#6-never-commit-wrappers-python-expman-bin" aria-label="Anchor link for: 6-never-commit-wrappers-python-expman-bin">🔗</a>6. Never commit <code>wrappers/python/expman/bin/</code></h3>
+<p>13 MB, platform-specific, and it must stay untracked-but-not-gitignored so
+maturin still ships it. See <a href="/how-to/setup/">setup</a>.</p>
+<h3 id="7-docs-yml-uses-force-orphan-true"><a class="zola-anchor" href="#7-docs-yml-uses-force-orphan-true" aria-label="Anchor link for: 7-docs-yml-uses-force-orphan-true">🔗</a>7. <code>docs.yml</code> uses <code>force_orphan: true</code></h3>
+<p>Every push to main rewrites gh-pages history from scratch (<code>docs.yml:33</code>).</p>
+<h2 id="pre-flight-checklist"><a class="zola-anchor" href="#pre-flight-checklist" aria-label="Anchor link for: pre-flight-checklist">🔗</a>Pre-flight checklist</h2>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> ci</span><span style="color: #9399B2;font-style: italic;">                      # nothing else gates this</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">git</span><span style="color: #A6E3A1;"> status</span><span style="color: #9399B2;font-style: italic;">                   # bin/ untracked? debris staged?</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">git</span><span style="color: #A6E3A1;"> log --oneline -1</span><span style="color: #9399B2;font-style: italic;">         # will the bump commit be LAST on the push?</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> bump patch</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">git</span><span style="color: #A6E3A1;"> push</span></span></code></pre>
+<p>Then watch: <code>publish.yml</code>, <code>nix.yml</code>, <code>docs.yml</code>, <code>ci.yml</code> all running; the
+release at <code>v&lt;version&gt;</code> should end up with both the wheels and the nix results
+attached.</p>
+
+    </div>
+
+    
+    
+    
+</article>
+
+
+
+<nav class="page-nav" aria-label="Page navigation">
+    
+
+    
+</nav>
+
+
+
+                </main>
+
+                
+                
+                
+
+
+
+
+<aside id="page-toc-panel" class="page-toc-panel" aria-hidden="true" aria-label="On this page">
+    <div class="page-toc-panel__content">
+        <div class="page-toc-panel__header">
+            <span class="page-toc-panel__title">On this page</span>
+            <button class="page-toc-panel__close" type="button" aria-label="Close table of contents">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+        <nav class="page-toc-panel__nav" aria-label="Page sections">
+            <ul class="page-toc-panel__list">
+                
+                <li class="page-toc-panel__item">
+                    <a href="#how-to-cut-a-release" class="page-toc-panel__link">
+                        How-to — cut a release
+                    </a>
+                    
+                    <ul class="page-toc-panel__list page-toc-panel__list--nested">
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#the-procedure" class="page-toc-panel__link">
+                                The procedure
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#what-fires-on-push" class="page-toc-panel__link">
+                                What fires on push
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#the-traps" class="page-toc-panel__link">
+                                The traps
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#pre-flight-checklist" class="page-toc-panel__link">
+                                Pre-flight checklist
+                            </a>
+                        </li>
+                        
+                    </ul>
+                    
+                </li>
+                
+            </ul>
+        </nav>
+    </div>
+</aside>
+
+
+                
+            </div>
+
+            
+            
+            
+        </div>
+    </div>
+
+    
+    <div class="sidebar-overlay" aria-hidden="true"></div>
+
+    
+    
+    
+<div class="search-overlay" role="dialog" aria-modal="true" aria-labelledby="search-title" aria-describedby="search-description">
+    <div class="search">
+        <h2 id="search-title" class="sr-only">Search documentation</h2>
+        <p id="search-description" class="sr-only">Type to search. Use arrow keys to navigate results, Enter to select, Escape to close.</p>
+
+        <div class="search__input-wrapper">
+            <span class="search__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                </svg>
+            </span>
+            <input
+                type="search"
+                class="search__input"
+                placeholder="Search documentation..."
+                autocomplete="off"
+                autofocus
+                aria-label="Search query"
+                aria-controls="search-results"
+                aria-autocomplete="list"
+            >
+            <span class="search__shortcut" aria-hidden="true">/</span>
+            <button class="search__close" type="button" aria-label="Close search dialog" title="Close (Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div id="search-results" class="search__results" role="listbox" aria-label="Search results">
+            
+        </div>
+
+        <footer class="search__footer">
+            <nav class="search__hints" aria-label="Keyboard shortcuts">
+                <span class="search__hint">
+                    <kbd aria-label="Up and down arrows">↑</kbd><kbd aria-hidden="true">↓</kbd> <span>Navigate</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Enter">↵</kbd> <span>Select</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Escape">esc</kbd> <span>Close</span>
+                </span>
+            </nav>
+            <span class="search__powered-by">Powered by <a href="https://github.com/weixsong/elasticlunr.js" target="_blank" rel="noopener noreferrer" aria-label="elasticlunr.js on GitHub (opens in new tab)">elasticlunr</a></span>
+        </footer>
+    </div>
+</div>
+
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    
+    <button class="page-toc-toggle" type="button" aria-label="Toggle table of contents" aria-expanded="false" aria-controls="page-toc-panel" title="On this page">
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--list" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 5H3"/>
+            <path d="M16 12H3"/>
+            <path d="M16 19H3"/>
+            <path d="M21 5h.01"/>
+            <path d="M21 12h.01"/>
+            <path d="M21 19h.01"/>
+        </svg>
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--close" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    <button class="fab scroll-to-top" aria-label="Scroll to top" title="Scroll to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m18 15-6-6-6 6"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/theme.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/navigation.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/code.js" defer></script>
+
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/elasticlunr.min.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/search_index.en.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/search.js" defer></script>
+    
+    
+
+    
+</body>
+</html>

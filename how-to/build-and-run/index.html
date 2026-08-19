@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+    <script>
+    (function(){var s='auto';try{s=localStorage.getItem('reticle-theme')||localStorage.getItem('ThemeColorScheme')||'auto'}catch(e){}
+    var t=s==='auto'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):s;
+    document.documentElement.setAttribute('data-theme',t);
+    document.documentElement.setAttribute('data-theme-setting',s);
+    document.documentElement.setAttribute('data-user-color-scheme',t)})();
+    </script>
+
+    
+    <title>Building and Running | expman-rs</title>
+
+    
+    
+    <meta name="description" content="How to build components, run the CLI, dashboard, examples, and Nix packages.">
+    
+
+    
+    
+
+    
+    
+
+    
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+    
+    
+    <link rel="canonical" href="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/">
+    <link rel="alternate" hreflang="en" href="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/">
+    <link rel="alternate" hreflang="x-default" href="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/">
+    
+
+    
+    <meta property="og:type" content="article">
+    
+    <meta property="og:url" content="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/">
+    
+    
+    <meta property="og:title" content="Building and Running">
+    
+    
+    <meta property="og:description" content="How to build components, run the CLI, dashboard, examples, and Nix packages.">
+    
+    
+    <meta property="og:site_name" content="expman-rs">
+    <meta property="og:locale" content="en">
+
+    
+    
+    
+    
+    
+    
+
+    
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <meta name="twitter:url" content="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/">
+    
+    
+    <meta name="twitter:title" content="Building and Running">
+    
+    
+    <meta name="twitter:description" content="How to build components, run the CLI, dashboard, examples, and Nix packages.">
+    
+    
+    
+
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "https://lokeshmohanty.github.io/expman-rs#website",
+                "url": "https://lokeshmohanty.github.io/expman-rs",
+                "name": "expman-rs",
+                "description": "High-performance ML experiment manager in Rust",
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "inLanguage": "en",
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": "https://lokeshmohanty.github.io/expman-rs?q={search_term_string}"
+                    },
+                    "query-input": "required name=search_term_string"
+                }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://zentinelproxy.io/#organization",
+                "name": "lokeshmohanty",
+                "url": "https://zentinelproxy.io",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://zentinelproxy.io/img/og-image.png",
+                    "width": 1200,
+                    "height": 630
+                }
+            },
+            {
+                "@type": "WebPage",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/#webpage",
+                "url": "https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/",
+                "name": "Building and Running",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs#website"
+                },
+                "description": "How to build components, run the CLI, dashboard, examples, and Nix packages.",
+                "inLanguage": "en"
+                
+                
+            }
+            
+            ,{
+                "@type": "Article",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/#article",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/#webpage"
+                },
+                "headline": "Building and Running",
+                
+                "description": "How to build components, run the CLI, dashboard, examples, and Nix packages.",
+                
+                
+                
+                "author": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                
+                
+                "wordCount": 1043,
+                
+                "inLanguage": "en"
+            }
+            
+        ]
+    }
+    </script>
+
+    
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "expman-rs",
+                "item": "https://lokeshmohanty.github.io/expman-rs"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "expman-rs Documentation",
+                "item": "https://lokeshmohanty.github.io/expman-rs/"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "How-To Guides",
+                "item": "https://lokeshmohanty.github.io/expman-rs/how-to/"
+            }
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Building and Running",
+                "item": "https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/"
+            }
+        ]
+    }
+    </script>
+    
+
+    
+    <link rel="stylesheet" href="https://lokeshmohanty.github.io/expman-rs/style.css">
+
+    
+    
+
+    
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/SpaceGrotesk-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/Nunito-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/CascadiaCode-Variable.woff2" as="font" type="font/woff2" crossorigin>
+
+    
+    
+    
+
+    
+    
+
+    
+    
+    
+    
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('reticle-theme') || localStorage.getItem('ThemeColorScheme') || 'auto';
+                var theme = stored === 'auto'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : stored;
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-theme-setting', stored);
+                document.documentElement.setAttribute('data-user-color-scheme', theme);
+            } catch(e) {}
+        })();
+    </script>
+    
+
+    
+</head>
+<body class="page-build-and-run">
+    
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    
+    
+
+    
+    
+        
+    
+
+    
+    <div class="layout layout--docs layout--fixed-header" data-mode="docs">
+        
+
+
+<aside id="sidebar" class="sidebar" role="complementary" aria-labelledby="sidebar-title">
+    
+    <div class="sidebar__resize-handle" aria-hidden="true" title="Drag to resize sidebar width"></div>
+
+    <div class="sidebar__header">
+        <span id="sidebar-title" class="sidebar__title">Table of contents</span>
+        <button class="sidebar__close" type="button" aria-label="Close sidebar" title="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18"/>
+                <path d="m6 6 12 12"/>
+            </svg>
+        </button>
+    </div>
+
+    <nav class="sidebar__content" aria-label="Documentation navigation">
+        <div class="toc">
+            
+            
+
+            
+            <div class="toc__section">
+                <ol class="toc__list toc__list--numbered" start="0">
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/architecture/" class="toc__link ">
+                            <span class="toc__number">0.</span>
+                            Architecture
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/decisions/" class="toc__link ">
+                            <span class="toc__number">1.</span>
+                            Decisions Log
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/print/" class="toc__link ">
+                            <span class="toc__number">2.</span>
+                            Print Version
+                        </a>
+                    </li>
+                    
+                    
+                </ol>
+            </div>
+
+            
+            
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/reference/" class="toc__section-title ">Reference</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/cli/" class="toc__link ">
+                            CLI Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/" class="toc__link ">
+                            HTTP API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/" class="toc__link ">
+                            Python API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/storage-layout/" class="toc__link ">
+                            Storage Layout Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/module-map/" class="toc__link ">
+                            Module Map Reference
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/how-to/" class="toc__section-title ">How-To Guides</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/setup/" class="toc__link ">
+                            Development Setup
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/" class="toc__link active">
+                            Building and Running
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/test-and-lint/" class="toc__link ">
+                            Testing and Linting
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/add-an-api-endpoint/" class="toc__link ">
+                            Adding an API Endpoint
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/release/" class="toc__link ">
+                            Cutting a Release
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            
+        </div>
+    </nav>
+
+    <div class="sidebar__footer">
+        
+        <div class="sidebar__actions-mobile">
+            
+            
+
+            
+            
+            <div class="sidebar__action">
+                <span class="sidebar__action-label">Theme</span>
+                
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            </div>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="sidebar__github" target="_blank" rel="noopener noreferrer" aria-label="View project on GitHub (opens in new tab)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+                <span>View on GitHub</span>
+            </a>
+            
+        </div>
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs/print?auto=true" class="print-button" target="_blank" rel="noopener" aria-label="Print all documentation pages (opens print dialog)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+            <span>Print all pages</span>
+        </a>
+    </div>
+</aside>
+
+
+
+
+        <div class="layout__main">
+            
+            
+
+
+
+
+<header class="header" role="banner">
+    <div class="header__left">
+        
+        
+        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar navigation" aria-expanded="true" aria-controls="sidebar" title="Toggle sidebar">
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--open" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--closed" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m14 9 3 3-3 3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+        <button class="toc-toggle toc-toggle--docs" type="button" aria-label="Open table of contents" aria-expanded="false" aria-controls="sidebar" title="Table of contents">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+
+        
+        
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs" class="header__logo" aria-label="expman-rs - Go to homepage">
+            
+            <span>expman-rs</span>
+        </a>
+    </div>
+
+    
+    <nav class="header__nav" role="navigation" aria-label="Main navigation">
+        
+    </nav>
+
+    
+    <div class="header__actions" role="group" aria-label="Site actions">
+        
+        
+        <button class="search-toggle" type="button" aria-label="Open search dialog" aria-keyshortcuts="/" aria-haspopup="dialog" title="Search (press /)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+            </svg>
+        </button>
+        
+
+        
+        <div class="header__actions-desktop">
+            
+            
+
+            
+            
+            
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs&#x2F;edit&#x2F;main&#x2F;docs&#x2F;content/how-to&#x2F;build-and-run.md" class="btn btn--icon btn--ghost" aria-label="Edit this page on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="Edit this page">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                    <path d="m15 5 4 4"/>
+                </svg>
+            </a>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="btn btn--icon btn--ghost" aria-label="View project on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+            </a>
+            
+        </div>
+    </div>
+</header>
+
+
+            
+
+            
+            
+            <div class="scroll-progress" aria-hidden="true">
+                <div class="scroll-progress__bar"></div>
+                <span class="scroll-progress__percent">0%</span>
+            </div>
+            
+
+            
+
+
+
+
+
+    
+
+
+    
+
+
+<nav class="nav-buttons" aria-label="Page navigation">
+    
+    
+    <a href="https://lokeshmohanty.github.io/expman-rs/how-to/setup/" class="nav-button nav-button--prev" aria-label="Previous: Development Setup">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span class="nav-button__label">
+            Development Setup
+            <span class="nav-button__shortcut">←</span>
+        </span>
+    </a>
+    
+
+    
+    
+    <a href="https://lokeshmohanty.github.io/expman-rs/how-to/test-and-lint/" class="nav-button nav-button--next" aria-label="Next: Testing and Linting">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+        </svg>
+        <span class="nav-button__label">
+            Testing and Linting
+            <span class="nav-button__shortcut">→</span>
+        </span>
+    </a>
+    
+</nav>
+
+
+
+
+            <div class="layout__content-area">
+                <main id="main-content" class="main-content" role="main" aria-label="Main content">
+                    
+
+
+<article class="article" itemscope itemtype="https://schema.org/Article" aria-labelledby="article-title">
+    
+    <header class="article__header article__header--docs">
+        <h1 id="article-title" itemprop="headline">Building and Running</h1>
+        
+        <p class="article__description" itemprop="description">How to build components, run the CLI, dashboard, examples, and Nix packages.</p>
+        
+    </header>
+
+    <div class="article__content" itemprop="articleBody">
+        <h1 id="how-to-build-and-run"><a class="zola-anchor" href="#how-to-build-and-run" aria-label="Anchor link for: how-to-build-and-run">🔗</a>How-to — build and run</h1>
+<p><em>Verified 2026-07-27. Prefer <code>just</code> recipes over raw cargo — several of them
+exist specifically to route around <code>build.rs</code>.</em></p>
+<h2 id="the-one-thing-to-understand-first-build-rs"><a class="zola-anchor" href="#the-one-thing-to-understand-first-build-rs" aria-label="Anchor link for: the-one-thing-to-understand-first-build-rs">🔗</a>The one thing to understand first: <code>build.rs</code></h2>
+<p>When the <code>server</code> feature is enabled and the target is not wasm32, <code>build.rs</code>
+shells out to <code>trunk build --release</code> to produce <code>dist/</code>. On failure it falls
+back to an existing <code>dist/index.html</code>, writes placeholder assets during
+<code>CARGO_DOC</code>, and otherwise <strong>hard-exits(1)</strong> (<code>build.rs:44</code>).</p>
+<p>So <code>cargo build --all-features</code> on a clean checkout without <code>trunk</code> on PATH
+fails at build-script time with an error that does not obviously say "install
+trunk".</p>
+<p>Two escape hatches:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #CBA6F7;">export</span><span> EXPMAN_SKIP_FRONTEND_BUILD</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">1</span><span style="color: #9399B2;font-style: italic;">   # skip trunk; asserts dist/index.html exists</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> prep-dist</span><span style="color: #9399B2;font-style: italic;">                         # mkdir -p dist &amp;&amp; touch dist/index.html</span></span></code></pre>
+<p>CI uses both: every Rust job downloads a prebuilt <code>frontend-dist</code> artifact into
+<code>dist/</code> and sets <code>EXPMAN_SKIP_FRONTEND_BUILD=1</code>.</p>
+<p><code>build.rs</code> reruns on changes to <code>src/app</code>, <code>Trunk.toml</code>, and <code>Cargo.toml</code>, and
+builds with <code>CARGO_TARGET_DIR=target/wasm_build</code> with <code>MAKEFLAGS</code> stripped (a
+recursive-cargo guard).</p>
+<h2 id="common-commands"><a class="zola-anchor" href="#common-commands" aria-label="Anchor link for: common-commands">🔗</a>Common commands</h2>
+<table><thead><tr><th>command</th><th>what</th></tr></thead><tbody>
+<tr><td><code>just build</code></td><td>frontend + python extension + <code>cargo build --all-features</code></td></tr>
+<tr><td><code>just build-release</code></td><td>same, release profile</td></tr>
+<tr><td><code>just build-frontend</code></td><td><code>trunk build --release</code> → <code>dist/</code></td></tr>
+<tr><td><code>just build-py</code></td><td>build the CLI, copy it into the package, <code>maturin develop --release</code></td></tr>
+<tr><td><code>just dev-py</code></td><td>same but debug — the normal Python dev loop</td></tr>
+<tr><td><code>just build-docs</code></td><td><code>cargo doc --no-deps --all-features</code> + a redirect <code>index.html</code></td></tr>
+<tr><td><code>just check</code></td><td><code>fmt-check</code> + <code>lint-rust</code> + <code>lint-py</code> + <code>cargo check --all-features</code></td></tr>
+<tr><td><code>just clean</code></td><td><code>cargo clean</code> and remove built <code>.so</code>s</td></tr>
+</tbody></table>
+<h2 id="running"><a class="zola-anchor" href="#running" aria-label="Anchor link for: running">🔗</a>Running</h2>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> serve</span><span> [DIR]</span><span style="color: #9399B2;font-style: italic;">           # dashboard on 127.0.0.1:8000, DIR defaults to ./experiments</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> list</span><span> [DIR]</span><span style="color: #9399B2;font-style: italic;">            # list experiments</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> run</span><span style="color: #94E2D5;"> &lt;</span><span style="color: #A6E3A1;">ARG</span><span>S</span><span style="color: #94E2D5;">&gt;</span><span style="color: #9399B2;font-style: italic;">            # cargo run --features cli,server -- &lt;ARGS&gt;</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> example-rust</span><span style="color: #9399B2;font-style: italic;">          # examples/rust/logging.rs</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> example-py</span><span style="color: #9399B2;font-style: italic;">            # examples/python/basic_training.py (runs dev-py first)</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> bench</span><span style="color: #9399B2;font-style: italic;">                 # test_log_vector_is_fast in release, with output</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">just</span><span style="color: #A6E3A1;"> stats</span><span style="color: #9399B2;font-style: italic;">                 # tokei over src/ and wrappers/python/</span></span></code></pre>
+<p>The dashboard needs both features: <code>cargo run --features cli,server -- serve</code>.
+<code>serve</code> is gated on <code>server</code>; without it the subcommand does not exist.</p>
+<h2 id="feature-combinations-that-matter"><a class="zola-anchor" href="#feature-combinations-that-matter" aria-label="Anchor link for: feature-combinations-that-matter">🔗</a>Feature combinations that matter</h2>
+<table><thead><tr><th>you want</th><th>features</th></tr></thead><tbody>
+<tr><td>CLI only, no dashboard</td><td><code>--features cli</code></td></tr>
+<tr><td>CLI + dashboard</td><td><code>--features cli,server</code> ← triggers the trunk build</td></tr>
+<tr><td>Python wheel</td><td><code>--features python</code> ← never triggers trunk</td></tr>
+<tr><td>everything (tests, clippy)</td><td><code>--all-features</code> ← triggers the trunk build</td></tr>
+</tbody></table>
+<p>Wheel builds set <code>features = ["python"]</code> only (<code>pyproject.toml:31</code>), which is
+why <code>maturin</code> never needs <code>trunk</code>.</p>
+<h2 id="frontend-only-iteration"><a class="zola-anchor" href="#frontend-only-iteration" aria-label="Anchor link for: frontend-only-iteration">🔗</a>Frontend-only iteration</h2>
+<p><code>Trunk.toml</code> targets <code>src/app/index.html</code> with <code>dist = "dist"</code>. <code>trunk serve</code>
+will hot-reload the WASM app, but the API calls need a backend — run
+<code>just serve</code> in another shell and point the frontend at it (CORS is fully
+permissive, so cross-origin from the trunk dev server works).</p>
+<p>Note the WASM bundle is built with <code>data-wasm-opt="0"</code> — the current
+<code>expman-app_bg.wasm</code> is ~2.6 MB.</p>
+<h2 id="styling"><a class="zola-anchor" href="#styling" aria-label="Anchor link for: styling">🔗</a>Styling</h2>
+<p>Tailwind is <strong>built</strong>, not fetched. <code>src/app/index.html</code> declares
+<code>data-trunk rel="tailwind-css" href="../../assets/tailwind.css"</code>; trunk runs the
+standalone Tailwind CLI, pinned in <code>Trunk.toml</code>:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="toml"><span class="giallo-l"><span style="color: #9399B2;">[</span><span>tools</span><span style="color: #9399B2;">]</span></span>
+<span class="giallo-l"><span>tailwindcss</span><span style="color: #94E2D5;"> =</span><span style="color: #A6E3A1;"> &quot;3.4.17&quot;</span></span></code></pre>
+<p>Trunk downloads that version on a normal build. The Nix build runs with
+<code>TRUNK_OFFLINE=true</code>, so it takes <code>pkgs.tailwindcss_3</code> from <code>nativeBuildInputs</code>
+instead — the two must stay the same version. They currently emit byte-identical
+CSS; if you bump one, bump the other.</p>
+<p>Config is <code>tailwind.config.js</code>. Two things to know:</p>
+<ul>
+<li><strong>Classes are scanned out of the Rust source</strong> (<code>content: ["./src/**/*.rs"]</code>).
+A class assembled at runtime — <code>format!("text-{}", colour)</code> — will not be
+generated and the element renders unstyled. Build such classes from a <code>match</code>
+that returns whole literals.</li>
+<li><strong><code>@tailwindcss/typography</code> needs no npm.</strong> The standalone CLI bundles it, so
+the <code>prose</code> classes used for project READMEs work. They did <em>not</em> work under
+the old <code>cdn.tailwindcss.com</code> script, which ships no plugins — that markdown
+had been silently unstyled.</li>
+</ul>
+<h2 id="fonts"><a class="zola-anchor" href="#fonts" aria-label="Anchor link for: fonts">🔗</a>Fonts</h2>
+<p>Three type roles, self-hosted:</p>
+<table><thead><tr><th>role</th><th>face</th><th>carries</th></tr></thead><tbody>
+<tr><td>display</td><td>Space Grotesk</td><td>headings, the wordmark</td></tr>
+<tr><td>body</td><td>Nunito</td><td>prose, descriptions, list items</td></tr>
+<tr><td>mono</td><td>Cascadia Code</td><td>run IDs, metrics, counts, timestamps, tags, uppercase labels, code</td></tr>
+</tbody></table>
+<p>The woff2 files are vendored into <code>assets/fonts/</code> (latin + latin-ext only,
+~273 KB) with <code>@font-face</code> rules in <code>assets/fonts.css</code>. <code>index.html</code> copies them
+via <code>data-trunk rel="copy-dir"</code> and links the CSS; <code>api/frontend.rs</code> embeds
+<code>*.woff2</code> into the binary.</p>
+<blockquote>
+<p>Two ways this breaks silently. If <code>frontend.rs</code> loses its <code>#[include = "*.woff2"]</code>, the faces 404 and the page falls back to system fonts — which
+looks like a CSS bug. And <code>code</code>/<code>pre</code> are styled by Tailwind preflight from
+its own variable, not from the font config, so the mono role is set directly
+in the <code>&lt;style&gt;</code> block; drop that rule and every code block silently reverts.</p>
+</blockquote>
+<p>To regenerate after a Fontsource release, unpack the three
+<code>@fontsource-variable/*</code> tarballs and copy the latin subsets, taking the
+<code>unicode-range</code> values from each package's own <code>unicode.json</code> rather than
+transcribing them:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #CBA6F7;">for</span><span> pkg</span><span style="color: #CBA6F7;"> in</span><span style="color: #A6E3A1;"> space-grotesk nunito cascadia-code</span><span style="color: #9399B2;">;</span><span style="color: #CBA6F7;"> do</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">  curl</span><span style="color: #A6E3A1;"> -sL &quot;https://registry.npmjs.org/@fontsource-variable/</span><span>$pkg</span><span style="color: #A6E3A1;">/-/</span><span>$pkg</span><span style="color: #A6E3A1;">-&lt;VERSION&gt;.tgz&quot;</span><span style="color: #F5C2E7;"> \</span></span>
+<span class="giallo-l"><span style="color: #94E2D5;">    |</span><span style="color: #89B4FA;font-style: italic;"> tar</span><span style="color: #A6E3A1;"> xz -C &quot;</span><span>$pkg</span><span style="color: #A6E3A1;">&quot; --strip-components=1</span></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">done</span></span>
+<span class="giallo-l"><span style="color: #9399B2;font-style: italic;"># then copy files/*-latin{,-ext}-wght-{normal,italic}.woff2 into assets/fonts/</span></span>
+<span class="giallo-l"><span style="color: #9399B2;font-style: italic;"># and rebuild assets/fonts.css from each package&#39;s unicode.json</span></span></code></pre>
+<p>Verify from a loaded page, not from the stylesheet:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="javascript"><span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">getComputedStyle</span><span>(document</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">querySelector</span><span>(</span><span style="color: #A6E3A1;">&quot;h1&quot;</span><span>))</span><span style="color: #94E2D5;">.</span><span>fontFamily</span><span style="color: #9399B2;font-style: italic;">    // Space Grotesk Variable</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">getComputedStyle</span><span>(document</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">querySelector</span><span>(</span><span style="color: #A6E3A1;">&quot;code&quot;</span><span>))</span><span style="color: #94E2D5;">.</span><span>fontFamily</span><span style="color: #9399B2;font-style: italic;">  // Cascadia Code Variable</span></span>
+<span class="giallo-l"><span>[</span><span style="color: #94E2D5;">...</span><span>document</span><span style="color: #94E2D5;">.</span><span>fonts]</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">filter</span><span>(</span><span style="color: #EBA0AC;font-style: italic;">f</span><span style="color: #CBA6F7;"> =&gt;</span><span> f</span><span style="color: #94E2D5;">.</span><span>status</span><span style="color: #94E2D5;"> ===</span><span style="color: #A6E3A1;"> &quot;loaded&quot;</span><span>)</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">map</span><span>(</span><span style="color: #EBA0AC;font-style: italic;">f</span><span style="color: #CBA6F7;"> =&gt;</span><span> f</span><span style="color: #94E2D5;">.</span><span>family)</span></span>
+<span class="giallo-l"><span style="color: #9399B2;font-style: italic;">// Should be empty — the dashboard makes no third-party requests:</span></span>
+<span class="giallo-l"><span>performance</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">getEntriesByType</span><span>(</span><span style="color: #A6E3A1;">&quot;resource&quot;</span><span>)</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">map</span><span>(</span><span style="color: #EBA0AC;font-style: italic;">r</span><span style="color: #CBA6F7;"> =&gt;</span><span> r</span><span style="color: #94E2D5;">.</span><span>name)</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">filter</span><span>(</span><span style="color: #EBA0AC;font-style: italic;">n</span><span style="color: #CBA6F7;"> =&gt;</span><span style="color: #94E2D5;"> !</span><span>n</span><span style="color: #94E2D5;">.</span><span style="color: #89B4FA;font-style: italic;">startsWith</span><span>(location</span><span style="color: #94E2D5;">.</span><span>origin))</span></span></code></pre><h2 id="new-asset-git-add-it-before-nix-build"><a class="zola-anchor" href="#new-asset-git-add-it-before-nix-build" aria-label="Anchor link for: new-asset-git-add-it-before-nix-build">🔗</a>New asset? <code>git add</code> it before <code>nix build</code></h2>
+<p>A flake's <code>src = ./.</code> sees only <strong>git-tracked</strong> files. An untracked
+<code>assets/whatever.css</code> builds fine with <code>trunk</code> and then fails under
+<code>nix build .#expman</code> with a confusing "No such file or directory" for a path that
+plainly exists. Stage new assets before testing the Nix build.</p>
+<h2 id="nix-builds"><a class="zola-anchor" href="#nix-builds" aria-label="Anchor link for: nix-builds">🔗</a>Nix builds</h2>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">nix</span><span style="color: #A6E3A1;"> build .#expman</span><span style="color: #9399B2;font-style: italic;">                          # the exp CLI (features cli,server)</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">nix</span><span style="color: #A6E3A1;"> build .#python3Packages.expman-rs</span><span style="color: #9399B2;font-style: italic;">       # the Python package</span></span>
+<span class="giallo-l"><span style="color: #89B4FA;font-style: italic;">nix</span><span style="color: #A6E3A1;"> run github:lokeshmohanty/expman-rs</span><span style="color: #9399B2;font-style: italic;">      # run the CLI without cloning</span></span></code></pre>
+<p><code>packages.expman</code> builds the frontend in <code>preBuild</code> with <code>TRUNK_OFFLINE=true</code>
+(forcing the Nix-provided <code>wasm-bindgen-cli</code>) and <code>doCheck = false</code> — tests are
+CI's job.</p>
+<blockquote>
+<p><strong>Caveat:</strong> <code>packages.python3Packages.expman-rs</code> has no step that populates
+<code>expman/bin/exp</code>, so its <code>exp</code> console script reports <em>"Bundled binary not
+found"</em>. Get the CLI from <code>.#expman</code> instead.</p>
+</blockquote>
+<h2 id="troubleshooting"><a class="zola-anchor" href="#troubleshooting" aria-label="Anchor link for: troubleshooting">🔗</a>Troubleshooting</h2>
+<table><thead><tr><th>symptom</th><th>cause</th></tr></thead><tbody>
+<tr><td>build script exits 1 with a trunk error</td><td><code>server</code> feature on, no trunk. Set <code>EXPMAN_SKIP_FRONTEND_BUILD=1</code> or <code>just prep-dist</code>.</td></tr>
+<tr><td>dashboard loads unstyled</td><td>Tailwind is loaded from a CDN (<code>src/app/index.html:8</code>). You are offline.</td></tr>
+<tr><td>Jupyter/TensorBoard tab shows a blank iframe</td><td>those services are not proxied — the browser connects directly to <code>localhost:{port}</code>, so this only works when the browser and the server are on the same machine. Unaffected by <code>--jupyter-command</code>: that changes which interpreter is launched, not how the browser reaches it.</td></tr>
+<tr><td><code>ImportError</code> from <code>import expman</code></td><td>the extension is not built. <code>just dev-py</code>.</td></tr>
+<tr><td>Interactive tab cannot import your <em>project's</em> package</td><td>the kernel is the interpreter Jupyter runs under, which is whichever environment the <em>server</em> was started in. Launch Jupyter inside the project instead: <code>exp serve --jupyter-command 'uv run --extra nb jupyter'</code>.</td></tr>
+<tr><td>edits to <code>.expman/notebook.ipynb</code> do not reach a run's Interactive tab</td><td>that run's <code>interactive.ipynb</code> has been edited, so expman will not overwrite it. The server logs a warn saying so; delete the file to opt back into regeneration.</td></tr>
+<tr><td><code>exp serve</code> exits with <em>"is not a parsable command line"</em></td><td>an unbalanced quote in <code>--jupyter-command</code>. It is validated at startup rather than at the first click on the tab.</td></tr>
+<tr><td>clippy passes locally, fails in CI</td><td><code>just lint-rust</code> includes the wasm target via <code>lint-frontend</code>; the pre-commit hook does not.</td></tr>
+</tbody></table>
+
+    </div>
+
+    
+    
+    
+</article>
+
+
+
+<nav class="page-nav" aria-label="Page navigation">
+    
+
+    
+</nav>
+
+
+
+                </main>
+
+                
+                
+                
+
+
+
+
+<aside id="page-toc-panel" class="page-toc-panel" aria-hidden="true" aria-label="On this page">
+    <div class="page-toc-panel__content">
+        <div class="page-toc-panel__header">
+            <span class="page-toc-panel__title">On this page</span>
+            <button class="page-toc-panel__close" type="button" aria-label="Close table of contents">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+        <nav class="page-toc-panel__nav" aria-label="Page sections">
+            <ul class="page-toc-panel__list">
+                
+                <li class="page-toc-panel__item">
+                    <a href="#how-to-build-and-run" class="page-toc-panel__link">
+                        How-to — build and run
+                    </a>
+                    
+                    <ul class="page-toc-panel__list page-toc-panel__list--nested">
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#the-one-thing-to-understand-first-build-rs" class="page-toc-panel__link">
+                                The one thing to understand first: build.rs
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#common-commands" class="page-toc-panel__link">
+                                Common commands
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#running" class="page-toc-panel__link">
+                                Running
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#feature-combinations-that-matter" class="page-toc-panel__link">
+                                Feature combinations that matter
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#frontend-only-iteration" class="page-toc-panel__link">
+                                Frontend-only iteration
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#styling" class="page-toc-panel__link">
+                                Styling
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#fonts" class="page-toc-panel__link">
+                                Fonts
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#new-asset-git-add-it-before-nix-build" class="page-toc-panel__link">
+                                New asset? git add it before nix build
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#nix-builds" class="page-toc-panel__link">
+                                Nix builds
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#troubleshooting" class="page-toc-panel__link">
+                                Troubleshooting
+                            </a>
+                        </li>
+                        
+                    </ul>
+                    
+                </li>
+                
+            </ul>
+        </nav>
+    </div>
+</aside>
+
+
+                
+            </div>
+
+            
+            
+            
+        </div>
+    </div>
+
+    
+    <div class="sidebar-overlay" aria-hidden="true"></div>
+
+    
+    
+    
+<div class="search-overlay" role="dialog" aria-modal="true" aria-labelledby="search-title" aria-describedby="search-description">
+    <div class="search">
+        <h2 id="search-title" class="sr-only">Search documentation</h2>
+        <p id="search-description" class="sr-only">Type to search. Use arrow keys to navigate results, Enter to select, Escape to close.</p>
+
+        <div class="search__input-wrapper">
+            <span class="search__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                </svg>
+            </span>
+            <input
+                type="search"
+                class="search__input"
+                placeholder="Search documentation..."
+                autocomplete="off"
+                autofocus
+                aria-label="Search query"
+                aria-controls="search-results"
+                aria-autocomplete="list"
+            >
+            <span class="search__shortcut" aria-hidden="true">/</span>
+            <button class="search__close" type="button" aria-label="Close search dialog" title="Close (Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div id="search-results" class="search__results" role="listbox" aria-label="Search results">
+            
+        </div>
+
+        <footer class="search__footer">
+            <nav class="search__hints" aria-label="Keyboard shortcuts">
+                <span class="search__hint">
+                    <kbd aria-label="Up and down arrows">↑</kbd><kbd aria-hidden="true">↓</kbd> <span>Navigate</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Enter">↵</kbd> <span>Select</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Escape">esc</kbd> <span>Close</span>
+                </span>
+            </nav>
+            <span class="search__powered-by">Powered by <a href="https://github.com/weixsong/elasticlunr.js" target="_blank" rel="noopener noreferrer" aria-label="elasticlunr.js on GitHub (opens in new tab)">elasticlunr</a></span>
+        </footer>
+    </div>
+</div>
+
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    
+    <button class="page-toc-toggle" type="button" aria-label="Toggle table of contents" aria-expanded="false" aria-controls="page-toc-panel" title="On this page">
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--list" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 5H3"/>
+            <path d="M16 12H3"/>
+            <path d="M16 19H3"/>
+            <path d="M21 5h.01"/>
+            <path d="M21 12h.01"/>
+            <path d="M21 19h.01"/>
+        </svg>
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--close" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    <button class="fab scroll-to-top" aria-label="Scroll to top" title="Scroll to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m18 15-6-6-6 6"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/theme.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/navigation.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/code.js" defer></script>
+
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/elasticlunr.min.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/search_index.en.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/search.js" defer></script>
+    
+    
+
+    
+</body>
+</html>

@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+    <script>
+    (function(){var s='auto';try{s=localStorage.getItem('reticle-theme')||localStorage.getItem('ThemeColorScheme')||'auto'}catch(e){}
+    var t=s==='auto'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):s;
+    document.documentElement.setAttribute('data-theme',t);
+    document.documentElement.setAttribute('data-theme-setting',s);
+    document.documentElement.setAttribute('data-user-color-scheme',t)})();
+    </script>
+
+    
+    <title>Python API Reference | expman-rs</title>
+
+    
+    
+    <meta name="description" content="Complete reference for Experiment class, read API, and TensorBoard SummaryWriter compatibility layer.">
+    
+
+    
+    
+
+    
+    
+
+    
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+    
+    
+    <link rel="canonical" href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/">
+    <link rel="alternate" hreflang="en" href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/">
+    <link rel="alternate" hreflang="x-default" href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/">
+    
+
+    
+    <meta property="og:type" content="article">
+    
+    <meta property="og:url" content="https://lokeshmohanty.github.io/expman-rs/reference/python-api/">
+    
+    
+    <meta property="og:title" content="Python API Reference">
+    
+    
+    <meta property="og:description" content="Complete reference for Experiment class, read API, and TensorBoard SummaryWriter compatibility layer.">
+    
+    
+    <meta property="og:site_name" content="expman-rs">
+    <meta property="og:locale" content="en">
+
+    
+    
+    
+    
+    
+    
+
+    
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <meta name="twitter:url" content="https://lokeshmohanty.github.io/expman-rs/reference/python-api/">
+    
+    
+    <meta name="twitter:title" content="Python API Reference">
+    
+    
+    <meta name="twitter:description" content="Complete reference for Experiment class, read API, and TensorBoard SummaryWriter compatibility layer.">
+    
+    
+    
+
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "https://lokeshmohanty.github.io/expman-rs#website",
+                "url": "https://lokeshmohanty.github.io/expman-rs",
+                "name": "expman-rs",
+                "description": "High-performance ML experiment manager in Rust",
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "inLanguage": "en",
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": "https://lokeshmohanty.github.io/expman-rs?q={search_term_string}"
+                    },
+                    "query-input": "required name=search_term_string"
+                }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://zentinelproxy.io/#organization",
+                "name": "lokeshmohanty",
+                "url": "https://zentinelproxy.io",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://zentinelproxy.io/img/og-image.png",
+                    "width": 1200,
+                    "height": 630
+                }
+            },
+            {
+                "@type": "WebPage",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/reference/python-api/#webpage",
+                "url": "https://lokeshmohanty.github.io/expman-rs/reference/python-api/",
+                "name": "Python API Reference",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs#website"
+                },
+                "description": "Complete reference for Experiment class, read API, and TensorBoard SummaryWriter compatibility layer.",
+                "inLanguage": "en"
+                
+                
+            }
+            
+            ,{
+                "@type": "Article",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/reference/python-api/#article",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs/reference/python-api/#webpage"
+                },
+                "headline": "Python API Reference",
+                
+                "description": "Complete reference for Experiment class, read API, and TensorBoard SummaryWriter compatibility layer.",
+                
+                
+                
+                "author": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                
+                
+                "wordCount": 1516,
+                
+                "inLanguage": "en"
+            }
+            
+        ]
+    }
+    </script>
+
+    
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "expman-rs",
+                "item": "https://lokeshmohanty.github.io/expman-rs"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "expman-rs Documentation",
+                "item": "https://lokeshmohanty.github.io/expman-rs/"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Reference",
+                "item": "https://lokeshmohanty.github.io/expman-rs/reference/"
+            }
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Python API Reference",
+                "item": "https://lokeshmohanty.github.io/expman-rs/reference/python-api/"
+            }
+        ]
+    }
+    </script>
+    
+
+    
+    <link rel="stylesheet" href="https://lokeshmohanty.github.io/expman-rs/style.css">
+
+    
+    
+
+    
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/SpaceGrotesk-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/Nunito-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/CascadiaCode-Variable.woff2" as="font" type="font/woff2" crossorigin>
+
+    
+    
+    
+
+    
+    
+
+    
+    
+    
+    
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('reticle-theme') || localStorage.getItem('ThemeColorScheme') || 'auto';
+                var theme = stored === 'auto'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : stored;
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-theme-setting', stored);
+                document.documentElement.setAttribute('data-user-color-scheme', theme);
+            } catch(e) {}
+        })();
+    </script>
+    
+
+    
+</head>
+<body class="page-python-api">
+    
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    
+    
+
+    
+    
+        
+    
+
+    
+    <div class="layout layout--docs layout--fixed-header" data-mode="docs">
+        
+
+
+<aside id="sidebar" class="sidebar" role="complementary" aria-labelledby="sidebar-title">
+    
+    <div class="sidebar__resize-handle" aria-hidden="true" title="Drag to resize sidebar width"></div>
+
+    <div class="sidebar__header">
+        <span id="sidebar-title" class="sidebar__title">Table of contents</span>
+        <button class="sidebar__close" type="button" aria-label="Close sidebar" title="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18"/>
+                <path d="m6 6 12 12"/>
+            </svg>
+        </button>
+    </div>
+
+    <nav class="sidebar__content" aria-label="Documentation navigation">
+        <div class="toc">
+            
+            
+
+            
+            <div class="toc__section">
+                <ol class="toc__list toc__list--numbered" start="0">
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/architecture/" class="toc__link ">
+                            <span class="toc__number">0.</span>
+                            Architecture
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/decisions/" class="toc__link ">
+                            <span class="toc__number">1.</span>
+                            Decisions Log
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/print/" class="toc__link ">
+                            <span class="toc__number">2.</span>
+                            Print Version
+                        </a>
+                    </li>
+                    
+                    
+                </ol>
+            </div>
+
+            
+            
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/reference/" class="toc__section-title ">Reference</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/cli/" class="toc__link ">
+                            CLI Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/" class="toc__link ">
+                            HTTP API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/" class="toc__link active">
+                            Python API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/storage-layout/" class="toc__link ">
+                            Storage Layout Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/module-map/" class="toc__link ">
+                            Module Map Reference
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/how-to/" class="toc__section-title ">How-To Guides</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/setup/" class="toc__link ">
+                            Development Setup
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/" class="toc__link ">
+                            Building and Running
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/test-and-lint/" class="toc__link ">
+                            Testing and Linting
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/add-an-api-endpoint/" class="toc__link ">
+                            Adding an API Endpoint
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/release/" class="toc__link ">
+                            Cutting a Release
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            
+        </div>
+    </nav>
+
+    <div class="sidebar__footer">
+        
+        <div class="sidebar__actions-mobile">
+            
+            
+
+            
+            
+            <div class="sidebar__action">
+                <span class="sidebar__action-label">Theme</span>
+                
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            </div>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="sidebar__github" target="_blank" rel="noopener noreferrer" aria-label="View project on GitHub (opens in new tab)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+                <span>View on GitHub</span>
+            </a>
+            
+        </div>
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs/print?auto=true" class="print-button" target="_blank" rel="noopener" aria-label="Print all documentation pages (opens print dialog)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+            <span>Print all pages</span>
+        </a>
+    </div>
+</aside>
+
+
+
+
+        <div class="layout__main">
+            
+            
+
+
+
+
+<header class="header" role="banner">
+    <div class="header__left">
+        
+        
+        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar navigation" aria-expanded="true" aria-controls="sidebar" title="Toggle sidebar">
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--open" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--closed" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m14 9 3 3-3 3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+        <button class="toc-toggle toc-toggle--docs" type="button" aria-label="Open table of contents" aria-expanded="false" aria-controls="sidebar" title="Table of contents">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+
+        
+        
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs" class="header__logo" aria-label="expman-rs - Go to homepage">
+            
+            <span>expman-rs</span>
+        </a>
+    </div>
+
+    
+    <nav class="header__nav" role="navigation" aria-label="Main navigation">
+        
+    </nav>
+
+    
+    <div class="header__actions" role="group" aria-label="Site actions">
+        
+        
+        <button class="search-toggle" type="button" aria-label="Open search dialog" aria-keyshortcuts="/" aria-haspopup="dialog" title="Search (press /)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+            </svg>
+        </button>
+        
+
+        
+        <div class="header__actions-desktop">
+            
+            
+
+            
+            
+            
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs&#x2F;edit&#x2F;main&#x2F;docs&#x2F;content/reference&#x2F;python-api.md" class="btn btn--icon btn--ghost" aria-label="Edit this page on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="Edit this page">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                    <path d="m15 5 4 4"/>
+                </svg>
+            </a>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="btn btn--icon btn--ghost" aria-label="View project on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+            </a>
+            
+        </div>
+    </div>
+</header>
+
+
+            
+
+            
+            
+            <div class="scroll-progress" aria-hidden="true">
+                <div class="scroll-progress__bar"></div>
+                <span class="scroll-progress__percent">0%</span>
+            </div>
+            
+
+            
+
+
+
+
+
+    
+
+
+    
+
+
+<nav class="nav-buttons" aria-label="Page navigation">
+    
+    
+    <a href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/" class="nav-button nav-button--prev" aria-label="Previous: HTTP API Reference">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span class="nav-button__label">
+            HTTP API Reference
+            <span class="nav-button__shortcut">←</span>
+        </span>
+    </a>
+    
+
+    
+    
+    <a href="https://lokeshmohanty.github.io/expman-rs/reference/storage-layout/" class="nav-button nav-button--next" aria-label="Next: Storage Layout Reference">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+        </svg>
+        <span class="nav-button__label">
+            Storage Layout Reference
+            <span class="nav-button__shortcut">→</span>
+        </span>
+    </a>
+    
+</nav>
+
+
+
+
+            <div class="layout__content-area">
+                <main id="main-content" class="main-content" role="main" aria-label="Main content">
+                    
+
+
+<article class="article" itemscope itemtype="https://schema.org/Article" aria-labelledby="article-title">
+    
+    <header class="article__header article__header--docs">
+        <h1 id="article-title" itemprop="headline">Python API Reference</h1>
+        
+        <p class="article__description" itemprop="description">Complete reference for Experiment class, read API, and TensorBoard SummaryWriter compatibility layer.</p>
+        
+    </header>
+
+    <div class="article__content" itemprop="articleBody">
+        <h1 id="reference-python-api"><a class="zola-anchor" href="#reference-python-api" aria-label="Anchor link for: reference-python-api">🔗</a>Reference — Python API</h1>
+<p><em>Hand-written from <code>wrappers/python/expman/*.py</code> and
+<code>src/wrappers/python/mod.rs</code>, updated 2026-07-28.</em></p>
+<p><code>pip install expman-rs</code> → <code>import expman</code>. <code>expman.__version__</code> comes from
+<code>CARGO_PKG_VERSION</code> (<code>mod.rs:295</code>), i.e. it tracks <code>Cargo.toml</code>, <strong>not</strong>
+<code>pyproject.toml</code>.</p>
+<p>The write path, the projects layer, and the read API cross into Rust. Console
+redirection, <code>tensorboard_dir</code>, the module-level singleton API, the <code>to_pandas</code>
+convenience, <code>cli.py</code>, and all of <code>tensorboard.py</code> are pure Python.</p>
+<h2 id="class-experiment"><a class="zola-anchor" href="#class-experiment" aria-label="Anchor link for: class-experiment">🔗</a><code>class Experiment</code></h2>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="python"><span class="giallo-l"><span style="color: #89B4FA;">Experiment</span><span style="color: #9399B2;">(</span><span>name</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> run_name</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">None</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> base_dir</span><span style="color: #94E2D5;">=</span><span style="color: #A6E3A1;">&quot;experiments&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">           flush_interval_rows</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">50</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> flush_interval_ms</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">500</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">           redirect_console</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">True</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">           project</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">None</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> tags</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">None</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> description</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">None</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">           heartbeat_interval_secs</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">30</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">           group</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">None</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> rank</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">None</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">           system_metrics_interval_secs</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">15</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">           capture_provenance</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">True</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> capture_diff</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">False</span><span style="color: #9399B2;">)</span></span></code></pre>
+<p><code>project</code>, <code>tags</code> and <code>description</code> are written <strong>at creation</strong>, offline — no
+server required, so this works on a compute node running a SLURM batch job.
+<code>project</code> lands in <code>experiment.yaml</code>; <code>tags</code> and <code>description</code> land in
+<code>run.yaml</code>. Before this, consumers had to hand-patch <code>run.yaml</code> after <code>close()</code>.</p>
+<p><code>heartbeat_interval_secs</code> controls how often the engine refreshes
+<code>run.yaml.heartbeat_at</code>, which is what lets <code>exp reap</code> distinguish a
+hard-killed run from a legitimately long one. Pass <code>0</code> to disable.</p>
+<blockquote>
+<p><code>experiment.yaml</code> is only <em>created</em> when absent, but an explicit <code>project=</code>
+on a later run still takes effect: the engine updates that one field rather
+than ignoring it.</p>
+</blockquote>
+<p><code>group</code> and <code>rank</code> are <strong>auto-detected</strong> and rarely passed by hand. <code>rank</code> comes
+from <code>EXPMAN_RANK</code> / <code>RANK</code> / <code>SLURM_PROCID</code> / <code>OMPI_COMM_WORLD_RANK</code> /
+<code>LOCAL_RANK</code>; <code>group</code> from <code>EXPMAN_GROUP</code> or the scheduler's job id. A DDP script
+therefore needs <em>no</em> expman-specific changes: each rank becomes its own run
+(named <code>&lt;group&gt;-rank&lt;N&gt;</code>, so ranks cannot collide), and the dashboard rolls the
+group into a single expandable row.</p>
+<p><code>system_metrics_interval_secs</code> samples GPU/CPU/RAM into <code>system.parquet</code> via
+subprocess probes — <code>nvidia-smi</code>, <code>rocm-smi</code>, <code>tpu-info</code>, plus <code>/proc</code>. Probes
+whose binary is absent are skipped silently, so a laptop logs CPU and memory and
+says nothing about GPUs. <code>0</code> disables sampling.</p>
+<p><code>capture_provenance</code> records git commit/branch/dirty, the command line, hostname
+and scheduler job ids into <code>provenance.yaml</code>. <code>capture_diff</code> additionally records
+the working-tree diff; it is <strong>off by default</strong> because a dirty tree routinely
+contains an edited <code>.env</code> or a pasted key, and this store may be shared.</p>
+<p><code>redirect_console</code> is <strong>Python-only</strong> (not a PyO3 parameter). When true, it opens
+<code>&lt;run_dir&gt;/console.log</code> line-buffered and swaps <code>sys.stdout</code>/<code>sys.stderr</code> for a
+<code>Tee</code> (<code>__init__.py:34-48</code>) that writes to both. Redirect failure is caught and
+printed as a warning. <code>atexit.register(self.close)</code> is registered at
+<code>__init__.py:112</code>.</p>
+<table><thead><tr><th>member</th><th>backing</th><th>notes</th></tr></thead><tbody>
+<tr><td><code>log_params(params: dict)</code></td><td>PyO3</td><td>merged into <code>config.yaml</code>. Types are <strong>preserved</strong> (bool/int/float stay distinct).</td></tr>
+<tr><td><code>log_vector(values: dict, step: int|None = None)</code></td><td>PyO3</td><td>the hot path — a channel send. <code>True</code> and <code>1</code> both become <code>Float(1.0)</code>.</td></tr>
+<tr><td><code>log_scalar(key: str, value)</code></td><td>PyO3</td><td>replaces an existing value; lands in <code>run.yaml.scalars</code>.</td></tr>
+<tr><td><code>save_artifact(path: str)</code></td><td>PyO3</td><td>copied under the run's <code>artifacts/</code>; relative paths preserved.</td></tr>
+<tr><td><code>info(message)</code> / <code>warn(message)</code></td><td>PyO3</td><td>appended to <code>run.log</code>.</td></tr>
+<tr><td><code>set_project(project: str|None)</code></td><td>PyO3</td><td>writes only <code>project:</code> in <code>experiment.yaml</code>; offline. <code>None</code> unassigns.</td></tr>
+<tr><td><code>project</code></td><td>PyO3 getter</td><td>reads it back from <code>experiment.yaml</code>.</td></tr>
+<tr><td><code>set_tags(tags)</code> / <code>add_tags(tags)</code></td><td>PyO3</td><td>replace or union this run's tags. <code>add_tags</code> is idempotent per tag.</td></tr>
+<tr><td><code>set_description(text)</code></td><td>PyO3</td><td>sets this run's description.</td></tr>
+<tr><td><code>group</code> / <code>rank</code></td><td>PyO3 getters</td><td>this run's place in its group, or None.</td></tr>
+<tr><td><code>is_primary</code></td><td>Python</td><td>True on rank 0 <strong>or</strong> a non-distributed run. Guard once-per-job work with it, not <code>rank == 0</code>, which is False when there is no rank.</td></tr>
+<tr><td><code>log_image(tag, image, step=None)</code></td><td>PyO3</td><td>bytes, a path, a PIL Image, a matplotlib Figure, or an HWC/CHW numpy array. Raises on anything else.</td></tr>
+<tr><td><code>log_figure</code> / <code>log_audio</code> / <code>log_video</code></td><td>PyO3</td><td>as above; audio/video take encoded bytes.</td></tr>
+<tr><td><code>log_histogram(tag, values=..., bins=64)</code></td><td>PyO3</td><td>bins here (numpy if present, pure Python otherwise), or pass <code>edges=</code>/<code>counts=</code> precomputed.</td></tr>
+<tr><td><code>run_dir</code> / <code>run_name</code></td><td>PyO3 getters</td><td><strong>raise</strong> <code>RuntimeError("Engine is closed")</code> after close — unlike the write methods, which silently no-op.</td></tr>
+<tr><td><code>tensorboard_dir</code></td><td>pure Python <strong>(uncommitted)</strong></td><td><code>&lt;run_dir&gt;/tensorboard</code>, <code>makedirs(exist_ok=True)</code>. Intended for <code>torch.profiler.tensorboard_trace_handler</code>.</td></tr>
+<tr><td><code>close(status="FINISHED")</code></td><td>both</td><td>restores stdout/stderr, closes the console file, then closes the engine. Idempotent.</td></tr>
+<tr><td><code>__enter__</code> / <code>__exit__</code></td><td>Python</td><td><code>__exit__</code> maps an exception to <code>status="FAILED"</code> and returns <code>False</code> (does not suppress).</td></tr>
+</tbody></table>
+<blockquote>
+<p><strong>Status strings are not validated.</strong> <code>close()</code> maps anything it does not
+recognize silently to <code>FINISHED</code> (<code>mod.rs:194</code>). A typo'd status is not an
+error.</p>
+</blockquote>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="python"><span class="giallo-l"><span style="color: #CBA6F7;">with</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">Experiment</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;my_exp&quot;</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> base_dir</span><span style="color: #94E2D5;">=</span><span style="color: #A6E3A1;">&quot;./experiments&quot;</span><span style="color: #9399B2;">)</span><span style="color: #CBA6F7;"> as</span><span> exp</span><span style="color: #9399B2;">:</span></span>
+<span class="giallo-l"><span>    exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_params</span><span style="color: #9399B2;">({</span><span style="color: #A6E3A1;">&quot;lr&quot;</span><span style="color: #9399B2;">:</span><span style="color: #FAB387;"> 3e-4</span><span style="color: #9399B2;">,</span><span style="color: #A6E3A1;"> &quot;batch_size&quot;</span><span style="color: #9399B2;">:</span><span style="color: #FAB387;"> 32</span><span style="color: #9399B2;">,</span><span style="color: #A6E3A1;"> &quot;amp&quot;</span><span style="color: #9399B2;">:</span><span style="color: #FAB387;"> True</span><span style="color: #9399B2;">})</span></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">    for</span><span> step</span><span style="color: #CBA6F7;"> in</span><span style="color: #FAB387;font-style: italic;"> range</span><span style="color: #9399B2;">(</span><span style="color: #FAB387;">1000</span><span style="color: #9399B2;">):</span></span>
+<span class="giallo-l"><span>        exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_vector</span><span style="color: #9399B2;">({</span><span style="color: #A6E3A1;">&quot;train/loss&quot;</span><span style="color: #9399B2;">:</span><span> loss</span><span style="color: #9399B2;">,</span><span style="color: #A6E3A1;"> &quot;train/acc&quot;</span><span style="color: #9399B2;">:</span><span> acc</span><span style="color: #9399B2;">},</span><span style="color: #EBA0AC;font-style: italic;"> step</span><span style="color: #94E2D5;">=</span><span>step</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span>    exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_scalar</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;best_acc&quot;</span><span style="color: #9399B2;">,</span><span> best</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span>    exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">save_artifact</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;model.pt&quot;</span><span style="color: #9399B2;">)</span></span></code></pre><pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="python"><span class="giallo-l"><span style="color: #9399B2;font-style: italic;"># Everything the projects layer needs, from a batch job with no dashboard.</span></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">with</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">Experiment</span><span style="color: #9399B2;">(</span></span>
+<span class="giallo-l"><span style="color: #A6E3A1;">    &quot;e1-drift-regret-slope&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">    base_dir</span><span style="color: #94E2D5;">=</span><span style="color: #A6E3A1;">&quot;./experiments&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">    project</span><span style="color: #94E2D5;">=</span><span style="color: #A6E3A1;">&quot;study-1&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">    tags</span><span style="color: #94E2D5;">=</span><span style="color: #9399B2;">[</span><span style="color: #A6E3A1;">&quot;arm:tiered&quot;</span><span style="color: #9399B2;">,</span><span style="color: #A6E3A1;"> &quot;seed:1&quot;</span><span style="color: #9399B2;">,</span><span style="color: #A6E3A1;"> &quot;study:1&quot;</span><span style="color: #9399B2;">],</span></span>
+<span class="giallo-l"><span style="color: #EBA0AC;font-style: italic;">    description</span><span style="color: #94E2D5;">=</span><span style="color: #A6E3A1;">&quot;tiered allocation, seed 1&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">)</span><span style="color: #CBA6F7;"> as</span><span> exp</span><span style="color: #9399B2;">:</span></span>
+<span class="giallo-l"><span>    ...</span></span></code></pre><h2 id="module-level-singleton"><a class="zola-anchor" href="#module-level-singleton" aria-label="Anchor link for: module-level-singleton">🔗</a>Module-level singleton</h2>
+<p>A global <code>_current_exp</code> (<code>__init__.py:31</code>). <code>init(...)</code> takes the same arguments
+as <code>Experiment(...)</code> and closes any existing global experiment first.</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="python"><span class="giallo-l"><span>expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">init</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;my_exp&quot;</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span>expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_params</span><span style="color: #9399B2;">({</span><span>...</span><span style="color: #9399B2;">})</span><span>; expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_vector</span><span style="color: #9399B2;">({</span><span>...</span><span style="color: #9399B2;">},</span><span style="color: #EBA0AC;font-style: italic;"> step</span><span style="color: #94E2D5;">=</span><span>i</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span>expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_scalar</span><span style="color: #9399B2;">(</span><span>k</span><span style="color: #9399B2;">,</span><span> v</span><span style="color: #9399B2;">)</span><span>; expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">save_artifact</span><span style="color: #9399B2;">(</span><span>path</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span>expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">tensorboard_dir</span><span style="color: #9399B2;">()</span><span style="color: #9399B2;font-style: italic;">      # -&gt; str | None   (uncommitted)</span></span>
+<span class="giallo-l"><span>expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">info</span><span style="color: #9399B2;">(</span><span>msg</span><span style="color: #9399B2;">)</span><span>; expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">warn</span><span style="color: #9399B2;">(</span><span>msg</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span>expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">close</span><span style="color: #9399B2;">()</span></span></code></pre>
+<p>With no active experiment, <code>log_*</code>/<code>save_artifact</code>/<code>tensorboard_dir</code> print
+<code>"Warning: No active experiment. Call expman.init() first."</code>; <code>info</code>/<code>warn</code>
+<strong>silently no-op</strong> — an inconsistency, not a design.</p>
+<h2 id="read-api"><a class="zola-anchor" href="#read-api" aria-label="Anchor link for: read-api">🔗</a>Read API</h2>
+<p>Everything here reads an existing store, and returns <strong>plain dicts and lists</strong>
+so an analysis script works in a bare environment. <code>to_pandas=True</code> imports
+pandas lazily and only then — pandas stays an optional extra, never a runtime
+dependency of the wheel.</p>
+<p>This is what previously did not exist, and its absence is why analysis scripts
+read Parquet and a side-car JSON manifest directly, leaving the manifest rather
+than expman as the durable record.</p>
+<table><thead><tr><th>function</th><th>returns</th></tr></thead><tbody>
+<tr><td><code>load_runs(base_dir="experiments", project=None, experiment=None, status=None, tags=None, to_pandas=False)</code></td><td>run dicts, newest first</td></tr>
+<tr><td><code>read_metrics(run_dir, to_pandas=False)</code></td><td>one dict per logged row</td></tr>
+<tr><td><code>load_config(run_dir)</code></td><td>the run's <code>config.yaml</code> (logged params)</td></tr>
+<tr><td><code>load_run(run_dir)</code></td><td>the run's <code>run.yaml</code> metadata</td></tr>
+<tr><td><code>load_projects(base_dir="experiments")</code></td><td>every project, with its experiments</td></tr>
+<tr><td><code>load_provenance(run_dir)</code></td><td>git/command/hostname/scheduler captured at creation</td></tr>
+<tr><td><code>read_system_metrics(run_dir, to_pandas=False)</code></td><td>sampled hardware metrics</td></tr>
+<tr><td><code>read_histograms(run_dir)</code></td><td>logged distributions: tag, step, edges, counts, total</td></tr>
+<tr><td><code>read_media(run_dir)</code></td><td>logged images/audio/video: tag, step, file, bytes</td></tr>
+<tr><td><code>sweep_params()</code></td><td>this trial's hyperparameters, typed, or <code>{}</code> outside a sweep</td></tr>
+<tr><td><code>sweep_name()</code></td><td>the sweep this process belongs to, or None</td></tr>
+<tr><td><code>assign_project(experiment, project, base_dir="experiments")</code></td><td><code>None</code>; assigns with no open run</td></tr>
+</tbody></table>
+<p>Each <code>load_runs()</code> row carries <code>run</code>, <code>experiment</code>, <code>project</code>, <code>status</code>,
+<code>started_at</code>, <code>finished_at</code>, <code>heartbeat_at</code>, <code>duration_secs</code>, <code>description</code>,
+<code>tags</code>, <code>scalars</code>, <code>vectors</code>, and <code>path</code>. Feed that <code>path</code> straight to
+<code>read_metrics()</code> / <code>load_config()</code> — the two compose, so a caller never does
+path arithmetic.</p>
+<p><code>load_runs()</code> also takes <code>group=</code> to select one DDP job or sweep cohort.</p>
+<p><code>tags</code> accepts either a list (all must match) or an expression string with
+<code>AND</code>/<code>OR</code> and parentheses:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="python"><span class="giallo-l"><span style="color: #CBA6F7;">import</span><span> expman</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>runs</span><span style="color: #94E2D5;"> =</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">load_runs</span><span style="color: #9399B2;">(</span><span style="color: #EBA0AC;font-style: italic;">tags</span><span style="color: #94E2D5;">=</span><span style="color: #A6E3A1;">&quot;arm:tiered AND (study:1 OR study:2)&quot;</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">for</span><span> run</span><span style="color: #CBA6F7;"> in</span><span> runs</span><span style="color: #9399B2;">:</span></span>
+<span class="giallo-l"><span>    metrics</span><span style="color: #94E2D5;"> =</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">read_metrics</span><span style="color: #9399B2;">(</span><span style="color: #EBA0AC;font-style: italic;">run</span><span style="color: #9399B2;">[</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #A6E3A1;font-style: italic;">path</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #9399B2;">])</span></span>
+<span class="giallo-l"><span>    params</span><span style="color: #94E2D5;"> =</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">load_config</span><span style="color: #9399B2;">(</span><span style="color: #EBA0AC;font-style: italic;">run</span><span style="color: #9399B2;">[</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #A6E3A1;font-style: italic;">path</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #9399B2;">])</span></span>
+<span class="giallo-l"><span style="color: #FAB387;font-style: italic;">    print</span><span style="color: #9399B2;">(</span><span style="color: #EBA0AC;font-style: italic;">run</span><span style="color: #9399B2;">[</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #A6E3A1;font-style: italic;">run</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #9399B2;">],</span><span style="color: #EBA0AC;font-style: italic;"> params</span><span style="color: #9399B2;">[</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #A6E3A1;font-style: italic;">lr</span><span style="color: #A6E3A1;">&quot;</span><span style="color: #9399B2;">],</span><span style="color: #EBA0AC;font-style: italic;"> metrics</span><span style="color: #9399B2;">[</span><span style="color: #94E2D5;">-</span><span style="color: #FAB387;font-style: italic;">1</span><span style="color: #9399B2;">][</span><span style="color: #A6E3A1;">&quot;regret&quot;</span><span style="color: #9399B2;">])</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>df</span><span style="color: #94E2D5;"> =</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">read_metrics</span><span style="color: #9399B2;">(</span><span style="color: #EBA0AC;font-style: italic;">runs</span><span style="color: #9399B2;">[</span><span style="color: #FAB387;font-style: italic;">0</span><span style="color: #9399B2;">][</span><span style="color: #A6E3A1;">&quot;path&quot;</span><span style="color: #9399B2;">],</span><span style="color: #EBA0AC;font-style: italic;"> to_pandas</span><span style="color: #94E2D5;">=</span><span style="color: #FAB387;">True</span><span style="color: #9399B2;">)</span><span style="color: #9399B2;font-style: italic;">   # needs pandas</span></span></code></pre>
+<p><code>assign_project()</code> is <code>Experiment.set_project()</code> without an open run — for a
+sync script projecting an external manifest into the store.</p>
+<blockquote>
+<p><code>read_metrics()</code> reads the Parquet directly and is <strong>never downsampled</strong> — the
+cap applies to the HTTP endpoint the browser uses, not to analysis code.</p>
+</blockquote>
+<h3 id="media-and-distributions"><a class="zola-anchor" href="#media-and-distributions" aria-label="Anchor link for: media-and-distributions">🔗</a>Media and distributions</h3>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="python"><span class="giallo-l"><span>exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_image</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;samples/epoch&quot;</span><span style="color: #9399B2;">,</span><span> pil_image</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> step</span><span style="color: #94E2D5;">=</span><span>epoch</span><span style="color: #9399B2;">)</span><span style="color: #9399B2;font-style: italic;">   # or bytes, path, ndarray</span></span>
+<span class="giallo-l"><span>exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_figure</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;confusion&quot;</span><span style="color: #9399B2;">,</span><span> fig</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> step</span><span style="color: #94E2D5;">=</span><span>epoch</span><span style="color: #9399B2;">)</span><span style="color: #9399B2;font-style: italic;">            # matplotlib</span></span>
+<span class="giallo-l"><span>exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_histogram</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;weights/fc1&quot;</span><span style="color: #9399B2;">,</span><span> model</span><span style="color: #9399B2;">.</span><span>fc1</span><span style="color: #9399B2;">.</span><span>weight</span><span style="color: #9399B2;">,</span><span style="color: #EBA0AC;font-style: italic;"> step</span><span style="color: #94E2D5;">=</span><span>epoch</span><span style="color: #9399B2;">)</span></span></code></pre>
+<p>Images are written to <code>&lt;run&gt;/media/</code> with a <code>media.jsonl</code> manifest, not into
+Parquet — a column of image blobs would make the metrics file useless for its
+actual purpose. Histograms are stored as one row per (tag, step) with JSON
+<code>edges</code>/<code>counts</code>, because bin counts vary and a column-per-bin schema would churn
+on every call.</p>
+<h3 id="sweeps-from-a-training-script"><a class="zola-anchor" href="#sweeps-from-a-training-script" aria-label="Anchor link for: sweeps-from-a-training-script">🔗</a>Sweeps from a training script</h3>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="python"><span class="giallo-l"><span style="color: #CBA6F7;">import</span><span> expman</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>params</span><span style="color: #94E2D5;"> =</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">sweep_params</span><span style="color: #9399B2;">()</span><span style="color: #9399B2;font-style: italic;">      # {&quot;lr&quot;: 0.001, &quot;bs&quot;: 32} — typed, or {}</span></span>
+<span class="giallo-l"><span style="color: #CBA6F7;">with</span><span> expman</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">Experiment</span><span style="color: #9399B2;">(</span><span style="color: #A6E3A1;">&quot;e1&quot;</span><span style="color: #9399B2;">)</span><span style="color: #CBA6F7;"> as</span><span> exp</span><span style="color: #9399B2;">:</span><span style="color: #9399B2;font-style: italic;">  # group/project/run name come from the env</span></span>
+<span class="giallo-l"><span>    exp</span><span style="color: #9399B2;">.</span><span style="color: #89B4FA;">log_params</span><span style="color: #9399B2;">(</span><span>params</span><span style="color: #9399B2;">)</span></span>
+<span class="giallo-l"><span>    ...</span></span></code></pre><h2 id="class-summarywriter-tensorboard-drop-in"><a class="zola-anchor" href="#class-summarywriter-tensorboard-drop-in" aria-label="Anchor link for: class-summarywriter-tensorboard-drop-in">🔗</a><code>class SummaryWriter</code> — TensorBoard drop-in</h2>
+<p><code>wrappers/python/expman/tensorboard.py</code>, pure Python. Signature-compatible with
+<code>torch.utils.tensorboard.SummaryWriter</code>; <code>purge_step</code>, <code>max_queue</code>,
+<code>flush_secs</code>, and <code>filename_suffix</code> are accepted and ignored.</p>
+<p><strong><code>log_dir</code> mapping</strong> (<code>tensorboard.py:81-86</code>):</p>
+<table><thead><tr><th><code>log_dir</code></th><th>becomes</th></tr></thead><tbody>
+<tr><td><code>"runs/exp1"</code></td><td><code>Experiment("exp1", base_dir="runs")</code></td></tr>
+<tr><td><code>"my_exp"</code> (no separator)</td><td><code>Experiment("my_exp", base_dir="experiments")</code></td></tr>
+<tr><td><code>None</code></td><td><code>runs/&lt;Mon DD_HH-MM-SS&gt;_&lt;hostname&gt;&lt;comment&gt;</code></td></tr>
+</tbody></table>
+<p>Implemented: <code>add_scalar</code> → one <code>log_vector</code>; <code>add_scalars</code> → prefixes keys with
+<code>f"{main_tag}/{k}"</code> into one <code>log_vector</code>; <code>add_text</code> → <code>info(...)</code>;
+<code>add_hparams</code> → <code>log_params</code> + conditional <code>log_vector</code>; <code>flush()</code> is a
+documented no-op (expman auto-flushes); <code>close()</code>, <code>__enter__</code>/<code>__exit__</code>.</p>
+<p>Also implemented, since 2026-07-29: <code>add_histogram</code>, <code>add_image</code>, <code>add_images</code>
+and <code>add_figure</code> store natively; <code>add_audio</code>/<code>add_video</code> store encoded bytes.</p>
+<p><strong>Warn-once, no longer silent.</strong> <code>add_graph</code>, <code>add_embedding</code>, <code>add_pr_curve</code> and
+<code>add_mesh</code> cannot be stored, and now emit a <code>UserWarning</code> the first time each is
+called. They were previously <strong>silent no-ops</strong>, so swapping
+<code>torch.utils.tensorboard.SummaryWriter</code> for this class threw away every image and
+histogram a user logged with nothing said at runtime — code that looked like it
+worked. For those four, point a real TensorBoard writer at
+<code>exp.tensorboard_dir</code>; the dashboard renders it in the TensorBoard tab.
+<code>add_custom_scalars</code> stays quiet deliberately: it is a layout hint carrying no
+data.</p>
+<blockquote>
+<p>The compat layer <strong>warns rather than raises</strong> on input it cannot encode, unlike
+the native <code>log_image</code>, which raises. It wraps code written for TensorBoard,
+often mid-way through a multi-day run; killing that run over one unencodable
+image would be a worse failure than the one being reported.</p>
+</blockquote>
+<p>The constructor eagerly calls <code>log_params({})</code> and <code>info("SummaryWriter initialized")</code> (<code>:97-98</code>) so the run's files appear on disk immediately.</p>
+<h2 id="expman-cli-main"><a class="zola-anchor" href="#expman-cli-main" aria-label="Anchor link for: expman-cli-main">🔗</a><code>expman.cli:main</code></h2>
+<p>A 31-line shim (<code>cli.py</code>) exposed as the <code>exp</code> console script. Resolves
+<code>&lt;package_dir&gt;/bin/exp</code> (<code>exp.exe</code> on win32), best-effort <code>chmod 0o755</code>, then
+<code>subprocess.call([bin_path] + sys.argv[1:])</code> and forwards the exit code. Missing
+binary → stderr message and <code>return 1</code>.</p>
+<h2 id="behaviors-worth-knowing"><a class="zola-anchor" href="#behaviors-worth-knowing" aria-label="Anchor link for: behaviors-worth-knowing">🔗</a>Behaviors worth knowing</h2>
+<ul>
+<li><strong>All write-path errors are swallowed</strong> in the PyO3 layer. Lock poisoning and
+a closed engine both produce <code>Ok(())</code>. Only the getters raise.</li>
+<li><strong>The GIL is never released.</strong> See
+<a href="/architecture/#python-bridge">architecture</a>.</li>
+<li><strong><code>panic = "abort"</code></strong> means a Rust panic aborts the whole Python process
+rather than raising a Python exception.</li>
+<li><code>abi3-py39</code> + <code>requires-python = "&gt;=3.9"</code> means one wheel per platform covers
+3.9+. Note ruff is configured with <code>target-version = "py310"</code>
+(<code>pyproject.toml:36</code>) — a mismatch that could let 3.10-only syntax through and
+break 3.9 users.</li>
+</ul>
+<h2 id="tests"><a class="zola-anchor" href="#tests" aria-label="Anchor link for: tests">🔗</a>Tests</h2>
+<p><code>wrappers/python/tests/test_experiment.py</code> (6 tests) and <code>test_tensorboard.py</code>
+(14). The important one is <code>test_vectors_vs_scalar</code> (<code>test_experiment.py:90</code>),
+which pins the scalars-vs-vectors split in both directions.</p>
+<p>Gaps: no test for <code>tensorboard_dir</code>; no test exercises <code>cli.py</code>;
+<code>test_default_log_dir</code> (<code>test_tensorboard.py:45</code>) takes no <code>tmp_path</code> and may
+write a <code>runs/</code> dir into the CWD — which is why <code>wrappers/python/.gitignore</code>
+contains exactly <code>runs/</code>.</p>
+
+    </div>
+
+    
+    
+    
+</article>
+
+
+
+<nav class="page-nav" aria-label="Page navigation">
+    
+
+    
+</nav>
+
+
+
+                </main>
+
+                
+                
+                
+
+
+
+
+<aside id="page-toc-panel" class="page-toc-panel" aria-hidden="true" aria-label="On this page">
+    <div class="page-toc-panel__content">
+        <div class="page-toc-panel__header">
+            <span class="page-toc-panel__title">On this page</span>
+            <button class="page-toc-panel__close" type="button" aria-label="Close table of contents">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+        <nav class="page-toc-panel__nav" aria-label="Page sections">
+            <ul class="page-toc-panel__list">
+                
+                <li class="page-toc-panel__item">
+                    <a href="#reference-python-api" class="page-toc-panel__link">
+                        Reference — Python API
+                    </a>
+                    
+                    <ul class="page-toc-panel__list page-toc-panel__list--nested">
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#class-experiment" class="page-toc-panel__link">
+                                class Experiment
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#module-level-singleton" class="page-toc-panel__link">
+                                Module-level singleton
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#read-api" class="page-toc-panel__link">
+                                Read API
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#class-summarywriter-tensorboard-drop-in" class="page-toc-panel__link">
+                                class SummaryWriter — TensorBoard drop-in
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#expman-cli-main" class="page-toc-panel__link">
+                                expman.cli:main
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#behaviors-worth-knowing" class="page-toc-panel__link">
+                                Behaviors worth knowing
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#tests" class="page-toc-panel__link">
+                                Tests
+                            </a>
+                        </li>
+                        
+                    </ul>
+                    
+                </li>
+                
+            </ul>
+        </nav>
+    </div>
+</aside>
+
+
+                
+            </div>
+
+            
+            
+            
+        </div>
+    </div>
+
+    
+    <div class="sidebar-overlay" aria-hidden="true"></div>
+
+    
+    
+    
+<div class="search-overlay" role="dialog" aria-modal="true" aria-labelledby="search-title" aria-describedby="search-description">
+    <div class="search">
+        <h2 id="search-title" class="sr-only">Search documentation</h2>
+        <p id="search-description" class="sr-only">Type to search. Use arrow keys to navigate results, Enter to select, Escape to close.</p>
+
+        <div class="search__input-wrapper">
+            <span class="search__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                </svg>
+            </span>
+            <input
+                type="search"
+                class="search__input"
+                placeholder="Search documentation..."
+                autocomplete="off"
+                autofocus
+                aria-label="Search query"
+                aria-controls="search-results"
+                aria-autocomplete="list"
+            >
+            <span class="search__shortcut" aria-hidden="true">/</span>
+            <button class="search__close" type="button" aria-label="Close search dialog" title="Close (Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div id="search-results" class="search__results" role="listbox" aria-label="Search results">
+            
+        </div>
+
+        <footer class="search__footer">
+            <nav class="search__hints" aria-label="Keyboard shortcuts">
+                <span class="search__hint">
+                    <kbd aria-label="Up and down arrows">↑</kbd><kbd aria-hidden="true">↓</kbd> <span>Navigate</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Enter">↵</kbd> <span>Select</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Escape">esc</kbd> <span>Close</span>
+                </span>
+            </nav>
+            <span class="search__powered-by">Powered by <a href="https://github.com/weixsong/elasticlunr.js" target="_blank" rel="noopener noreferrer" aria-label="elasticlunr.js on GitHub (opens in new tab)">elasticlunr</a></span>
+        </footer>
+    </div>
+</div>
+
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    
+    <button class="page-toc-toggle" type="button" aria-label="Toggle table of contents" aria-expanded="false" aria-controls="page-toc-panel" title="On this page">
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--list" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 5H3"/>
+            <path d="M16 12H3"/>
+            <path d="M16 19H3"/>
+            <path d="M21 5h.01"/>
+            <path d="M21 12h.01"/>
+            <path d="M21 19h.01"/>
+        </svg>
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--close" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    <button class="fab scroll-to-top" aria-label="Scroll to top" title="Scroll to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m18 15-6-6-6 6"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/theme.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/navigation.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/code.js" defer></script>
+
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/elasticlunr.min.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/search_index.en.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/search.js" defer></script>
+    
+    
+
+    
+</body>
+</html>

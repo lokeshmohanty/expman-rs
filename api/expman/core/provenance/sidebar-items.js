@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["capture_command","capture_git","capture_hostname","capture_scheduler"],"struct":["EnvironmentInfo","GitInfo","Provenance"]};

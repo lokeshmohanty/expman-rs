@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["GENERATED_MARKER"],"fn":["is_generated_readme","load_manifest","sync_manifest","sync_project"],"struct":["Frontpage","ProjectManifest","ProjectSpec","Section","SyncReport"]};

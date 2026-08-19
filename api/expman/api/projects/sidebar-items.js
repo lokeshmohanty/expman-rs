@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create_project","delete_project","get_project","get_project_readme","get_project_runs","list_projects","update_project","update_project_readme"],"struct":["CreateProject","ProjectUpdate","RunsQuery"]};

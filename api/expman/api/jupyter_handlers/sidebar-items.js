@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["available_jupyter","create_jupyter_notebook","create_multi_jupyter_notebook","get_jupyter_notebook","get_multi_jupyter_notebook","start_jupyter","start_multi_jupyter","status_jupyter","status_multi_jupyter","stop_jupyter","stop_multi_jupyter"],"struct":["MultiRunJupyterPayload"]};

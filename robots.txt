@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+Allow: /
+Sitemap: https://lokeshmohanty.github.io/expman-rs/sitemap.xml

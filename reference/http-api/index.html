@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+    <script>
+    (function(){var s='auto';try{s=localStorage.getItem('reticle-theme')||localStorage.getItem('ThemeColorScheme')||'auto'}catch(e){}
+    var t=s==='auto'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):s;
+    document.documentElement.setAttribute('data-theme',t);
+    document.documentElement.setAttribute('data-theme-setting',s);
+    document.documentElement.setAttribute('data-user-color-scheme',t)})();
+    </script>
+
+    
+    <title>HTTP API Reference | expman-rs</title>
+
+    
+    
+    <meta name="description" content="Complete route specification for expman-rs axum HTTP server.">
+    
+
+    
+    
+
+    
+    
+
+    
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+    
+    
+    <link rel="canonical" href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/">
+    <link rel="alternate" hreflang="en" href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/">
+    <link rel="alternate" hreflang="x-default" href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/">
+    
+
+    
+    <meta property="og:type" content="article">
+    
+    <meta property="og:url" content="https://lokeshmohanty.github.io/expman-rs/reference/http-api/">
+    
+    
+    <meta property="og:title" content="HTTP API Reference">
+    
+    
+    <meta property="og:description" content="Complete route specification for expman-rs axum HTTP server.">
+    
+    
+    <meta property="og:site_name" content="expman-rs">
+    <meta property="og:locale" content="en">
+
+    
+    
+    
+    
+    
+    
+
+    
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <meta name="twitter:url" content="https://lokeshmohanty.github.io/expman-rs/reference/http-api/">
+    
+    
+    <meta name="twitter:title" content="HTTP API Reference">
+    
+    
+    <meta name="twitter:description" content="Complete route specification for expman-rs axum HTTP server.">
+    
+    
+    
+
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "https://lokeshmohanty.github.io/expman-rs#website",
+                "url": "https://lokeshmohanty.github.io/expman-rs",
+                "name": "expman-rs",
+                "description": "High-performance ML experiment manager in Rust",
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "inLanguage": "en",
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": "https://lokeshmohanty.github.io/expman-rs?q={search_term_string}"
+                    },
+                    "query-input": "required name=search_term_string"
+                }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://zentinelproxy.io/#organization",
+                "name": "lokeshmohanty",
+                "url": "https://zentinelproxy.io",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://zentinelproxy.io/img/og-image.png",
+                    "width": 1200,
+                    "height": 630
+                }
+            },
+            {
+                "@type": "WebPage",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/reference/http-api/#webpage",
+                "url": "https://lokeshmohanty.github.io/expman-rs/reference/http-api/",
+                "name": "HTTP API Reference",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs#website"
+                },
+                "description": "Complete route specification for expman-rs axum HTTP server.",
+                "inLanguage": "en"
+                
+                
+            }
+            
+            ,{
+                "@type": "Article",
+                "@id": "https://lokeshmohanty.github.io/expman-rs/reference/http-api/#article",
+                "isPartOf": {
+                    "@id": "https://lokeshmohanty.github.io/expman-rs/reference/http-api/#webpage"
+                },
+                "headline": "HTTP API Reference",
+                
+                "description": "Complete route specification for expman-rs axum HTTP server.",
+                
+                
+                
+                "author": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                "publisher": {
+                    "@id": "https://zentinelproxy.io/#organization"
+                },
+                
+                
+                "wordCount": 1345,
+                
+                "inLanguage": "en"
+            }
+            
+        ]
+    }
+    </script>
+
+    
+    
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "expman-rs",
+                "item": "https://lokeshmohanty.github.io/expman-rs"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "expman-rs Documentation",
+                "item": "https://lokeshmohanty.github.io/expman-rs/"
+            }
+            
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Reference",
+                "item": "https://lokeshmohanty.github.io/expman-rs/reference/"
+            }
+            
+            
+            ,{
+                "@type": "ListItem",
+                "position": 4,
+                "name": "HTTP API Reference",
+                "item": "https://lokeshmohanty.github.io/expman-rs/reference/http-api/"
+            }
+        ]
+    }
+    </script>
+    
+
+    
+    <link rel="stylesheet" href="https://lokeshmohanty.github.io/expman-rs/style.css">
+
+    
+    
+
+    
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/SpaceGrotesk-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/Nunito-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://lokeshmohanty.github.io/expman-rs/fonts/CascadiaCode-Variable.woff2" as="font" type="font/woff2" crossorigin>
+
+    
+    
+    
+
+    
+    
+
+    
+    
+    
+    
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('reticle-theme') || localStorage.getItem('ThemeColorScheme') || 'auto';
+                var theme = stored === 'auto'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : stored;
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-theme-setting', stored);
+                document.documentElement.setAttribute('data-user-color-scheme', theme);
+            } catch(e) {}
+        })();
+    </script>
+    
+
+    
+</head>
+<body class="page-http-api">
+    
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    
+    
+
+    
+    
+        
+    
+
+    
+    <div class="layout layout--docs layout--fixed-header" data-mode="docs">
+        
+
+
+<aside id="sidebar" class="sidebar" role="complementary" aria-labelledby="sidebar-title">
+    
+    <div class="sidebar__resize-handle" aria-hidden="true" title="Drag to resize sidebar width"></div>
+
+    <div class="sidebar__header">
+        <span id="sidebar-title" class="sidebar__title">Table of contents</span>
+        <button class="sidebar__close" type="button" aria-label="Close sidebar" title="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18"/>
+                <path d="m6 6 12 12"/>
+            </svg>
+        </button>
+    </div>
+
+    <nav class="sidebar__content" aria-label="Documentation navigation">
+        <div class="toc">
+            
+            
+
+            
+            <div class="toc__section">
+                <ol class="toc__list toc__list--numbered" start="0">
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/architecture/" class="toc__link ">
+                            <span class="toc__number">0.</span>
+                            Architecture
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/decisions/" class="toc__link ">
+                            <span class="toc__number">1.</span>
+                            Decisions Log
+                        </a>
+                    </li>
+                    
+                    
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/print/" class="toc__link ">
+                            <span class="toc__number">2.</span>
+                            Print Version
+                        </a>
+                    </li>
+                    
+                    
+                </ol>
+            </div>
+
+            
+            
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/reference/" class="toc__section-title ">Reference</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/cli/" class="toc__link ">
+                            CLI Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/http-api/" class="toc__link active">
+                            HTTP API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/" class="toc__link ">
+                            Python API Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/storage-layout/" class="toc__link ">
+                            Storage Layout Reference
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/reference/module-map/" class="toc__link ">
+                            Module Map Reference
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            <div class="toc__section">
+                <a href="https://lokeshmohanty.github.io/expman-rs/how-to/" class="toc__section-title ">How-To Guides</a>
+                <ul class="toc__list">
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/setup/" class="toc__link ">
+                            Development Setup
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/build-and-run/" class="toc__link ">
+                            Building and Running
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/test-and-lint/" class="toc__link ">
+                            Testing and Linting
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/add-an-api-endpoint/" class="toc__link ">
+                            Adding an API Endpoint
+                        </a>
+                    </li>
+                    
+                    <li class="toc__item">
+                        <a href="https://lokeshmohanty.github.io/expman-rs/how-to/release/" class="toc__link ">
+                            Cutting a Release
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            
+            
+            
+        </div>
+    </nav>
+
+    <div class="sidebar__footer">
+        
+        <div class="sidebar__actions-mobile">
+            
+            
+
+            
+            
+            <div class="sidebar__action">
+                <span class="sidebar__action-label">Theme</span>
+                
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            </div>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="sidebar__github" target="_blank" rel="noopener noreferrer" aria-label="View project on GitHub (opens in new tab)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+                <span>View on GitHub</span>
+            </a>
+            
+        </div>
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs/print?auto=true" class="print-button" target="_blank" rel="noopener" aria-label="Print all documentation pages (opens print dialog)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+            <span>Print all pages</span>
+        </a>
+    </div>
+</aside>
+
+
+
+
+        <div class="layout__main">
+            
+            
+
+
+
+
+<header class="header" role="banner">
+    <div class="header__left">
+        
+        
+        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar navigation" aria-expanded="true" aria-controls="sidebar" title="Toggle sidebar">
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--open" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+            <svg class="sidebar-toggle__icon sidebar-toggle__icon--closed" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m14 9 3 3-3 3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+        <button class="toc-toggle toc-toggle--docs" type="button" aria-label="Open table of contents" aria-expanded="false" aria-controls="sidebar" title="Table of contents">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M9 3v18"/>
+                <path d="m16 15-3-3 3-3"/>
+            </svg>
+        </button>
+        
+
+        
+        
+
+        
+        
+
+        
+        <a href="https://lokeshmohanty.github.io/expman-rs" class="header__logo" aria-label="expman-rs - Go to homepage">
+            
+            <span>expman-rs</span>
+        </a>
+    </div>
+
+    
+    <nav class="header__nav" role="navigation" aria-label="Main navigation">
+        
+    </nav>
+
+    
+    <div class="header__actions" role="group" aria-label="Site actions">
+        
+        
+        <button class="search-toggle" type="button" aria-label="Open search dialog" aria-keyshortcuts="/" aria-haspopup="dialog" title="Search (press /)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.3-4.3"/>
+            </svg>
+        </button>
+        
+
+        
+        <div class="header__actions-desktop">
+            
+            
+
+            
+            
+            
+<button class="theme-toggle" type="button" aria-label="Toggle color theme: cycles through light, dark, and auto modes" aria-live="polite" title="Toggle theme">
+    <span class="theme-toggle__icons">
+        
+        <span class="theme-toggle__sun" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__moon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+        </span>
+
+        
+        <span class="theme-toggle__auto" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a7 7 0 1 0 7 7"/>
+            </svg>
+        </span>
+    </span>
+    <span class="sr-only theme-toggle__status">Current theme: auto</span>
+</button>
+
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs&#x2F;edit&#x2F;main&#x2F;docs&#x2F;content/reference&#x2F;http-api.md" class="btn btn--icon btn--ghost" aria-label="Edit this page on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="Edit this page">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                    <path d="m15 5 4 4"/>
+                </svg>
+            </a>
+            
+
+            
+            
+            <a href="https:&#x2F;&#x2F;github.com&#x2F;lokeshmohanty&#x2F;expman-rs" class="btn btn--icon btn--ghost" aria-label="View project on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer" title="GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+                    <path d="M9 18c-4.51 2-5-2-7-2"/>
+                </svg>
+            </a>
+            
+        </div>
+    </div>
+</header>
+
+
+            
+
+            
+            
+            <div class="scroll-progress" aria-hidden="true">
+                <div class="scroll-progress__bar"></div>
+                <span class="scroll-progress__percent">0%</span>
+            </div>
+            
+
+            
+
+
+
+
+
+    
+
+
+    
+
+
+<nav class="nav-buttons" aria-label="Page navigation">
+    
+    
+    <a href="https://lokeshmohanty.github.io/expman-rs/reference/cli/" class="nav-button nav-button--prev" aria-label="Previous: CLI Reference">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span class="nav-button__label">
+            CLI Reference
+            <span class="nav-button__shortcut">←</span>
+        </span>
+    </a>
+    
+
+    
+    
+    <a href="https://lokeshmohanty.github.io/expman-rs/reference/python-api/" class="nav-button nav-button--next" aria-label="Next: Python API Reference">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+        </svg>
+        <span class="nav-button__label">
+            Python API Reference
+            <span class="nav-button__shortcut">→</span>
+        </span>
+    </a>
+    
+</nav>
+
+
+
+
+            <div class="layout__content-area">
+                <main id="main-content" class="main-content" role="main" aria-label="Main content">
+                    
+
+
+<article class="article" itemscope itemtype="https://schema.org/Article" aria-labelledby="article-title">
+    
+    <header class="article__header article__header--docs">
+        <h1 id="article-title" itemprop="headline">HTTP API Reference</h1>
+        
+        <p class="article__description" itemprop="description">Complete route specification for expman-rs axum HTTP server.</p>
+        
+    </header>
+
+    <div class="article__content" itemprop="articleBody">
+        <h1 id="reference-http-api"><a class="zola-anchor" href="#reference-http-api" aria-label="Anchor link for: reference-http-api">🔗</a>Reference — HTTP API</h1>
+<p><em>Hand-written from <code>src/api/*.rs</code>, 2026-07-27. Authoritative over
+<code>src/api/README.md</code>, which is stale (it documents a nonexistent <code>/api/events</code>
+endpoint and mentions <code>utoipa</code>).</em></p>
+<p>Router: <code>src/api/mod.rs:42-140</code>. All routes below are prefixed with <code>/api</code>
+(<code>mod.rs:153</code>). Anything else falls through to the embedded frontend
+(<code>mod.rs:155</code>). CORS is fully permissive — <code>Any</code> origin/method/header
+(<code>mod.rs:146-149</code>).</p>
+<p>Rows marked <strong>NEW</strong> are from the uncommitted TensorBoard work.</p>
+<h2 id="projects"><a class="zola-anchor" href="#projects" aria-label="Anchor link for: projects">🔗</a>Projects</h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th><th>Response</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/projects</code></td><td><code>projects.rs</code></td><td><code>[{id, display_name, description, tags, experiments_count, created_at, generated, generated_from, generated_at}]</code></td></tr>
+<tr><td>POST</td><td><code>/projects</code></td><td><code>projects.rs:53</code></td><td><code>ProjectMetadata</code></td></tr>
+<tr><td>GET</td><td><code>/projects/{project}</code></td><td><code>projects.rs</code></td><td><code>{id, display_name, description, tags, created_at, generated, generated_from, generated_at, readme, experiments: [...]}</code></td></tr>
+<tr><td>PATCH</td><td><code>/projects/{project}</code></td><td><code>projects.rs:151</code></td><td>updated <code>ProjectMetadata</code>. Body: <code>{display_name?, description?, tags?}</code></td></tr>
+<tr><td>DELETE</td><td><code>/projects/{project}</code></td><td><code>projects.rs:178</code></td><td><code>204 No Content</code> (unassigns experiments)</td></tr>
+<tr><td>GET</td><td><code>/projects/{project}/runs</code></td><td><code>projects.rs</code></td><td>cross-experiment runs table with facets — see below</td></tr>
+<tr><td>GET</td><td><code>/projects/{project}/readme</code></td><td><code>projects.rs</code></td><td><code>{content}</code></td></tr>
+<tr><td>PUT</td><td><code>/projects/{project}/readme</code></td><td><code>projects.rs:133</code></td><td><code>{content}</code>. Body: <code>{content}</code></td></tr>
+</tbody></table>
+<h2 id="experiments"><a class="zola-anchor" href="#experiments" aria-label="Anchor link for: experiments">🔗</a>Experiments</h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th><th>Response</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/experiments</code></td><td><code>experiments.rs:17</code></td><td><code>[{id, display_name, description, tags, project, runs_count}]</code> (ad-hoc <code>json!</code>)</td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/metadata</code></td><td><code>experiments.rs:39</code></td><td><code>ExperimentMetadata</code></td></tr>
+<tr><td>PATCH</td><td><code>/experiments/{exp}/metadata</code></td><td><code>experiments.rs:60</code></td><td>merged <code>ExperimentMetadata</code>. Body: <code>{display_name?, description?, tags?, project?}</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/stats</code></td><td><code>stats.rs:16</code></td><td><code>[{run, status, started_at, finished_at, duration_secs, last_metrics}]</code></td></tr>
+</tbody></table>
+<h2 id="runs"><a class="zola-anchor" href="#runs" aria-label="Anchor link for: runs">🔗</a>Runs</h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th><th>Notes</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs</code></td><td><code>runs.rs:26</code></td><td>query <code>?metrics=a,b,c</code> filters columns. Backfills <code>vectors</code> from <code>vectors.parquet</code> when empty (<code>runs.rs:56-68</code>)</td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/metadata</code></td><td><code>runs.rs:88</code></td><td><code>RunMetadata</code> with latest scalars merged into <code>vectors</code></td></tr>
+<tr><td>PATCH</td><td><code>/experiments/{exp}/runs/{run}/metadata</code></td><td><code>runs.rs:118</code></td><td>Body: <code>{name?, description?, tags?}</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/config</code></td><td><code>metrics.rs:118</code></td><td><code>config.yaml</code> as JSON</td></tr>
+</tbody></table>
+<h2 id="metrics-and-streams"><a class="zola-anchor" href="#metrics-and-streams" aria-label="Anchor link for: metrics-and-streams">🔗</a>Metrics and streams</h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th><th>Notes</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/metrics</code></td><td><code>metrics.rs:28</code></td><td>query <code>?since_step=N</code>. Returns <code>Vec&lt;HashMap&lt;String, Value&gt;&gt;</code></td></tr>
+<tr><td><strong>GET (SSE)</strong></td><td><code>/run/{exp}/{run}/stream/vectors</code></td><td><code>metrics.rs:41</code></td><td>every 500 ms re-reads <code>vectors.parquet</code> past the last seen <code>step</code>, emits a JSON array of new rows. 15 s keep-alive.</td></tr>
+<tr><td><strong>GET (SSE)</strong></td><td><code>/experiments/{exp}/runs/{run}/log/stream</code></td><td><code>metrics.rs:78</code></td><td>query <code>?file=</code> (default <code>run.log</code>). Tails by byte offset; resets on truncation (<code>:99</code>). 15 s keep-alive.</td></tr>
+</tbody></table>
+<p>Both streams terminate via <code>.take_until(shutdown.cancelled())</code>.</p>
+<p>Note the vectors-SSE route is the <strong>one route that breaks the naming
+convention</strong> — <code>/run/{exp}/{run}/...</code> rather than <code>/experiments/...</code>
+(<code>mod.rs:56</code>). It is also currently unused by the frontend.</p>
+<h2 id="artifacts"><a class="zola-anchor" href="#artifacts" aria-label="Anchor link for: artifacts">🔗</a>Artifacts</h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th><th>Notes</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/artifacts</code></td><td><code>artifacts.rs:18</code></td><td><code>Vec&lt;ArtifactInfo&gt;</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/artifacts/content</code></td><td><code>artifacts.rs:34</code></td><td>query <code>?path=</code>. Raw bytes with a guessed content-type; <code>.parquet</code> returns <code>{type:"parquet", data:[first 100 rows]}</code> (<code>:69-73</code>). Path traversal is guarded by canonicalize + <code>starts_with</code> (<code>:47-58</code>).</td></tr>
+</tbody></table>
+<h2 id="global"><a class="zola-anchor" href="#global" aria-label="Anchor link for: global">🔗</a>Global</h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th><th>Response</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/stats</code></td><td><code>stats.rs</code></td><td><code>{total_experiments, total_projects, total_runs, active_runs, stale_runs, total_storage_bytes}</code></td></tr>
+<tr><td>GET</td><td><code>/config</code></td><td><code>stats.rs</code></td><td><code>{live_mode, read_only, version}</code> — both read from <code>AppState</code>, so they reflect the flags <code>exp serve</code> was actually given</td></tr>
+</tbody></table>
+<h2 id="jupyter"><a class="zola-anchor" href="#jupyter" aria-label="Anchor link for: jupyter">🔗</a>Jupyter</h2>
+<p>Per-run, plus a <code>__multi__</code> variant scoped to the experiment.</p>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/jupyter/available</code></td><td><code>jupyter_handlers.rs</code> <code>available_jupyter</code> → <code>{backend: "jupyter"|"python"|"none"}</code></td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/runs/{run}/jupyter/start</code></td><td><code>start_jupyter</code> → <code>{port}</code></td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/runs/{run}/jupyter/stop</code></td><td><code>stop_jupyter</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/jupyter/status</code></td><td><code>status_jupyter</code> → <code>{running, port}</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/jupyter/notebook</code></td><td><code>get_jupyter_notebook</code> → <code>{exists, content}</code></td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/runs/{run}/jupyter/notebook</code></td><td><code>create_jupyter_notebook</code> → <code>{created, content}</code> or 409</td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/jupyter/start</code></td><td><code>start_multi_jupyter</code>, body <code>{runs: [String]}</code></td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/jupyter/stop</code></td><td><code>stop_multi_jupyter</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/jupyter/status</code></td><td><code>status_multi_jupyter</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/jupyter/notebook</code></td><td><code>get_multi_jupyter_notebook</code></td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/jupyter/notebook</code></td><td><code>create_multi_jupyter_notebook</code></td></tr>
+</tbody></table>
+<p><strong>Both start routes write the notebook first</strong>, and since 1.3.0 that write may
+<em>replace</em> an existing <code>interactive.ipynb</code> — when expman wrote it, you have not
+edited it, and the template has changed since. An edited notebook is never
+overwritten. Full rules, and the <code>--notebook-template</code> placeholder list:
+<a href="/reference/cli/#exp-serve-dir">CLI reference</a>.</p>
+<p><code>GET /jupyter/available</code> reports on the <strong>configured</strong> Jupyter command
+(<code>exp serve --jupyter-command</code>, default <code>jupyter</code>), not a hardcoded <code>jupyter</code> —
+so a project that reaches Jupyter through <code>uv run</code> is detected rather than
+falling back to the ipython/python copy-paste view.</p>
+<p><strong>409 from the notebook POSTs means "the file on disk stands"</strong> — whether because
+it is already current or because it was edited and left alone. The two are the
+same answer to the caller; the distinction is in the server log (warn for an
+edited file, info for a regeneration).</p>
+<h2 id="tensorboard-new-uncommitted"><a class="zola-anchor" href="#tensorboard-new-uncommitted" aria-label="Anchor link for: tensorboard-new-uncommitted">🔗</a>TensorBoard — <strong>NEW / uncommitted</strong></h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Handler</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/tensorboard/available</code></td><td><code>tensorboard_handlers.rs:14</code> → <code>{available}</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/tensorboard/has_logs</code></td><td><code>:20</code> → <code>{has_logs}</code></td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/runs/{run}/tensorboard/start</code></td><td><code>:30</code> → <code>{port}</code></td></tr>
+<tr><td>POST</td><td><code>/experiments/{exp}/runs/{run}/tensorboard/stop</code></td><td><code>:43</code></td></tr>
+<tr><td>GET</td><td><code>/experiments/{exp}/runs/{run}/tensorboard/status</code></td><td><code>:54</code> → <code>{running, port}</code></td></tr>
+</tbody></table>
+<p>No multi-run variant exists, unlike Jupyter — see <code>STATUS.md</code>.</p>
+<h2 id="frontend-fallback"><a class="zola-anchor" href="#frontend-fallback" aria-label="Anchor link for: frontend-fallback">🔗</a>Frontend fallback</h2>
+<p><code>GET /*</code> → <code>frontend::serve_frontend</code> (<code>frontend.rs:57</code>). Serves a <code>rust-embed</code>
+asset if the path matches, else falls back to <code>index.html</code> for anything that
+looks like an SPA route, else 404.</p>
+<p>The route/asset split is <code>is_asset_request</code> (<code>frontend.rs:45</code>): only the <strong>last</strong>
+path segment is examined, and only a suffix in <code>ASSET_EXTENSIONS</code> (<code>:36</code>) counts
+as an asset. A dot earlier in the path is part of a name, not an extension — so
+<code>/experiments/dmc-cartpole.swingup</code> and
+<code>/experiments/dmc-cheetah.run/runs/latest</code> are routes. <code>html</code> is excluded from
+the list on purpose. See <a href="/architecture/">architecture</a> for why the list is
+wider than what the bundle embeds.</p>
+<h2 id="notes"><a class="zola-anchor" href="#notes" aria-label="Anchor link for: notes">🔗</a>Notes</h2>
+<ul>
+<li><strong>No WebSocket endpoints exist</strong>, despite axum's <code>ws</code> feature being enabled.</li>
+<li><strong>No caching.</strong> Every request re-reads the filesystem and re-parses Parquet.</li>
+<li>Routes the frontend never calls: <code>/run/{exp}/{run}/stream/vectors</code>,
+<code>/experiments/{exp}/runs/{run}/config</code>, <code>/experiments/{exp}/stats</code>,
+<code>/config</code>.</li>
+<li>Test coverage: <code>tests/api_test.rs</code> covers 7 routes in-process via
+<code>tower::ServiceExt::oneshot</code>. The Jupyter and TensorBoard routes are
+<strong>untested</strong>.</li>
+</ul>
+<hr />
+<h2 id="get-projects-project-runs"><a class="zola-anchor" href="#get-projects-project-runs" aria-label="Anchor link for: get-projects-project-runs">🔗</a><code>GET /projects/{project}/runs</code></h2>
+<p><code>GET /projects/{project}</code> returns an experiment list only, which is not a view
+you can work in: with one project per study, the comparison worth living in cuts
+<em>across</em> experiments. This returns the flat runs table plus what a filter UI
+needs.</p>
+<p>Query parameters (all optional):</p>
+<table><thead><tr><th>param</th><th>meaning</th></tr></thead><tbody>
+<tr><td><code>tags</code></td><td>expression, e.g. <code>arm:tiered AND (study:1 OR study:2)</code></td></tr>
+<tr><td><code>status</code></td><td><code>RUNNING</code>, <code>FINISHED</code>, <code>FAILED</code>, <code>CRASHED</code> (400 otherwise)</td></tr>
+<tr><td><code>experiment</code></td><td>narrow to one experiment</td></tr>
+<tr><td><code>group</code></td><td>narrow to one DDP job or sweep cohort</td></tr>
+</tbody></table>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="json"><span class="giallo-l"><span style="color: #9399B2;">{</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">project</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;study-1&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">total</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 2</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">runs</span><span style="color: #9399B2;">&quot;: [{ &quot;</span><span style="color: #89B4FA;">run</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;tiered-s2&quot;</span><span style="color: #9399B2;">, &quot;</span><span style="color: #89B4FA;">experiment</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;...&quot;</span><span style="color: #9399B2;">, &quot;</span><span style="color: #89B4FA;">project</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;study-1&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">             &quot;</span><span style="color: #89B4FA;">status</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;FINISHED&quot;</span><span style="color: #9399B2;">, &quot;</span><span style="color: #89B4FA;">started_at</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;...&quot;</span><span style="color: #9399B2;">, &quot;</span><span style="color: #89B4FA;">heartbeat_at</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> null</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">             &quot;</span><span style="color: #89B4FA;">tags</span><span style="color: #9399B2;">&quot;: [</span><span style="color: #A6E3A1;">&quot;arm:tiered&quot;</span><span style="color: #9399B2;">], &quot;</span><span style="color: #89B4FA;">scalars</span><span style="color: #9399B2;">&quot;: {}, &quot;</span><span style="color: #89B4FA;">vectors</span><span style="color: #9399B2;">&quot;: {},</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">             &quot;</span><span style="color: #89B4FA;">path</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;experiments/...&quot;</span><span style="color: #9399B2;"> }],</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">facets</span><span style="color: #9399B2;">&quot;: {</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    &quot;</span><span style="color: #89B4FA;">tags</span><span style="color: #9399B2;">&quot;:        { &quot;</span><span style="color: #89B4FA;">arm:tiered</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 2</span><span style="color: #9399B2;">, &quot;</span><span style="color: #89B4FA;">seed:1</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 1</span><span style="color: #9399B2;">, &quot;</span><span style="color: #89B4FA;">study:1</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 2</span><span style="color: #9399B2;"> },</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    &quot;</span><span style="color: #89B4FA;">status</span><span style="color: #9399B2;">&quot;:      { &quot;</span><span style="color: #89B4FA;">FINISHED</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 2</span><span style="color: #9399B2;"> },</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    &quot;</span><span style="color: #89B4FA;">experiments</span><span style="color: #9399B2;">&quot;: { &quot;</span><span style="color: #89B4FA;">e1-drift-regret-slope</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 2</span><span style="color: #9399B2;"> },</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">    &quot;</span><span style="color: #89B4FA;">groups</span><span style="color: #9399B2;">&quot;:      { &quot;</span><span style="color: #89B4FA;">lr-sweep</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 6</span><span style="color: #9399B2;">, &quot;</span><span style="color: #89B4FA;">job-77001</span><span style="color: #9399B2;">&quot;:</span><span style="color: #FAB387;"> 4</span><span style="color: #9399B2;"> }</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  },</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">metrics</span><span style="color: #9399B2;">&quot;: [</span><span style="color: #A6E3A1;">&quot;regret&quot;</span><span style="color: #9399B2;">]</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">}</span></span></code></pre>
+<p>This is <code>core::dto::ProjectRuns</code>, so the frontend deserializes the same type the
+handler serializes. It backs the dashboard's <strong>Compare</strong> tab.</p>
+<p>Facets are counted over the <strong>returned</strong> runs, so they narrow as filters are
+applied — the behaviour a filter UI needs to avoid offering options that lead to
+empty results. <code>metrics</code> is the union of metric names across those runs, so a
+caller knows what is comparable before fetching any series.</p>
+<h2 id="read-only-mode"><a class="zola-anchor" href="#read-only-mode" aria-label="Anchor link for: read-only-mode">🔗</a>Read-only mode</h2>
+<p><code>exp serve --read-only</code> rejects every request that is not <code>GET</code>/<code>HEAD</code>/<code>OPTIONS</code>
+with <code>403 {"error": "read_only", "message": ...}</code>. It is middleware over the
+whole router (<code>enforce_read_only</code> in <code>api/mod.rs</code>), not a per-handler check, so
+new routes are covered by default. <code>/config</code> reports <code>read_only</code> so the frontend
+can hide controls rather than offering writes that will fail.</p>
+<h2 id="generated-projects"><a class="zola-anchor" href="#generated-projects" aria-label="Anchor link for: generated-projects">🔗</a>Generated projects</h2>
+<p>A project created by <code>exp project sync</code> carries <code>generated: true</code>. Writes to it
+— <code>PATCH /projects/{p}</code> and <code>PUT /projects/{p}/readme</code> — are refused with <code>409</code>:</p>
+<pre class="giallo" style="color: #CDD6F4; background-color: #1E1E2E;"><code data-lang="json"><span class="giallo-l"><span style="color: #9399B2;">{</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">error</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;generated_project&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">message</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;Project &#39;study-1&#39; is generated from studies.yaml (thesis repo) and is regenerated on each sync. Edit the source and re-run `exp project sync` instead.&quot;</span><span style="color: #9399B2;">,</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">  &quot;</span><span style="color: #89B4FA;">generated_from</span><span style="color: #9399B2;">&quot;:</span><span style="color: #A6E3A1;"> &quot;studies.yaml (thesis repo)&quot;</span></span>
+<span class="giallo-l"><span style="color: #9399B2;">}</span></span></code></pre>
+<p>Accepting the write would be worse than refusing it: the dashboard would report
+success and the edit would vanish at the next sync with no trace. <code>DELETE</code> is
+refused on the same grounds.</p>
+<h2 id="downsampling"><a class="zola-anchor" href="#downsampling" aria-label="Anchor link for: downsampling">🔗</a>Downsampling</h2>
+<p><code>GET /experiments/{exp}/runs/{run}/metrics</code> returns at most <strong>2000 points</strong>.</p>
+<table><thead><tr><th>param</th><th>meaning</th></tr></thead><tbody>
+<tr><td><code>max_points</code></td><td>change the cap; <code>0</code> disables it</td></tr>
+<tr><td><code>full=1</code></td><td>return every row — the escape hatch for export and analysis</td></tr>
+<tr><td><code>since_step</code></td><td>only rows past this step (used by the SSE stream)</td></tr>
+</tbody></table>
+<p>The reduction is <strong>Largest-Triangle-Three-Buckets</strong>, not a stride. A stride drops
+the single-row loss spike or divergence, which is exactly what someone opens a
+chart to find; LTTB keeps whichever point in each bucket contributes the most
+visible area, so extremes survive. First and last rows are always kept, so
+endpoints are exact.</p>
+<p>Without this, a million-step run serialises to hundreds of MB of JSON and hangs
+the tab before it draws anything.</p>
+
+    </div>
+
+    
+    
+    
+</article>
+
+
+
+<nav class="page-nav" aria-label="Page navigation">
+    
+
+    
+</nav>
+
+
+
+                </main>
+
+                
+                
+                
+
+
+
+
+<aside id="page-toc-panel" class="page-toc-panel" aria-hidden="true" aria-label="On this page">
+    <div class="page-toc-panel__content">
+        <div class="page-toc-panel__header">
+            <span class="page-toc-panel__title">On this page</span>
+            <button class="page-toc-panel__close" type="button" aria-label="Close table of contents">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+        <nav class="page-toc-panel__nav" aria-label="Page sections">
+            <ul class="page-toc-panel__list">
+                
+                <li class="page-toc-panel__item">
+                    <a href="#reference-http-api" class="page-toc-panel__link">
+                        Reference — HTTP API
+                    </a>
+                    
+                    <ul class="page-toc-panel__list page-toc-panel__list--nested">
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#projects" class="page-toc-panel__link">
+                                Projects
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#experiments" class="page-toc-panel__link">
+                                Experiments
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#runs" class="page-toc-panel__link">
+                                Runs
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#metrics-and-streams" class="page-toc-panel__link">
+                                Metrics and streams
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#artifacts" class="page-toc-panel__link">
+                                Artifacts
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#global" class="page-toc-panel__link">
+                                Global
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#jupyter" class="page-toc-panel__link">
+                                Jupyter
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#tensorboard-new-uncommitted" class="page-toc-panel__link">
+                                TensorBoard — NEW &#x2F; uncommitted
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#frontend-fallback" class="page-toc-panel__link">
+                                Frontend fallback
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#notes" class="page-toc-panel__link">
+                                Notes
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#get-projects-project-runs" class="page-toc-panel__link">
+                                GET &#x2F;projects&#x2F;{project}&#x2F;runs
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#read-only-mode" class="page-toc-panel__link">
+                                Read-only mode
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#generated-projects" class="page-toc-panel__link">
+                                Generated projects
+                            </a>
+                        </li>
+                        
+                        <li class="page-toc-panel__item">
+                            <a href="#downsampling" class="page-toc-panel__link">
+                                Downsampling
+                            </a>
+                        </li>
+                        
+                    </ul>
+                    
+                </li>
+                
+            </ul>
+        </nav>
+    </div>
+</aside>
+
+
+                
+            </div>
+
+            
+            
+            
+        </div>
+    </div>
+
+    
+    <div class="sidebar-overlay" aria-hidden="true"></div>
+
+    
+    
+    
+<div class="search-overlay" role="dialog" aria-modal="true" aria-labelledby="search-title" aria-describedby="search-description">
+    <div class="search">
+        <h2 id="search-title" class="sr-only">Search documentation</h2>
+        <p id="search-description" class="sr-only">Type to search. Use arrow keys to navigate results, Enter to select, Escape to close.</p>
+
+        <div class="search__input-wrapper">
+            <span class="search__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                </svg>
+            </span>
+            <input
+                type="search"
+                class="search__input"
+                placeholder="Search documentation..."
+                autocomplete="off"
+                autofocus
+                aria-label="Search query"
+                aria-controls="search-results"
+                aria-autocomplete="list"
+            >
+            <span class="search__shortcut" aria-hidden="true">/</span>
+            <button class="search__close" type="button" aria-label="Close search dialog" title="Close (Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div id="search-results" class="search__results" role="listbox" aria-label="Search results">
+            
+        </div>
+
+        <footer class="search__footer">
+            <nav class="search__hints" aria-label="Keyboard shortcuts">
+                <span class="search__hint">
+                    <kbd aria-label="Up and down arrows">↑</kbd><kbd aria-hidden="true">↓</kbd> <span>Navigate</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Enter">↵</kbd> <span>Select</span>
+                </span>
+                <span class="search__hint">
+                    <kbd aria-label="Escape">esc</kbd> <span>Close</span>
+                </span>
+            </nav>
+            <span class="search__powered-by">Powered by <a href="https://github.com/weixsong/elasticlunr.js" target="_blank" rel="noopener noreferrer" aria-label="elasticlunr.js on GitHub (opens in new tab)">elasticlunr</a></span>
+        </footer>
+    </div>
+</div>
+
+    
+
+    
+    
+
+    
+    
+
+    
+    
+    
+    <button class="page-toc-toggle" type="button" aria-label="Toggle table of contents" aria-expanded="false" aria-controls="page-toc-panel" title="On this page">
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--list" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 5H3"/>
+            <path d="M16 12H3"/>
+            <path d="M16 19H3"/>
+            <path d="M21 5h.01"/>
+            <path d="M21 12h.01"/>
+            <path d="M21 19h.01"/>
+        </svg>
+        <svg class="page-toc-toggle__icon page-toc-toggle__icon--close" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    <button class="fab scroll-to-top" aria-label="Scroll to top" title="Scroll to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m18 15-6-6-6 6"/>
+        </svg>
+    </button>
+    
+
+    
+    
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/theme.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/navigation.js" defer></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/code.js" defer></script>
+
+    
+    <script src="https://lokeshmohanty.github.io/expman-rs/elasticlunr.min.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/search_index.en.js"></script>
+    <script src="https://lokeshmohanty.github.io/expman-rs/js/search.js" defer></script>
+    
+    
+
+    
+</body>
+</html>
