@@ -1,6 +1,20 @@
 # expman-rs Justfile
 # Run `just` to see available commands
 
+# The Zola version the documentation site is built with — the single source of
+# truth for it. `.github/workflows/docs.yml` reads this with
+# `just --evaluate zola_version` and installs exactly it; `just check-zola`
+# asserts the zola the dev shell puts on PATH is the same one.
+#
+# Pinned because docs.yml used to install `zola@latest`. Zola 0.23 replaced the
+# template engine and the reticle theme does not parse under it, so from 0.23.3's
+# release every push to main failed to deploy the docs — three consecutive
+# releases, silently, because nothing else depends on that job.
+#
+# To move it: bump nixpkgs so the dev shell provides the new zola, fix the theme
+# submodule if it needs it, confirm `just build-zola-docs` passes, then edit this.
+zola_version := "0.22.1"
+
 default:
     @just --list
 
@@ -191,8 +205,32 @@ check-versions:
 
     exit $STATUS
 
+# Verify the zola on PATH is the one the Docs workflow pins.
+#
+# nixpkgs carries no versioned zola attribute, so flake.nix can only ask for
+# `zola` and a `nix flake update` is free to move it. That is the one way the dev
+# shell and `zola_version` can drift apart, and this is what makes the move loud
+# here instead of a surprise in a docs deploy nobody watches.
+#
+# Skips when zola is absent so the CI lint job, which has no zola, keeps working.
+check-zola:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v zola >/dev/null 2>&1; then
+        echo "  skip zola not on PATH"
+        exit 0
+    fi
+    HAVE=$(zola --version | awk '{print $2}')
+    if [ "$HAVE" != "{{zola_version}}" ]; then
+        echo "  FAIL zola on PATH is $HAVE, but docs.yml pins {{zola_version}}"
+        echo "       Either the flake moved or the pin is stale — reconcile them,"
+        echo "       and only raise zola_version once the docs still build."
+        exit 1
+    fi
+    echo "  ok   zola $HAVE matches the docs.yml pin"
+
 # Full CI check
-ci: fmt-check lint test lint-py test-py check-versions
+ci: fmt-check lint test lint-py test-py check-versions check-zola
 
 # Clean build artifacts
 clean:

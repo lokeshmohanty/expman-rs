@@ -19,7 +19,20 @@ jobs:
           submodules: recursive
 
       - uses: taiki-e/install-action@just
-      - uses: taiki-e/install-action@zola
+
+      # Zola is pinned, never `@latest`. The `@zola` shorthand installs the newest
+      # release, so 0.23 — which replaced the template engine the reticle theme is
+      # written against — reached this job the day it shipped and broke the docs
+      # deploy on three consecutive releases without failing anything else.
+      # `zola_version` in the Justfile is the only place the version is written;
+      # `just check-zola` holds the dev shell to the same one.
+      - name: Resolve the pinned Zola version
+        id: zola
+        run: echo "version=$(just --evaluate zola_version)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: zola@${{ steps.zola.outputs.version }}
+
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 

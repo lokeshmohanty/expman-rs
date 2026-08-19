@@ -840,12 +840,50 @@ more than the tidying.
 
 ---
 
+## 2026-08-19 — The Docs workflow pins Zola, and the Justfile owns the version
+
+**Decision.** `docs.yml` no longer installs `taiki-e/install-action@zola`, which
+is a shorthand for "newest release". It reads `zola_version` out of the Justfile
+and installs exactly that (`0.22.1`), and `just check-zola` asserts the zola the
+dev shell puts on PATH is the same one.
+
+**Why.** Zola 0.23 replaced the template engine, and the reticle theme is written
+against the old one — `{% macro post_row(page, date_format="%b %d") %}` is an
+unknown tag to it, and `get_section(path=parts.1)` no longer parses either. From
+0.23.3's release the Docs job failed on every push: releases 1.2.0, 1.2.1 and
+1.3.0 all deployed nothing. Nothing else noticed, because no other workflow needs
+zola and `docs.yml` gates nothing — the docs simply stopped updating. Local builds
+stayed green the whole time on nixpkgs' 0.22.1, which is what made the drift
+invisible rather than merely broken.
+
+**Why the version lives in the Justfile.** The obvious alternative was to let CI
+take zola from the flake, so there is one toolchain rather than two. nixpkgs
+publishes no versioned zola attribute — unlike `wasm-bindgen-cli_0_2_108` — so
+`flake.nix` can only ask for `zola` and has no literal to point CI at; making CI
+resolve it would mean installing Nix in a job that otherwise needs none. The
+Justfile holds the single literal instead, CI reads it with `just --evaluate`, and
+`check-zola` is what keeps `flake.nix` honest about it.
+
+**Consequences.** A new zola release can no longer reach CI on its own. A
+`nix flake update` that moves the dev shell's zola still can move the two apart —
+that is precisely what `check-zola` fails on, in `just ci`, rather than in a docs
+deploy nobody watches. Raising `zola_version` now means fixing the theme submodule
+first; the pin buys time for that, it does not substitute for it.
+
+---
+
 ## Open questions
 
 *The four questions that stood here on 2026-07-27 — version single-sourcing,
 gating releases on tests, `.maturinignore`, and the Tailwind CDN — were all
 resolved on 2026-07-28; see the entries above.*
 
+- **The reticle theme has not been ported to Zola 0.23.** The pin above holds the
+  docs build at 0.22.1, so this is not urgent, but it is a standing debt in a
+  *different* repo (the `docs/themes/reticle` submodule). At least two
+  incompatibilities are known — `{% macro %}` and integer tuple indexing
+  (`parts.1`) — and 0.23.3 reports them one at a time, so the real count is
+  unknown until someone fixes them in order.
 - **`github-release.yml` is still invoked twice** for the same tag, from
   `publish.yml` and `nix.yml`, so the final asset set remains race-dependent.
   Untouched by the release gating work.

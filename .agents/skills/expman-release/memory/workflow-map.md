@@ -21,7 +21,7 @@
 | `ci.yml` | push + PR on `main`, `paths-ignore`: `**.md`, `examples/**`, `docs/**`, `.gitignore`, `LICENSE` | `build-assets` → `rust` ∥ `python` |
 | `publish.yml` | push on `main`, **no path filter** | `check-release` → `build-assets` → (`rust` ∥ `python`) → (`publish-cargo` ∥ `publish-pypi`) → `github-release` (pattern `wheels-*`). The `rust`/`python` jobs are the release gate, added 2026-07-28. |
 | `nix.yml` | push on `main`, paths `src/**`, `wrappers/python/**`, `flake.nix`, `Cargo.toml`, `Cargo.lock`, self | `nix build .#expman` + `.#python3Packages.expman-rs` → push to cachix → on a release commit, `github-release` (pattern `nix-build-results`) |
-| `docs.yml` | push on `main`, **no path filter** | `just build-docs` → gh-pages via `peaceiris/actions-gh-pages@v4` with `force_orphan: true` |
+| `docs.yml` | push on `main`, **no path filter** | `zola --root docs build` → `just build-docs` → gh-pages via `peaceiris/actions-gh-pages@v4` with `force_orphan: true` |
 
 ## What a release commit actually sets off
 
@@ -42,6 +42,24 @@ Two consequences that are not obvious from any single file:
   `github-release` needs `publish-pypi` (so wheels exist) but *not*
   `publish-cargo` — if cargo publish fails, PyPI and the GitHub Release still go
   out.
+
+## `docs.yml` fails alone and silently
+
+Nothing depends on it and it gates nothing, so a broken docs deploy shows up only
+as a red mark on a push everyone reads as "the release worked". That is how
+`zola@latest` — the `taiki-e/install-action@zola` shorthand — took out releases
+1.2.0, 1.2.1 and 1.3.0 unnoticed when zola 0.23 replaced the template engine the
+reticle theme is written against.
+
+Since 2026-08-19 the zola version is pinned: `zola_version` in the **Justfile** is
+the only place it is written, `docs.yml` reads it with `just --evaluate` and
+installs exactly it, and `just check-zola` (part of `just ci`) fails if the dev
+shell's zola has drifted from it. **Do not restore an unpinned tool shorthand
+here, and do not put the version in the workflow** — `flake.nix` cannot hold it
+because nixpkgs publishes no versioned zola attribute.
+
+When checking a release, look at `docs.yml` explicitly. It is the one entry point
+whose failure costs nothing at the time and everything later.
 
 ## Smaller oddities
 
