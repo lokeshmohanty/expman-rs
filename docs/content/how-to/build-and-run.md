@@ -185,6 +185,9 @@ CI's job.
 |---|---|
 | build script exits 1 with a trunk error | `server` feature on, no trunk. Set `EXPMAN_SKIP_FRONTEND_BUILD=1` or `just prep-dist`. |
 | dashboard loads unstyled | Tailwind is loaded from a CDN (`src/app/index.html:8`). You are offline. |
-| Jupyter/TensorBoard tab shows a blank iframe | those services are not proxied — the browser connects directly to `localhost:{port}`, so this only works when the browser and the server are on the same machine. |
+| Jupyter/TensorBoard tab shows a blank iframe | those services are not proxied — the browser connects directly to `localhost:{port}`, so this only works when the browser and the server are on the same machine. Unaffected by `--jupyter-command`: that changes which interpreter is launched, not how the browser reaches it. |
 | `ImportError` from `import expman` | the extension is not built. `just dev-py`. |
+| Interactive tab cannot import your *project's* package | the kernel is the interpreter Jupyter runs under, which is whichever environment the *server* was started in. Launch Jupyter inside the project instead: `exp serve --jupyter-command 'uv run --extra nb jupyter'`. |
+| edits to `.expman/notebook.ipynb` do not reach a run's Interactive tab | that run's `interactive.ipynb` has been edited, so expman will not overwrite it. The server logs a warn saying so; delete the file to opt back into regeneration. |
+| `exp serve` exits with *"is not a parsable command line"* | an unbalanced quote in `--jupyter-command`. It is validated at startup rather than at the first click on the tab. |
 | clippy passes locally, fails in CI | `just lint-rust` includes the wasm target via `lint-frontend`; the pre-commit hook does not. |

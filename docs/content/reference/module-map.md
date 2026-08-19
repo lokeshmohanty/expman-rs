@@ -60,11 +60,11 @@ exists purely to inline `src/app/README.md` into rustdoc.
 | file | what |
 |---|---|
 | `mod.rs` | router, CORS, `serve()`, graceful shutdown |
-| `state.rs` | `AppState` (base_dir, jupyter, tensorboard, shutdown token), `ServerConfig` |
+| `state.rs` | `AppState` (base_dir, jupyter, tensorboard, shutdown token), `ServerConfig` — flag-shaped, no file config; parses `jupyter_command` into a `JupyterCommand` when building the manager |
 | `projects.rs` · `experiments.rs` · `runs.rs` · `metrics.rs` · `artifacts.rs` · `stats.rs` | handlers — see [http-api](/reference/http-api/) |
 | `frontend.rs` | `rust-embed` of `dist/`, SPA fallback |
-| `jupyter_service.rs` | 537 lines: backend detection, port scan 8888–9999, `.ipynb` generation, spawn/status/stop. Has unit tests at `:449-537`. |
-| `jupyter_handlers.rs` | per-run and `__multi__` handlers |
+| `jupyter_service.rs` | 1331 lines: `JupyterCommand` (the configured launch command line), `NotebookTemplateConfig` (flag → convention → built-in) + `NotebookContext` (placeholder values), `.ipynb` rendering with JSON-escaped substitution, the `metadata.expman` staleness stamp, backend detection, port scan 8888–9999, spawn/status/stop. 23 unit tests from `:890`. |
+| `jupyter_handlers.rs` | per-run and `__multi__` handlers; builds the `NotebookContext`, reading `{{project}}` from the experiment's `experiment.yaml` |
 | `tensorboard_service.rs` | **untracked**. 175 lines, near-verbatim clone of the Jupyter manager. Port scan 6006–7999. **No tests.** |
 | `tensorboard_handlers.rs` | **untracked**. 5 handlers. |
 

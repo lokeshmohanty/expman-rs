@@ -443,3 +443,85 @@ async fn test_projects_crud() {
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json.as_array().unwrap().len(), 0);
 }
+
+/// The notebook POST route, end to end, with a project-supplied template.
+///
+/// Closes a gap `expman-build/memory/verification.md` calls out: the Jupyter
+/// routes had no integration coverage at all, so nothing checked that the
+/// template reached the handler through `ServerConfig` → `AppState`.
+#[tokio::test]
+async fn test_notebook_route_renders_the_configured_template() {
+    let (tmp, _) = setup_test_env();
+    let base_dir = tmp.path().to_path_buf();
+
+    // The store carries its own template, at the conventional path.
+    let template_dir = base_dir.join(".expman");
+    std::fs::create_dir_all(&template_dir).unwrap();
+    std::fs::write(
+        template_dir.join("notebook.ipynb"),
+        r#"{"cells": [{"cell_type": "code", "execution_count": null,
+ "metadata": {}, "outputs": [], "source": ["DIR = '{{run_dir}}'\n", "EXP = '{{experiment}}'"]}],
+ "metadata": {}, "nbformat": 4, "nbformat_minor": 5}"#,
+    )
+    .unwrap();
+
+    let state = AppState::from_config(&expman::api::ServerConfig {
+        base_dir: base_dir.clone(),
+        ..Default::default()
+    });
+    let app = build_router(state);
+
+    let notebook_route = "/api/experiments/test_exp/runs/run1/jupyter/notebook";
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(notebook_route)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+
+    let body = res.into_body().collect().await.unwrap().to_bytes();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    let content = json["content"].as_str().unwrap();
+    let notebook: Value = serde_json::from_str(content).unwrap();
+
+    let source: String = notebook["cells"][0]["source"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|line| line.as_str().unwrap())
+        .collect();
+    assert!(
+        source.contains("EXP = 'test_exp'"),
+        "the template should have been used: {source}"
+    );
+    assert!(
+        source.contains(&format!(
+            "DIR = '{}'",
+            base_dir.join("test_exp").join("run1").display()
+        )),
+        "run_dir should be substituted absolutely: {source}"
+    );
+    assert!(
+        notebook["metadata"]["expman"]["content_hash"].is_string(),
+        "expman should stamp its provenance"
+    );
+
+    // Second POST: the file on disk stands.
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(notebook_route)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CONFLICT);
+}

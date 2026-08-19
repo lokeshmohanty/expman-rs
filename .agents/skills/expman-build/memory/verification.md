@@ -20,8 +20,17 @@ Do not treat a green CI as coverage for these:
   artifact-name expression that implies a matrix.
 - **Version alignment** across `Cargo.toml`, `pyproject.toml`, and the two
   places in `flake.nix`. Nothing validates it.
-- **The Jupyter and TensorBoard routes** — zero test coverage in
-  `tests/api_test.rs`.
+- **The TensorBoard routes** — zero test coverage in `tests/api_test.rs`. The
+  Jupyter routes gained one integration test on 2026-08-19
+  (`test_notebook_route_renders_the_configured_template`, covering the notebook
+  POST and template plumbing); **start/stop/status still have none**, because
+  they spawn a real process.
+- **Anything that actually launches Jupyter.** `jupyter_service`'s 23 unit tests
+  cover template discovery, substitution, escaping, staleness and command
+  splitting, but the only spawn path they touch is the failure one
+  (a nonexistent program). That `--jupyter-command 'uv run … jupyter'` yields a
+  kernel which can import the project's package is **not** testable here — verify
+  it by hand in the browser.
 - **Both SSE streams** — untested.
 - **The `exp` console script** (`wrappers/python/expman/cli.py`) — never
   exercised from Python.

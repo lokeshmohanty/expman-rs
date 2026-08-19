@@ -31,6 +31,8 @@ Gated on the `server` feature. Starts the dashboard.
 | `--port`, `-p` | `8000` |
 | `--no-live` | off |
 | `--read-only` | off |
+| `--notebook-template <PATH>` | none — see discovery order below |
+| `--jupyter-command <CMD>` | `jupyter` |
 
 `--read-only` refuses **every** non-GET/HEAD/OPTIONS request with `403
 {"error": "read_only"}`. It is enforced as middleware over the whole router
@@ -40,7 +42,132 @@ POSTs, which spawn processes on the host. Use it to share a store with someone
 who should not be able to change it.
 
 `live_mode` and `read_only` are stored in `AppState` and reported truthfully by
-`/api/config`.
+`/api/config`. The two Jupyter flags are stored on the `JupyterManager` and are
+**not** reported by `/api/config` — nothing in the frontend needs them.
+
+### `--notebook-template` — the Interactive tab's cells
+
+*Added 1.3.0.* The notebook a run's Interactive tab opens comes from a
+project-supplied `.ipynb`, so the cells can do project-specific work — load this
+run's checkpoint, render a rollout the training host could not — instead of the
+built-in "read `vectors.parquet` and plot it".
+
+**Discovery order** (`jupyter_service.rs`, `NotebookTemplateConfig::resolve`):
+
+1. `--notebook-template <PATH>`
+2. `<DIR>/.expman/notebook.ipynb` — the convention, so a store can carry its own
+   notebook and the flag can stay unset
+3. the built-in default
+
+A `--notebook-template` that does not exist is **warned about and skipped**,
+falling through to 2 and 3; a typo in the flag does not stop the server.
+
+The template is itself a `.ipynb` — valid JSON — and expman substitutes these
+placeholders **anywhere in the file**, cells or metadata alike:
+
+| placeholder | value |
+|---|---|
+| `{{run_dir}}` | absolute path to the run directory (also the notebook's cwd) |
+| `{{run_name}}` | the run's directory name |
+| `{{experiment}}` | the experiment's directory name |
+| `{{store}}` | absolute path to `DIR`, the store root |
+| `{{project}}` | the run's experiment's `project`, or `""` when unassigned |
+
+Paths are absolute because a relative one would only resolve against the
+server's cwd, which the notebook has no reason to share.
+
+Values are **JSON-escaped** before substitution. Placeholders sit inside JSON
+string literals, so a run directory containing `"` or `\` would otherwise close
+the literal and corrupt the notebook. This is tested, not assumed
+(`test_placeholder_values_are_json_escaped`).
+
+If the substituted template does not parse as JSON, expman **logs an error
+naming the template path and writes the built-in default instead** — a broken
+`.ipynb` would break the tab the template exists to improve.
+
+**The multi-run notebook is deliberately not templatable.** `POST
+/experiments/{exp}/jupyter/start` writes an `interactive.ipynb` into the
+*experiment* directory, where `{{run_dir}}`, `{{run_name}}` and `{{project}}`
+have no value to take; a useful shared template would need its own placeholder
+set (a `{{runs}}` list plus a rule for rendering it), which is a separate design
+rather than a wider version of this one. It always gets the built-in default,
+and always will until that design exists.
+
+### Notebook staleness — regenerated unless you edited it
+
+*Added 1.3.0. Before then, an existing `interactive.ipynb` was kept forever, so a
+run generated under an old template never picked up a fix.*
+
+Every notebook expman writes carries a namespaced `metadata.expman` block:
+
+```json
+"metadata": {
+  "expman": {
+    "generated_by": "expman 1.3.0",
+    "template": "/abs/path/.expman/notebook.ipynb",
+    "template_hash": "sha256:…",
+    "content_hash": "sha256:…"
+  }
+}
+```
+
+On each launch (`POST …/jupyter/start`, or the notebook POST):
+
+| state on disk | what happens |
+|---|---|
+| absent | written |
+| matches `content_hash`, `template_hash` unchanged | left alone, silently |
+| matches `content_hash`, `template_hash` differs | **rewritten**, logged at info |
+| does not match `content_hash` — you edited it | left alone, logged at **warn** |
+| no `metadata.expman` — hand-made, or pre-1.3.0 | left alone, logged at warn |
+
+`content_hash` covers the parsed JSON with `content_hash` itself removed (a field
+cannot hash itself), so a whitespace reformat still counts as unedited.
+**Executing cells does not** — outputs and `execution_count` are your work, and
+expman will not overwrite them. Delete the file to opt back into regeneration.
+
+The rule applies to the multi-run notebook too, whose "template" is the built-in
+content — which names the runs, so changing the selected run set refreshes an
+unedited notebook.
+
+### `--jupyter-command` — which interpreter the kernel is
+
+*Added 1.3.0.* A command **line**, not a program name; split POSIX-shell-style
+(via `shlex`), so a quoted path with a space survives. No shell runs, so pipes,
+redirection and `$VAR` are not available. expman appends
+`notebook --no-browser --port=… …` after it:
+
+```bash
+exp serve ./experiments --jupyter-command 'uv run --extra nb jupyter'
+# actually executed:  uv run --extra nb jupyter notebook --no-browser --port=8888 …
+```
+
+**Why this rather than a kernelspec.** The kernel a notebook gets is the
+interpreter Jupyter itself runs under. Launch Jupyter from inside the project's
+virtualenv and its built-in `python3` kernel *is* that venv's interpreter, so
+`import <your package>` works with **no `ipykernel install` step and no kernelspec
+name for expman and the project to keep in sync**. expman therefore does not
+register a global kernel and does not write a named kernelspec into the generated
+notebook — either would mutate your `~/.local/share/jupyter` and then have to
+stay correct forever.
+
+Two failure modes, both with messages that name the configured value:
+
+- unparsable (unbalanced quote) or empty → `exp serve` **refuses to start**,
+  rather than failing at the first click on the Interactive tab
+- the program does not exist → the start request fails with
+  ``Failed to start Jupyter with the configured command `…`: No such file or
+  directory``, not a bare ENOENT
+
+**The trap.** expman runs the command with the **run directory** as cwd, because
+that is where Jupyter must serve `interactive.ipynb` from. A command that
+discovers its environment from cwd — `uv run` walking up for a `pyproject.toml` —
+therefore only works when the store lives inside the project. When it does not,
+name the project explicitly instead of changing directory:
+
+```bash
+--jupyter-command 'uv run --project /path/to/project --extra nb jupyter'
+```
 
 ## `exp list [DIR]`
 

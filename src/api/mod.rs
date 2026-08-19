@@ -17,6 +17,9 @@ pub use self::state::AppState;
 
 pub use self::state::ServerConfig;
 
+/// Jupyter configuration the CLI needs to describe and validate its flags.
+pub use self::jupyter_service::{JupyterCommand, DEFAULT_JUPYTER_COMMAND};
+
 mod artifacts;
 pub mod experiments;
 pub mod frontend;

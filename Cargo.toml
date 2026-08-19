@@ -40,7 +40,7 @@ doc = false
 [features]
 default = []
 cli = ["dep:clap", "dep:comfy-table", "dep:indicatif", "dep:tboard", "dep:tensorboard-rs"]
-server = ["dep:axum", "dep:tower-http", "dep:rust-embed", "dep:mime_guess", "dep:tokio-util", "dep:futures-util"]
+server = ["dep:axum", "dep:tower-http", "dep:rust-embed", "dep:mime_guess", "dep:tokio-util", "dep:futures-util", "dep:shlex", "dep:sha2"]
 python = ["dep:pyo3"]
 
 [dependencies]
@@ -78,6 +78,13 @@ rust-embed = { version = "8", features = ["include-exclude"], optional = true }
 mime_guess = { version = "2", optional = true }
 tokio-util = { version = "0.7", features = ["rt"], optional = true }
 futures-util = { version = "0.3", optional = true }
+# `serve --jupyter-command` is a command *line*, so it needs POSIX-shell word
+# splitting: a whitespace split would break on a quoted path containing a space.
+shlex = { version = "1", optional = true }
+# Notebook staleness detection: hash the template and the content expman wrote,
+# so a generated notebook can be refreshed without clobbering an edited one.
+# Already compiled for this feature via rust-embed, so it costs nothing new.
+sha2 = { version = "0.10", optional = true }
 
 # Python bindings
 pyo3 = { version = "0.28", features = ["extension-module", "abi3-py39"], optional = true }

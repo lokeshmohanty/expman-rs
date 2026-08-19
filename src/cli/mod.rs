@@ -36,8 +36,19 @@ async fn run_with_cli(cli: Cli) -> Result<()> {
             port,
             no_live,
             read_only,
+            notebook_template,
+            jupyter_command,
         } => {
-            cmd_serve(dir, host, port, !no_live, read_only).await?;
+            cmd_serve(ServerConfig {
+                base_dir: dir,
+                host,
+                port,
+                live_mode: !no_live,
+                read_only,
+                notebook_template,
+                jupyter_command,
+            })
+            .await?;
         }
         Commands::Project { command } => {
             cmd_project(command)?;
@@ -129,6 +140,18 @@ pub enum Commands {
         /// Refuse every mutating request — safe to share with a supervisor
         #[arg(long)]
         read_only: bool,
+        /// `.ipynb` to generate interactive notebooks from, with `{{run_dir}}`,
+        /// `{{run_name}}`, `{{experiment}}`, `{{store}}` and `{{project}}`
+        /// substituted. Defaults to `<DIR>/.expman/notebook.ipynb` if that
+        /// exists, else a built-in notebook that plots the run's metrics
+        #[arg(long, value_name = "PATH")]
+        notebook_template: Option<PathBuf>,
+        /// Command line that launches Jupyter, e.g. `uv run --extra nb jupyter`.
+        /// The notebook's kernel is whatever interpreter Jupyter runs under, so
+        /// launching it from inside the project's environment is what makes the
+        /// project's own package importable in the Interactive tab
+        #[arg(long, value_name = "CMD", default_value = crate::api::DEFAULT_JUPYTER_COMMAND)]
+        jupyter_command: String,
     },
     /// Manage projects: the grouping layer above experiments
     Project {
@@ -397,31 +420,30 @@ pub enum ProjectCommands {
 // ─── Command implementations ──────────────────────────────────────────────────
 
 #[cfg(feature = "server")]
-pub async fn cmd_serve(
-    dir: PathBuf,
-    host: String,
-    port: u16,
-    live: bool,
-    read_only: bool,
-) -> Result<()> {
+pub async fn cmd_serve(config: ServerConfig) -> Result<()> {
+    // Reject an unparsable --jupyter-command here rather than at the first click
+    // on the Interactive tab, when the message would be buried in the server log.
+    if let Err(e) = crate::api::JupyterCommand::parse(&config.jupyter_command) {
+        anyhow::bail!(e);
+    }
+
     println!("⚗️  ExpMan Dashboard");
-    println!("   Experiments: {}", dir.display());
-    println!("   URL:         http://{}:{}", host, port);
-    if live {
+    println!("   Experiments: {}", config.base_dir.display());
+    println!("   URL:         http://{}:{}", config.host, config.port);
+    if config.live_mode {
         println!("   Live mode:   ✓ SSE streaming enabled");
     }
-    if read_only {
+    if config.read_only {
         println!("   Read-only:   ✓ all mutating requests refused");
+    }
+    if let Some(template) = &config.notebook_template {
+        println!("   Notebooks:   {}", template.display());
+    }
+    if config.jupyter_command != crate::api::DEFAULT_JUPYTER_COMMAND {
+        println!("   Jupyter:     {}", config.jupyter_command);
     }
     println!();
 
-    let config = ServerConfig {
-        base_dir: dir,
-        host,
-        port,
-        live_mode: live,
-        read_only,
-    };
     serve(config).await?;
     Ok(())
 }

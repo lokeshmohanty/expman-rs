@@ -82,17 +82,33 @@ Per-run, plus a `__multi__` variant scoped to the experiment.
 
 | Method | Path | Handler |
 |---|---|---|
-| GET | `/jupyter/available` | `jupyter_handlers.rs:17` → `{backend: "jupyter"\|"python"\|"none"}` |
-| POST | `/experiments/{exp}/runs/{run}/jupyter/start` | `:23` → `{port}` |
-| POST | `/experiments/{exp}/runs/{run}/jupyter/stop` | `:46` |
-| GET | `/experiments/{exp}/runs/{run}/jupyter/status` | `:57` → `{running, port}` |
-| GET | `/experiments/{exp}/runs/{run}/jupyter/notebook` | `:69` → `{exists, content}` |
-| POST | `/experiments/{exp}/runs/{run}/jupyter/notebook` | `:87` → `{created, content}` or 409 |
-| POST | `/experiments/{exp}/jupyter/start` | `:122`, body `{runs: [String]}` |
-| POST | `/experiments/{exp}/jupyter/stop` | `:155` |
-| GET | `/experiments/{exp}/jupyter/status` | `:166` |
-| GET | `/experiments/{exp}/jupyter/notebook` | `:178` |
-| POST | `/experiments/{exp}/jupyter/notebook` | `:196` |
+| GET | `/jupyter/available` | `jupyter_handlers.rs` `available_jupyter` → `{backend: "jupyter"\|"python"\|"none"}` |
+| POST | `/experiments/{exp}/runs/{run}/jupyter/start` | `start_jupyter` → `{port}` |
+| POST | `/experiments/{exp}/runs/{run}/jupyter/stop` | `stop_jupyter` |
+| GET | `/experiments/{exp}/runs/{run}/jupyter/status` | `status_jupyter` → `{running, port}` |
+| GET | `/experiments/{exp}/runs/{run}/jupyter/notebook` | `get_jupyter_notebook` → `{exists, content}` |
+| POST | `/experiments/{exp}/runs/{run}/jupyter/notebook` | `create_jupyter_notebook` → `{created, content}` or 409 |
+| POST | `/experiments/{exp}/jupyter/start` | `start_multi_jupyter`, body `{runs: [String]}` |
+| POST | `/experiments/{exp}/jupyter/stop` | `stop_multi_jupyter` |
+| GET | `/experiments/{exp}/jupyter/status` | `status_multi_jupyter` |
+| GET | `/experiments/{exp}/jupyter/notebook` | `get_multi_jupyter_notebook` |
+| POST | `/experiments/{exp}/jupyter/notebook` | `create_multi_jupyter_notebook` |
+
+**Both start routes write the notebook first**, and since 1.3.0 that write may
+*replace* an existing `interactive.ipynb` — when expman wrote it, you have not
+edited it, and the template has changed since. An edited notebook is never
+overwritten. Full rules, and the `--notebook-template` placeholder list:
+[CLI reference](/reference/cli/#exp-serve-dir).
+
+`GET /jupyter/available` reports on the **configured** Jupyter command
+(`exp serve --jupyter-command`, default `jupyter`), not a hardcoded `jupyter` —
+so a project that reaches Jupyter through `uv run` is detected rather than
+falling back to the ipython/python copy-paste view.
+
+**409 from the notebook POSTs means "the file on disk stands"** — whether because
+it is already current or because it was edited and left alone. The two are the
+same answer to the caller; the distinction is in the server log (warn for an
+edited file, info for a regeneration).
 
 ## TensorBoard — **NEW / uncommitted**
 

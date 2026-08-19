@@ -11,12 +11,39 @@ use crate::core::storage;
 
 use super::state::AppState;
 
+use super::jupyter_service::NotebookContext;
 use super::{exp_dir, run_dir};
 use crate::core::dto;
 
+/// True unless the run's metadata says it is a Rust run.
+fn is_python_run(dir: &std::path::Path) -> bool {
+    match storage::load_run_metadata(dir) {
+        Ok(meta) => {
+            meta.language
+                .unwrap_or_else(|| "python".to_string())
+                .to_lowercase()
+                != "rust"
+        }
+        // Default to Python.
+        Err(_) => true,
+    }
+}
+
+/// The substitution context a notebook template is rendered against.
+///
+/// `{{project}}` comes from the *experiment's* metadata — a run has no project
+/// of its own — and is empty when the experiment is unassigned.
+fn notebook_context(state: &AppState, exp: &str, run: &str) -> NotebookContext {
+    let project = storage::load_experiment_metadata(&exp_dir(&state.base_dir, exp))
+        .ok()
+        .and_then(|meta| meta.project)
+        .unwrap_or_default();
+    NotebookContext::new(&state.base_dir, exp, run, project)
+}
+
 /// Returns the best available interactive backend.
-pub async fn available_jupyter() -> impl IntoResponse {
-    let backend = super::jupyter_service::detect_backend().await;
+pub async fn available_jupyter(State(state): State<AppState>) -> impl IntoResponse {
+    let backend = super::jupyter_service::detect_backend(state.jupyter.command()).await;
     Json(dto::BackendInfo { backend })
 }
 
@@ -25,19 +52,10 @@ pub async fn start_jupyter(
     State(state): State<AppState>,
     Path((exp, run)): Path<(String, String)>,
 ) -> impl IntoResponse {
-    let dir = run_dir(&state.base_dir, &exp, &run);
+    let is_python = is_python_run(&run_dir(&state.base_dir, &exp, &run));
+    let ctx = notebook_context(&state, &exp, &run);
 
-    let is_python = match storage::load_run_metadata(&dir) {
-        Ok(meta) => {
-            meta.language
-                .unwrap_or_else(|| "python".to_string())
-                .to_lowercase()
-                != "rust"
-        }
-        Err(_) => true,
-    };
-
-    match state.jupyter.spawn(&exp, &run, dir, is_python).await {
+    match state.jupyter.spawn(&ctx, is_python).await {
         Ok(port) => Json(dto::ServiceStartResponse { port }).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
@@ -96,24 +114,20 @@ pub async fn get_jupyter_notebook(
     }
 }
 
-/// Endpoint to create the default `interactive.ipynb` for a run.
+/// Endpoint to create the `interactive.ipynb` for a run.
+///
+/// 409 covers both "already current" and "left alone because it was edited" —
+/// from the caller's side they are the same answer: the file on disk stands.
 pub async fn create_jupyter_notebook(
     State(state): State<AppState>,
     Path((exp, run)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let dir = run_dir(&state.base_dir, &exp, &run);
+    let is_python = is_python_run(&dir);
+    let ctx = notebook_context(&state, &exp, &run);
 
-    let is_python = match storage::load_run_metadata(&dir) {
-        Ok(meta) => {
-            meta.language
-                .unwrap_or_else(|| "python".to_string())
-                .to_lowercase()
-                != "rust"
-        }
-        Err(_) => true, // Default to Python
-    };
-
-    match super::jupyter_service::generate_notebook(&dir, is_python).await {
+    match super::jupyter_service::generate_notebook(&ctx, is_python, state.jupyter.template()).await
+    {
         Ok(true) => {
             // Read back the created content
             let content = tokio::fs::read_to_string(dir.join("interactive.ipynb"))
@@ -139,20 +153,10 @@ pub async fn start_multi_jupyter(
 ) -> impl IntoResponse {
     let dir = exp_dir(&state.base_dir, &exp);
 
-    let is_python = if let Some(first_run) = payload.runs.first() {
-        let r_dir = run_dir(&state.base_dir, &exp, first_run);
-        match storage::load_run_metadata(&r_dir) {
-            Ok(meta) => {
-                meta.language
-                    .unwrap_or_else(|| "python".to_string())
-                    .to_lowercase()
-                    != "rust"
-            }
-            Err(_) => true,
-        }
-    } else {
-        true
-    };
+    let is_python = payload
+        .runs
+        .first()
+        .is_none_or(|first| is_python_run(&run_dir(&state.base_dir, &exp, first)));
 
     match state
         .jupyter
@@ -225,20 +229,10 @@ pub async fn create_multi_jupyter_notebook(
 ) -> impl IntoResponse {
     let dir = exp_dir(&state.base_dir, &exp);
 
-    let is_python = if let Some(first_run) = payload.runs.first() {
-        let r_dir = run_dir(&state.base_dir, &exp, first_run);
-        match storage::load_run_metadata(&r_dir) {
-            Ok(meta) => {
-                meta.language
-                    .unwrap_or_else(|| "python".to_string())
-                    .to_lowercase()
-                    != "rust"
-            }
-            Err(_) => true,
-        }
-    } else {
-        true
-    };
+    let is_python = payload
+        .runs
+        .first()
+        .is_none_or(|first| is_python_run(&run_dir(&state.base_dir, &exp, first)));
 
     match super::jupyter_service::generate_multi_run_notebook(&dir, is_python, &payload.runs).await
     {

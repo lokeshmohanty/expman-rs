@@ -708,6 +708,80 @@ It is the only such interpolation in the eleven workflows; the rest were checked
 
 ---
 
+## The notebook kernel comes from the launch command, not a registered kernelspec
+
+*2026-08-19, 1.3.0.*
+
+**Decision.** `exp serve --jupyter-command <CMD>` configures the command line that
+launches Jupyter (default `jupyter`, i.e. the previous behaviour). expman does
+**not** run `ipykernel install`, and does **not** write a kernelspec name into the
+notebooks it generates.
+
+**Why.** The problem being solved is "the Interactive tab cannot import the
+project's own package". The kernel a notebook gets is the interpreter Jupyter
+itself runs under, so launching Jupyter from inside the project's environment —
+`--jupyter-command 'uv run --extra nb jupyter'` — makes the built-in `python3`
+kernel *be* that environment. There is then nothing to install and no name for
+expman and the project to keep in sync. The alternatives both write into
+`~/.local/share/jupyter`, which is the user's, and then have to stay correct
+across every environment rebuild.
+
+**Consequences we accept.** The value is a command line, so it needs splitting;
+`shlex` does it POSIX-style but no shell runs, so pipes, redirection and variable
+expansion are unavailable. And because expman runs the command with the **run
+directory** as cwd (Jupyter has to serve `interactive.ipynb` from there), a
+command that discovers its environment from cwd only works when the store lives
+inside the project — otherwise the project must be named, e.g. `uv run --project
+/path/to/project …`. Documented in the CLI reference.
+
+---
+
+## Notebooks are rendered from a template and regenerated unless edited
+
+*2026-08-19, 1.3.0.*
+
+**Decision.** A run's `interactive.ipynb` is rendered from
+`--notebook-template`, else `<base_dir>/.expman/notebook.ipynb`, else the built-in
+default, with `{{run_dir}}` / `{{run_name}}` / `{{experiment}}` / `{{store}}` /
+`{{project}}` substituted. Each write stamps
+`metadata.expman.{template_hash, content_hash}`, and a later launch rewrites the
+file only when it still hashes to `content_hash` (unedited) *and* `template_hash`
+has changed.
+
+**Why.** Two separate defects. The cells were hardcoded, so a project could not
+make the tab do project-specific work — the motivating case being a run whose
+rollout GIF failed to render on a headless training host, where the checkpoint is
+there and only the notebook can turn it into a video. And `generate_notebook`
+returned early whenever the file existed, so a run created under an old template
+kept its old cells forever, with no way short of deleting the file.
+
+**Consequences we accept.**
+
+- Values are JSON-escaped on substitution, because placeholders sit inside JSON
+  string literals; an unescaped `"` in a path would corrupt the notebook. Tested
+  directly rather than assumed.
+- A template whose substituted form is not valid JSON is **not** an error the user
+  sees in the UI: expman logs the template path and writes the built-in default.
+  Serving a working default beats surfacing the failure, given the alternative is
+  a `.ipynb` Jupyter refuses to open.
+- `content_hash` is taken over the parsed JSON with the field itself removed, so
+  it is insensitive to whitespace but **sensitive to executed cells**. Running
+  cells therefore pins a notebook forever. That is the intended trade: outputs are
+  the user's work.
+- The notebook is now written pretty-printed with an extra metadata block. The
+  cells of the default are byte-for-byte what they were; the file around them is
+  not.
+
+**Found while doing this, and fixed here:** the multi-run generator spliced run
+names into JSON string literals unescaped, so a run directory named with a `"` or
+a `\` produced an `.ipynb` Jupyter could not open. Pre-existing, silent, and
+caught only because the new code parses what it generates instead of writing it
+blind. The Python branch now escapes at each interpolation; the Rust branch
+escapes its whole snippet with the same helper, replacing a hand-rolled
+`replace('\n', …).replace('"', …)` that mishandled backslashes.
+
+---
+
 ## Open questions
 
 *The four questions that stood here on 2026-07-27 — version single-sourcing,
@@ -725,6 +799,13 @@ resolved on 2026-07-28; see the entries above.*
   `tensorcore_utilization` on the same host, but the TPU was idle, so those two
   columns were only ever observed as `N/A`. If a live reading ever carries a unit
   suffix, `parse_leading_number` already strips it.
+- **The multi-run notebook is not templatable.** `--notebook-template` applies to
+  per-run notebooks only. A multi-run notebook has no single run, so `{{run_dir}}`,
+  `{{run_name}}` and `{{project}}` have nothing to bind to, and a useful shared
+  template needs its own placeholder set — a `{{runs}}` list plus a rule for
+  rendering it as loader cells. Left on the built-in default *deliberately*, and
+  said so in the CLI reference rather than left to be discovered. The staleness
+  contract does apply to it, with the built-in content as its "template".
 - **Sweeps have no Bayesian/early-stopping search.** Grid and random only;
   successive halving would be the next addition and needs a live-metrics read
   from the agent, which the append-only segments now make cheap.

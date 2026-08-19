@@ -12,21 +12,30 @@ weight = 4
 
 ```
 <base_dir>/                              default "./experiments"
+├── .expman/
+│   └── notebook.ipynb                   optional Jupyter template (read-only to expman)
 ├── .projects/                           Project storage directory
 │   └── <project_name>/                  Project directory
 │       ├── project.yaml                 ProjectMetadata
 │       └── README.md                    Markdown frontpage
 └── <experiment_name>/                   ExperimentConfig::experiment_dir()
     ├── experiment.yaml                  ExperimentMetadata (created if absent)
+    ├── interactive.ipynb                multi-run notebook, if the tab was opened
     └── <run_name>/                      ExperimentConfig::run_dir()
         ├── run.yaml                     RunMetadata
         ├── config.yaml                  merged hyperparameters
         ├── vectors.parquet              metric rows
         ├── run.log                      engine log lines
         ├── console.log                  stdout/stderr tee (Python only)
+        ├── interactive.ipynb            generated notebook, if the tab was opened
         ├── artifacts/                   user files, recursive
         └── tensorboard/                 only if Experiment.tensorboard_dir used
 ```
+
+`.expman/notebook.ipynb` is the **conventional notebook template** (1.3.0): a
+`.ipynb` the store carries so the Interactive tab runs project-specific cells
+without anyone passing `exp serve --notebook-template`. expman only ever reads
+it. `.expman/` is a dot-directory, so `list_experiments` already ignores it.
 
 `<run_name>` defaults to `chrono::Local::now().format("%Y%m%d_%H%M%S")`
 (`models.rs:32`).
@@ -91,6 +100,15 @@ enum MetricValue { Float(f64), Int(i64), Bool(bool), Text(String) }
 | `provenance.yaml` | git commit/branch/dirty, command, hostname, scheduler ids |
 | `run.yaml`, `config.yaml`, `run.log`, `console.log` | as before |
 | `.run.lock` | advisory lock file for `run.yaml` updates |
+| `interactive.ipynb` | the Jupyter tab's notebook, generated on first launch |
+
+`interactive.ipynb` is the one file in a run directory expman writes *for* the
+user rather than *about* the run, so it is the one file the user may own. Since
+1.3.0 each generated copy carries a `metadata.expman` block —
+`generated_by`, `template`, `template_hash`, `content_hash` — and that is what
+decides whether a later launch may refresh it. A notebook whose content no longer
+matches `content_hash`, or that has no such block at all, is never overwritten.
+See the [CLI reference](/reference/cli/#exp-serve-dir).
 
 **Metrics are append-only while a run is live.** Each flush appends an Arrow IPC
 batch rather than rewriting the Parquet, so cost is proportional to the rows

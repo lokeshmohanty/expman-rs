@@ -172,6 +172,25 @@ scanning a range (8888–9999 for Jupyter, 6006–7999 for TensorBoard), spawn t
 child with auth and framing protections disabled, register it in the map keyed
 `"{exp}:{run}"`, and reap it on `status`/`stop`/`shutdown_all`.
 
+**Jupyter's launch command is configuration, not a constant** (1.3.0). `exp serve
+--jupyter-command` is a command *line* — shell-word-split, no shell — that the
+`notebook --no-browser --port=…` arguments are appended to, so `uv run --extra nb
+jupyter` composes. This is the whole kernel story: the kernel a notebook gets is
+the interpreter Jupyter runs under, so launching Jupyter from inside the
+project's environment makes the project's package importable with no
+`ipykernel install` and no kernelspec for expman to keep in sync. Nothing is
+written to `~/.local/share/jupyter`, by design.
+
+**The generated notebook is a rendered template with a provenance stamp.** The
+content comes from `--notebook-template`, else `<base_dir>/.expman/notebook.ipynb`,
+else a built-in default; `{{run_dir}}`-style placeholders are substituted with
+JSON-escaped values, and the result is parsed before being written so a bad
+template degrades to the built-in rather than to a corrupt `.ipynb`. Each write
+records `metadata.expman.{template_hash, content_hash}`, which is what lets a
+later launch tell "expman wrote this and the template has since changed" (rewrite)
+from "the user changed this" (never touch). Rules and rationale:
+[CLI reference](/reference/cli/#exp-serve-dir).
+
 **No HTTP proxying.** The browser connects directly to `http://localhost:{port}`
 (`interactive.rs:120,210`; `tensorboard.rs:101,149`). That is why Jupyter is
 launched with `--ServerApp.token='' --ServerApp.password='' --disable_check_xsrf`
@@ -182,8 +201,18 @@ route is the obvious next architectural step.
 ## The frontend
 
 `src/app/`, Leptos 0.8 CSR, built by trunk from `src/app/index.html` into
-`dist/`, embedded via `rust-embed` (`api/frontend.rs:9-15`) with an SPA fallback
-heuristic (`:44`: a path with no `.` gets `index.html`).
+`dist/`, embedded via `rust-embed` (`api/frontend.rs:9-15`), with the SPA
+fallback decided by `is_asset_request`: a path whose **last segment** ends in a
+known asset extension (`ASSET_EXTENSIONS`) 404s when it is not in the bundle;
+everything else gets `index.html` and is routed client-side.
+
+The rule used to be "a path containing a `.` is an asset", which broke every
+experiment named after a dm_control task — `/experiments/dmc-cartpole.swingup`
+404'd, so the dashboard could not be deep-linked to one. The extension list is
+deliberately wider than what the bundle embeds: serving `index.html` for a
+missing `.js` hands the browser HTML where it expected JavaScript, and the
+resulting syntax error names the wrong file. `html` is excluded, because
+answering an HTML request with the shell is exactly what the fallback is for.
 
 - Data fetching is plain `gloo_net` returning `Result<T, String>`, wrapped in
   `LocalResource` + `<Suspense>`. **Metrics do not auto-refresh** — only logs

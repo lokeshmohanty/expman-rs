@@ -2,7 +2,53 @@
 
 *Update in place; keep short; absolute dates. History lives in git log.*
 
-## Current focus (2026-07-29)
+## Current focus (2026-08-19)
+
+**1.3.0 — the Jupyter integration became configurable.** Three features, driven by
+a JAX RL lab whose training runs on headless hosts: the rollout GIF fails to
+render there, so the run has a checkpoint and no video, and the Interactive tab
+had to be able to render it.
+
+- `exp serve --notebook-template <PATH>` — the generated `.ipynb` comes from a
+  project template. Discovery: flag → `<DIR>/.expman/notebook.ipynb` → built-in.
+  `{{run_dir}}` `{{run_name}}` `{{experiment}}` `{{store}}` `{{project}}`,
+  **JSON-escaped** (they sit inside JSON string literals). An unparsable result
+  logs the template path and falls back rather than writing a broken notebook.
+- `exp serve --jupyter-command <CMD>` — a command *line* (`shlex`-split, no
+  shell), default `jupyter`. Set it to `uv run --extra nb jupyter` and the
+  kernel *is* the project's venv, so no `ipykernel install` and no kernelspec.
+  Deliberately writes nothing to `~/.local/share/jupyter`.
+- **Staleness** — every generated notebook carries
+  `metadata.expman.{template_hash, content_hash}`. Unedited + template moved on →
+  rewritten. Edited, or no metadata → left alone, warned about. Previously an
+  existing notebook was kept forever, so a template fix never reached old runs.
+
+Gate green: `just ci` exit 0 — fmt, clippy wasm32 + native at `-D warnings`,
+**96/96** Rust (23 of them new, in `jupyter_service`), **71/71** Python, ruff,
+`check-versions`. Also verified against a live server: template rendering with
+real absolute paths, all five staleness paths over the HTTP API, and the three
+`--jupyter-command` error paths.
+
+**Bug found on the way, fixed here:** the multi-run generator spliced run names
+into JSON string literals unescaped, so a run directory named with a `"` or `\`
+had always produced an unopenable `.ipynb`. Silent and pre-existing; surfaced
+only because the new code parses what it generates.
+
+**Multi-run notebooks stay on the built-in default** — no single run, so three of
+the five placeholders have nothing to bind to. Recorded as an open question in
+`docs/content/decisions.md`, not left to be discovered.
+
+**Semver caveat:** user-facing surfaces (CLI, HTTP, Python) are all backward
+compatible, which is why this is a minor. The **Rust library surface is not**:
+`cli::cmd_serve` now takes a `ServerConfig`, and
+`api::jupyter_service::{generate_notebook, detect_backend, JupyterManager::spawn}`
+changed signature. The crate has no written stability policy for `pub` items
+inside the feature-gated `api`/`cli` modules; if one is ever wanted, that is the
+decision to make.
+
+---
+
+## Previous focus (2026-07-29)
 
 **Done, uncommitted:** the thesis-suite TODO (P0+P1+P2), the typography
 standard, every open question from `docs/decisions.md`, and **Tier 1 + Tier 2**
@@ -87,12 +133,31 @@ beside 70+ other tests, so it measured contention. It now runs alone
 
 ### Next actions
 
-- Bump `minor` and push — in progress.
+- *(1.2.0, done)* bumped and pushed.
 - The thesis repo can drop its `experiment.yaml` patching and pyyaml workaround,
   and read through `expman.load_runs()`.
+- **The thesis repo can now ship `<store>/.expman/notebook.ipynb`** with cells
+  that load `{{run_dir}}`'s checkpoint and render the rollout, and start the
+  dashboard with `--jupyter-command 'uv run --project <repo>/experiments --extra
+  nb jupyter'`. Untested against the real lab — that is the next verification.
 
 ## Known gaps / open questions
 
+- **Nothing tests that a Jupyter kernel can actually import a project's package.**
+  The 23 `jupyter_service` unit tests cover template discovery, substitution,
+  escaping, staleness and command splitting; the only spawn path they exercise is
+  the failure one. The claim that `--jupyter-command 'uv run … jupyter'` yields an
+  importable environment was reasoned from how Jupyter picks its kernel and is
+  **not** verified against a real project. Verify in the browser before relying on
+  it.
+- **`uv run` resolves its project from cwd, and expman sets cwd to the run
+  directory.** So `--jupyter-command 'uv run …'` only works when the store lives
+  inside the project; otherwise `--project <dir>` must be passed. Documented in
+  `reference/cli.md`, but it is the most likely thing to trip a first user.
+- **Executing a cell pins a notebook forever.** `content_hash` is sensitive to
+  outputs and `execution_count`, so a run whose notebook has been used will never
+  pick up a template fix. Intended (outputs are the user's), but the only escape
+  is deleting the file, and the dashboard offers no button for that.
 - **`build.rs` still `exit(1)`s** rather than degrading. It is the root of the
   `dist/` + `--allow-dirty` knot, and now of the Tailwind tool dependency: no
   network *and* no `tailwindcss` gives a hard failure whose message does not say
